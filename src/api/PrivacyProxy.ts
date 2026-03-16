@@ -1,5 +1,5 @@
 import DOMPurify from 'dompurify';
-import { SecureVault } from '../security/SecureVault';
+import { SecureVault, type MedicalProfile } from '../security/SecureVault';
 import { SecurityScrubber } from './SecurityScrubber';
 
 const API_DOMAIN = 'https://api.spoonacular.com/recipes';
@@ -9,18 +9,18 @@ export const InputSanitizer = {
         // Mitigación XSS y Sanitización agresiva en cliente
         let safeString = DOMPurify.sanitize(input, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
         // Strip de caracteres SQLi y NoSQLi comunes 
-        return safeString.replace(/['";=(){}$]/g, '').trim();
+        return safeString.replace(/['";\=(){}$]/g, '').trim();
     }
 };
 
 export const SecureAPI = {
-    async fetchSafeRecipes(rawQuery: string) {
+    async fetchSafeRecipes(rawQuery: string, externalProfile?: MedicalProfile) {
         // 1. Zero-Knowledge Profile Fetch
-        let profile = SecureVault.loadProfile();
+        let profile = externalProfile || SecureVault.loadProfile();
         if (!profile) {
             console.warn('[Privacy] No local profile authorized. Usando perfil estricto por defecto para la demo.');
             profile = {
-                allergies: ['peanuts', 'shellfish'],
+                allergies: [],
                 intolerances: ['dairy'],
                 conditions: ['SIBO'],
                 severities: {}

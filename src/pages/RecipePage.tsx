@@ -2,6 +2,14 @@ import { useState, useEffect } from 'react';
 import { RecipeCard, RecipeCardSkeleton } from '../components/RecipeCard';
 import { Recipe } from '../types/recipe';
 import { SecureAPI } from '../api/PrivacyProxy';
+import { useAuth } from '../context/AuthContext';
+import { ShieldCheck, UserCircle, Settings } from 'lucide-react';
+
+interface RecipePageProps {
+  onSelectRecipe: (recipe: Recipe) => void;
+  onOpenLogin: () => void;
+  onOpenOnboarding: () => void;
+}
 
 // Simulación de una API de recetas de Wati
 export const fetchDummySafeRecipes = async (): Promise<Recipe[]> => {
@@ -97,7 +105,8 @@ export const fetchDummySafeRecipes = async (): Promise<Recipe[]> => {
   });
 };
 
-export function RecipePage({ onSelectRecipe }: { onSelectRecipe: (recipe: Recipe) => void }) {
+export function RecipePage({ onSelectRecipe, onOpenLogin, onOpenOnboarding }: RecipePageProps) {
+  const { user, logout } = useAuth();
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -105,20 +114,14 @@ export function RecipePage({ onSelectRecipe }: { onSelectRecipe: (recipe: Recipe
     const loadData = async () => {
       setIsLoading(true);
       try {
-        // Llamado a la API real de Wati
         const rawData = await SecureAPI.fetchSafeRecipes('');
-        
-        // Mapeo de la respuesta cruda de Spoonacular a nuestra interfaz Recipe local
         const mappedRecipes: Recipe[] = rawData.map((apiRecipe: any) => {
-          // Evaluar riesgo basándonos en el securityDisclosure de SecurityScrubber
           const disclosure = apiRecipe.securityDisclosure;
           let calculatedSafetyLevel: 'safe' | 'review' | 'unsafe' = 'safe';
-          
           if (disclosure) {
              if (disclosure.riskLevel === 'DANGER') calculatedSafetyLevel = 'unsafe';
              else if (disclosure.riskLevel === 'WARNING') calculatedSafetyLevel = 'review';
           }
-
           return {
             id: apiRecipe.id ? apiRecipe.id.toString() : `api-${Math.random()}`,
             title: apiRecipe.title || 'Receta Sin Título',
@@ -129,61 +132,108 @@ export function RecipePage({ onSelectRecipe }: { onSelectRecipe: (recipe: Recipe
               id: ing.id ? ing.id.toString() : `ing-${Math.random()}`,
               name: ing.originalName || ing.name || 'Ingrediente',
               isBorderlineSafe: disclosure?.findings?.some((f: string) => f.toLowerCase().includes(ing.name?.toLowerCase())) || false
-            })).slice(0, 5), // Limitamos para UI rápida
+            })).slice(0, 5),
             instructions: apiRecipe.analyzedInstructions?.[0]?.steps?.map((s: any) => s.step) || [],
             summary: apiRecipe.summary,
             safetyLevel: calculatedSafetyLevel,
             siboAllergiesTags: apiRecipe.diets?.slice(0, 3) || ['Seguro'],
           };
         });
-
         setRecipes(mappedRecipes);
       } catch (error) {
         console.error("Error fetching recipes", error);
-        // Opcional: usar dummy si falla la carga (ej. perfil no configurado temporalmente en dev)
         const dummyData = await fetchDummySafeRecipes();
         setRecipes(dummyData);
       } finally {
         setIsLoading(false);
       }
     };
-
     loadData();
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6 lg:px-8 font-sans">
-      <div className="max-w-7xl mx-auto">
-        
-        {/* Cabecera de la página */}
-        <div className="mb-10 text-center sm:text-left">
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-800 tracking-tight">
-            Tus Recetas Seguras
-          </h1>
-          <p className="mt-3 text-lg text-slate-600 max-w-2xl">
-            Resultados generados a partir de tu perfil de SIBO y sensibilidades alimentarias.
-          </p>
-        </div>
+    <div className="min-h-screen bg-slate-50 font-sans">
+      {/* ── Top Navigation Bar ── */}
+      <nav className="sticky top-0 z-40 bg-white/80 backdrop-blur-lg border-b border-slate-200/60 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          {/* Logo */}
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{
+              background: 'linear-gradient(135deg, #34d399, #059669)'
+            }}>
+              <ShieldCheck className="w-4.5 h-4.5 text-white" />
+            </div>
+            <span className="text-lg font-extrabold text-slate-800 tracking-tight">Wati</span>
+          </div>
 
-        {/* 
-          RecipeGrid: Contenedor Responsivo
-        */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {isLoading ? (
-            Array.from({ length: 6 }).map((_, idx) => (
-              <RecipeCardSkeleton key={`skeleton-${idx}`} />
-            ))
-          ) : (
-            recipes
-              .filter(recipe => recipe.safetyLevel !== 'unsafe')
-              .map((recipe) => (
-                <RecipeCard 
-                  key={recipe.id} 
-                  recipe={recipe} 
-                  onCookNow={() => onSelectRecipe(recipe)} 
-                />
+          {/* Auth Actions */}
+          <div className="flex items-center gap-2">
+            {!user ? (
+              <button
+                onClick={onOpenLogin}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-white transition-all hover:shadow-lg hover:shadow-emerald-500/20 active:scale-[0.97]"
+                style={{ background: 'linear-gradient(135deg, #34d399, #059669)' }}
+              >
+                Crear Cuenta
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={onOpenOnboarding}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                  Alergias
+                </button>
+                <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
+                  <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
+                    <UserCircle className="w-5 h-5 text-emerald-600" />
+                  </div>
+                  <div className="hidden sm:block">
+                    <p className="text-xs font-bold text-slate-700 leading-tight">{user.displayName}</p>
+                    <button onClick={logout} className="text-[10px] text-slate-400 hover:text-red-400 transition-colors">
+                      Cerrar Sesión
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </nav>
+
+      {/* ── Page Content ── */}
+      <div className="py-10 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-10 text-center sm:text-left">
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-800 tracking-tight">
+              {user ? 'Tus Recetas Seguras' : 'Descubre Recetas'}
+            </h1>
+            <p className="mt-3 text-lg text-slate-600 max-w-2xl">
+              {user
+                ? 'Resultados generados a partir de tu perfil de alergias y sensibilidades alimentarias.'
+                : 'Crea una cuenta para personalizar las recetas según tus alergias e intolerancias.'}
+            </p>
+          </div>
+
+          {/* RecipeGrid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            {isLoading ? (
+              Array.from({ length: 6 }).map((_, idx) => (
+                <RecipeCardSkeleton key={`skeleton-${idx}`} />
               ))
-          )}
+            ) : (
+              recipes
+                .filter(recipe => recipe.safetyLevel !== 'unsafe')
+                .map((recipe) => (
+                  <RecipeCard 
+                    key={recipe.id} 
+                    recipe={recipe} 
+                    onCookNow={() => onSelectRecipe(recipe)} 
+                  />
+                ))
+            )}
+          </div>
         </div>
       </div>
     </div>
