@@ -1,4 +1,4 @@
-# Wati: Nutrición Consciente y Seguridad Médica
+# Wati: Nutrición Consciente
 
 Wati es una aplicación web progresiva (PWA) de recetas diseñada para usuarios con necesidades dietéticas específicas (FODMAPs, alergias, sensibilidades). A diferencia de otras aplicaciones de cocina, Wati prioriza la **seguridad médica** y la **privacidad extrema** mediante protocolos de cifrado y análisis de riesgo en tiempo real.
 
