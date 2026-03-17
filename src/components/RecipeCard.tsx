@@ -11,10 +11,10 @@ export function RecipeCard({ recipe, onCookNow }: RecipeCardProps) {
 
   // Configuración visual según el nivel de seguridad
   const safetyColor = recipe.safetyLevel === 'safe' 
-    ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+    ? 'bg-brand-sage/20 text-brand-forest border-brand-sage/40'
     : recipe.safetyLevel === 'review'
-      ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
-      : 'bg-red-100 text-red-800 border-red-200';
+      ? 'bg-brand-peach/40 text-brand-forest border-brand-peach/60'
+      : 'bg-red-50 text-red-900 border-red-200';
 
   const safetyText = recipe.safetyLevel === 'safe'
     ? 'Seguro'
@@ -25,10 +25,10 @@ export function RecipeCard({ recipe, onCookNow }: RecipeCardProps) {
   return (
     <article 
       onClick={() => onCookNow(recipe.id)}
-      className="group relative flex flex-col bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300 hover:-translate-y-1 overflow-hidden border border-slate-100 cursor-pointer"
+      className="group relative flex flex-col bg-white rounded-2xl border border-brand-sage/10 overflow-hidden cursor-pointer hover-lift shadow-sm"
     >
-      {/* Contenedor de Imagen de Alta Calidad */}
-      <div className="relative h-56 w-full overflow-hidden shrink-0 bg-slate-100">
+      {/* Image Container */}
+      <div className="relative h-56 w-full overflow-hidden shrink-0 bg-brand-cream">
         <img 
           src={recipe.imageUrl} 
           alt={recipe.title} 
@@ -57,7 +57,7 @@ export function RecipeCard({ recipe, onCookNow }: RecipeCardProps) {
       {/* Contenido Principal */}
       <div className="flex flex-col flex-1 p-5">
         <div className="flex justify-between items-start mb-3 gap-3">
-          <h3 className="text-xl font-bold text-slate-800 leading-tight line-clamp-2">
+          <h3 className="text-xl font-bold text-brand-forest leading-tight line-clamp-2">
             {recipe.title}
           </h3>
           
@@ -80,7 +80,7 @@ export function RecipeCard({ recipe, onCookNow }: RecipeCardProps) {
         {/* Etiquetas Dinámicas SIBO/Alergias */}
         <div className="flex flex-wrap gap-2 mb-5">
           {recipe.siboAllergiesTags.map(tag => (
-            <span key={tag} className="px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 text-[10px] font-bold tracking-wider uppercase border border-slate-200/60">
+            <span key={tag} className="px-2.5 py-1 rounded-md bg-brand-cream text-brand-teal text-[10px] font-bold tracking-wider uppercase border border-brand-mint/30">
               {tag}
             </span>
           ))}
