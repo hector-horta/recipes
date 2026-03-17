@@ -80,7 +80,7 @@ export function RecipeCard({ recipe, onCookNow }: RecipeCardProps) {
         {/* Etiquetas Dinámicas SIBO/Alergias */}
         <div className="flex flex-wrap gap-2 mb-5">
           {recipe.siboAllergiesTags.map(tag => (
-            <span key={tag} className="px-2.5 py-1 rounded-md bg-brand-cream text-brand-teal text-[10px] font-bold tracking-wider uppercase border border-brand-mint/30">
+            <span key={tag} className="px-2.5 py-1 rounded-md bg-brand-forest/5 text-brand-forest text-[10px] font-bold tracking-wider uppercase border border-brand-forest/10">
               {tag}
             </span>
           ))}

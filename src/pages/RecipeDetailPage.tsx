@@ -17,15 +17,17 @@ export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-brand-forest/90 via-brand-forest/40 to-transparent"></div>
+        {/* Top Scrim for Back Button Visibility */}
+        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/50 to-transparent"></div>
         
         {/* Navigation Header */}
-        <div className="absolute top-0 inset-x-0 p-6 flex justify-between items-center">
+        <div className="absolute top-0 inset-x-0 p-6 flex justify-between items-center z-10">
           <button 
             onClick={onBack}
-            className="p-2 sm:p-3 rounded-2xl bg-white/10 backdrop-blur-md text-white hover:bg-white/20 transition-all border border-white/10 shadow-lg"
+            className="p-2 sm:p-3 rounded-2xl bg-black/20 backdrop-blur-xl text-white hover:bg-black/30 transition-all border border-white/10 shadow-xl"
             aria-label="Volver"
           >
-            <ArrowLeft className="w-6 h-6" />
+            <ArrowLeft className="w-6 h-6 drop-shadow-sm" />
           </button>
         </div>
 
@@ -34,12 +36,12 @@ export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
           <div className="max-w-4xl mx-auto">
             <div className="flex flex-wrap gap-2 mb-4">
               {recipe.siboAllergiesTags.map(tag => (
-                <span key={tag} className="px-3 py-1 rounded-lg bg-brand-mint/20 backdrop-blur-md text-xs font-bold tracking-wider uppercase border border-brand-mint/30 text-brand-mint">
+                <span key={tag} className="px-3 py-1 rounded-lg bg-black/30 backdrop-blur-md text-xs font-bold tracking-wider uppercase border border-white/20 text-white">
                   {tag}
                 </span>
               ))}
             </div>
-            <h1 className="text-3xl sm:text-5xl font-black tracking-tight mb-4 drop-shadow-sm">
+            <h1 className="text-3xl sm:text-5xl font-black tracking-tight mb-4 drop-shadow-md">
               {recipe.title}
             </h1>
             <div className="flex items-center gap-6 text-sm font-medium">
