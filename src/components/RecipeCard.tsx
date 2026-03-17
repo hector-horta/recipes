@@ -11,9 +11,9 @@ export function RecipeCard({ recipe, onCookNow }: RecipeCardProps) {
 
   // Configuración visual según el nivel de seguridad
   const safetyColor = recipe.safetyLevel === 'safe' 
-    ? 'bg-brand-sage/20 text-brand-forest border-brand-sage/40'
+    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
     : recipe.safetyLevel === 'review'
-      ? 'bg-brand-peach/40 text-brand-forest border-brand-peach/60'
+      ? 'bg-amber-50 text-amber-900 border-amber-200'
       : 'bg-red-50 text-red-900 border-red-200';
 
   const safetyText = recipe.safetyLevel === 'safe'
@@ -40,7 +40,7 @@ export function RecipeCard({ recipe, onCookNow }: RecipeCardProps) {
         
         {/* Badge de Seguridad */}
         <div className="absolute top-4 left-4 flex gap-2">
-          <span className={`px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-md bg-opacity-95 shadow-sm border border-opacity-50 tracking-wide uppercase ${safetyColor}`}>
+          <span className={`px-3 py-1.5 rounded-full text-xs font-bold shadow-sm border tracking-wide uppercase ${safetyColor}`}>
             {safetyText}
           </span>
         </div>
@@ -80,7 +80,7 @@ export function RecipeCard({ recipe, onCookNow }: RecipeCardProps) {
         {/* Etiquetas Dinámicas SIBO/Alergias */}
         <div className="flex flex-wrap gap-2 mb-5">
           {recipe.siboAllergiesTags.map(tag => (
-            <span key={tag} className="px-2.5 py-1 rounded-md bg-brand-cream text-brand-teal text-[10px] font-bold tracking-wider uppercase border border-brand-mint/30">
+            <span key={tag} className="px-2.5 py-1 rounded-md bg-brand-forest/5 text-brand-forest text-[10px] font-bold tracking-wider uppercase border border-brand-forest/10">
               {tag}
             </span>
           ))}
