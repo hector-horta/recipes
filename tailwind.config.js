@@ -8,18 +8,19 @@ export default {
     extend: {
       colors: {
         brand: {
-          sage: '#82A082',
-          forest: '#1B4332',
-          mint: '#74C69D',
-          teal: '#40916C',
-          cream: '#FDFCF8',
-          peach: '#FFD8BE',
-          text: '#1B2621',
-          'text-muted': '#57635E',
+          sage: 'var(--brand-sage)',
+          forest: 'var(--brand-forest)',
+          mint: 'var(--brand-mint)',
+          teal: 'var(--brand-teal)',
+          cream: 'var(--brand-cream)',
+          peach: 'var(--brand-peach)',
+          celeste: '#74C6E6',
+          text: 'var(--brand-text)',
+          'text-muted': 'var(--brand-text-muted)',
         },
       },
       backgroundColor: {
-        'organic': '#FDFCF8',
+        'organic': 'var(--brand-cream)',
       }
     },
   },

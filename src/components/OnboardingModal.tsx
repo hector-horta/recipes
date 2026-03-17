@@ -20,11 +20,11 @@ const INTOLERANCE_CATALOG = [
   { id: 'sibo',      label: 'SIBO',               emoji: '🦠', desc: 'Dieta baja en FODMAPs' },
 ];
 
-const SEVERITY_OPTIONS: { value: 'mild' | 'moderate' | 'severe' | 'anaphylactic'; label: string; color: string; bgColor: string }[] = [
-  { value: 'mild',         label: 'Leve',       color: 'text-brand-mint',  bgColor: 'bg-brand-mint/10 border-brand-mint/20' },
-  { value: 'moderate',     label: 'Moderada',   color: 'text-brand-peach', bgColor: 'bg-brand-peach/10 border-brand-peach/20' },
-  { value: 'severe',       label: 'Severa',     color: 'text-orange-400',  bgColor: 'bg-orange-500/10 border-orange-500/20' },
-  { value: 'anaphylactic', label: 'Anafilaxis', color: 'text-red-400',     bgColor: 'bg-red-500/10 border-red-500/20' },
+const SEVERITY_OPTIONS: { value: 'mild' | 'moderate' | 'severe' | 'anaphylactic'; label: string; activeClasses: string }[] = [
+  { value: 'mild',         label: 'Leve',       activeClasses: '!bg-[#74C6E6] !text-white border-[#74C6E6]' },
+  { value: 'moderate',     label: 'Moderada',   activeClasses: '!bg-yellow-400 !text-slate-900 border-yellow-400' },
+  { value: 'severe',       label: 'Severa',     activeClasses: '!bg-orange-500 !text-white border-orange-500' },
+  { value: 'anaphylactic', label: 'Anafilaxis', activeClasses: '!bg-red-600 !text-white border-red-600' },
 ];
 
 interface OnboardingModalProps {
@@ -154,12 +154,12 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
                 const item = INTOLERANCE_CATALOG.find(c => c.id === id)!;
                 const currentSeverity = severities[id] || 'moderate';
                 return (
-                  <div key={id} className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                  <div key={id} className="rounded-2xl border border-brand-mint bg-brand-mint/20 p-5 shadow-lg shadow-brand-forest/40">
                     <div className="flex items-center gap-3 mb-4">
                       <span className="text-2xl">{item.emoji}</span>
                       <div>
                         <p className="text-white font-black text-sm">{item.label}</p>
-                        <p className="text-brand-cream text-[10px] font-bold opacity-70">{item.desc}</p>
+                        <p className="text-white/60 text-[10px] font-bold">{item.desc}</p>
                       </div>
                     </div>
                     <div className="grid grid-cols-4 gap-2">
@@ -171,8 +171,8 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
                           className={`
                             py-2.5 px-2 rounded-xl text-[10px] font-black border transition-all duration-200 uppercase tracking-tighter
                             ${currentSeverity === opt.value
-                              ? `${opt.bgColor} ${opt.color} border-current`
-                              : 'bg-white/5 border-white/10 text-brand-cream/40 hover:bg-white/10'}
+                              ? `${opt.activeClasses} shadow-lg scale-105`
+                              : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10'}
                           `}
                         >
                           {opt.label}
@@ -192,7 +192,7 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
             <button
               type="button"
               onClick={() => setStep('select')}
-              className="flex-1 py-3.5 rounded-xl font-bold text-sm text-brand-cream/60 bg-white/5 border border-white/5 hover:bg-white/10 transition-all"
+              className="flex-1 py-3.5 rounded-xl font-bold text-sm text-white/60 bg-white/5 border border-white/5 hover:bg-white/10 transition-all"
             >
               Atrás
             </button>
