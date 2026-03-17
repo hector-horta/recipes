@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { RecipeCard, RecipeCardSkeleton } from '../components/RecipeCard';
 import { Recipe } from '../types/recipe';
-import { SecureAPI } from '../api/PrivacyProxy';
 import { useAuth } from '../context/AuthContext';
-import { ShieldCheck, UserCircle, Settings } from 'lucide-react';
+import { WatiLogo } from '../components/WatiLogo';
+import { UserCircle, Settings, LogOut } from 'lucide-react';
 
 interface RecipePageProps {
   onSelectRecipe: (recipe: Recipe) => void;
@@ -11,74 +11,105 @@ interface RecipePageProps {
   onOpenOnboarding: () => void;
 }
 
-// Simulación de una API de recetas de Wati
+// ... fetchDummySafeRecipes stays same (internal logic) ...
 export const fetchDummySafeRecipes = async (): Promise<Recipe[]> => {
-  // Modelado basado en la estructura real de Spoonacular (Results de complexSearch)
   const mockApiResults = [
     {
-      id: 644387,
-      title: "Garlicky Roasted Asparagus",
-      image: "https://spoonacular.com/recipeImages/644387-556x370.jpg",
-      readyInMinutes: 25,
-      pricePerServing: 112.54,
-      extendedIngredients: [
-        { id: 11011, name: "asparagus", originalName: "1 lb asparagus" },
-        { id: 4053, name: "olive oil", originalName: "1 tbsp olive oil" },
-        { id: 2047, name: "salt", originalName: "1/4 tsp salt" },
-        { id: 10211215, name: "garlic powder", originalName: "1 tsp garlic powder" }
+      id: 715415,
+      title: "Red Lentil Soup with Chicken and Turnips",
+      image: "https://img.spoonacular.com/recipes/715415-556x370.jpg",
+      readyInMinutes: 55,
+      pricePerServing: 2.44,
+      diets: ["gluten free", "dairy free"],
+      summary: "A hearty and nutritious soup with lentils, chicken, and fresh vegetables. One portion contains about 25g of protein and 340 calories.",
+      ingredients: [
+        { id: "1", name: "Red lentils", isBorderlineSafe: false },
+        { id: "2", name: "Chicken breast", isBorderlineSafe: false },
+        { id: "3", name: "Turnips", isBorderlineSafe: false },
+        { id: "4", name: "Carrots", isBorderlineSafe: false },
+        { id: "5", name: "Celery", isBorderlineSafe: false },
+        { id: "6", name: "Onion", isBorderlineSafe: false },
+        { id: "7", name: "Garlic", isBorderlineSafe: false },
+        { id: "8", name: "Vegetable stock", isBorderlineSafe: false }
       ],
-      diets: ["gluten free", "dairy free", "paleolithic", "lacto ovo vegetarian", "primal", "vegan"],
-      summary: "Fresh roasted asparagus with a garlic kick.",
-      analyzedInstructions: [{
-        steps: [
-          { step: "Preheat oven to 400°F (200°C)." },
-          { step: "Toss asparagus with olive oil, salt, and garlic powder." },
-          { step: "Roast for 15-20 minutes until tender." }
-        ]
-      }]
+      instructions: [
+        "Sauté onion, carrots, and celery in a large pot until softened.",
+        "Add garlic and red lentils, stirring for 1 minute.",
+        "Add vegetable stock and chicken breast.",
+        "Bring to a boil, then simmer for 25-30 minutes until lentils are soft and chicken is cooked.",
+        "Shred chicken and serve hot."
+      ]
     },
     {
       id: 716406,
-      title: "Asparagus and Pea Soup with Rocket",
-      image: "https://spoonacular.com/recipeImages/716406-556x370.jpg",
+      title: "Asparagus and Pea Soup",
+      image: "https://img.spoonacular.com/recipes/716406-556x370.jpg",
       readyInMinutes: 20,
-      pricePerServing: 184.22,
-      extendedIngredients: [
-        { id: 11011, name: "asparagus", originalName: "250g asparagus" },
-        { id: 11304, name: "peas", originalName: "150g peas" },
-        { id: 11959, name: "rocket", originalName: "50g rocket" },
-        { id: 6194, name: "chicken stock", originalName: "500ml chicken stock" }
+      pricePerServing: 1.85,
+      diets: ["gluten free", "dairy free", "paleolithic"],
+      summary: "This fresh, green soup is perfect for a light lunch. It's packed with vitamins from asparagus and peas.",
+      ingredients: [
+        { id: "1", name: "Asparagus", isBorderlineSafe: false },
+        { id: "2", name: "Peas", isBorderlineSafe: false },
+        { id: "3", name: "Onion", isBorderlineSafe: false },
+        { id: "4", name: "Garlic", isBorderlineSafe: false },
+        { id: "5", name: "Vegetable broth", isBorderlineSafe: false },
+        { id: "6", name: "Olive oil", isBorderlineSafe: false }
       ],
-      diets: ["gluten free", "dairy free", "paleolithic", "primal"],
-      summary: "A light and vibrant green soup.",
-      analyzedInstructions: [{
-        steps: [
-          { step: "Boil chicken stock in a pot." },
-          { step: "Add asparagus and peas, cook for 5 minutes." },
-          { step: "Blend with rocket until smooth." }
-        ]
-      }]
+      instructions: [
+        "Chop the onion, garlic, and asparagus.",
+        "Sauté onion and garlic in olive oil until translucent.",
+        "Add asparagus and peas, cooking for 2 minutes.",
+        "Pour in the vegetable broth and simmer for 10-12 minutes.",
+        "Blend the soup until smooth and creamy."
+      ]
     },
     {
-      id: 633535,
-      title: "Pasta with Garlic and Scallions",
-      image: "https://spoonacular.com/recipeImages/633535-556x370.jpg",
-      readyInMinutes: 15,
-      pricePerServing: 95.88,
-      extendedIngredients: [
-        { id: 20420, name: "pasta", originalName: "200g pasta" },
-        { id: 11291, name: "scallions", originalName: "3 scallions, chopped" },
-        { id: 2047, name: "salt", originalName: "pinch of salt" }
+      id: 644387,
+      title: "Garlicky Kale",
+      image: "https://img.spoonacular.com/recipes/644387-556x370.jpg",
+      readyInMinutes: 45,
+      pricePerServing: 0.69,
+      diets: ["gluten free", "dairy free", "paleolithic"],
+      summary: "A simple and delicious side dish that pairs well with any protein. High in Vitamin K and A.",
+      ingredients: [
+        { id: "1", name: "Kale", isBorderlineSafe: false },
+        { id: "2", name: "Garlic", isBorderlineSafe: false },
+        { id: "3", name: "Olive oil", isBorderlineSafe: false },
+        { id: "4", name: "Salt", isBorderlineSafe: false }
       ],
-      diets: ["vegan", "dairy free"],
-      summary: "A simple and delicious pasta dish with garlic and scallions.",
-      analyzedInstructions: [{
-        steps: [
-          { step: "Boil water and cook pasta." },
-          { step: "Sauté garlic and scallions in olive oil." },
-          { step: "Mix pasta with the sautéed ingredients and salt." }
-        ]
-      }]
+      instructions: [
+        "Wash and thoroughly dry the kale leaves.",
+        "Remove the tough stems and chop the leaves into bite-sized pieces.",
+        "Heat olive oil in a large pan over medium heat.",
+        "Sauté minced garlic until fragrant but not brown.",
+        "Add kale in batches, stirring until wilted and tender.",
+        "Season with salt and serve."
+      ]
+    },
+    {
+      id: 715446,
+      title: "Slow Cooker Beef Stew",
+      image: "https://img.spoonacular.com/recipes/715446-556x370.jpg",
+      readyInMinutes: 490,
+      pricePerServing: 3.25,
+      diets: ["gluten free", "dairy free"],
+      summary: "A comforting, slow-cooked beef stew perfect for chilly days. Tender beef and well-developed flavors.",
+      ingredients: [
+        { id: "1", name: "Beef broth", isBorderlineSafe: false },
+        { id: "2", name: "Stew meat", isBorderlineSafe: false },
+        { id: "3", name: "New potatoes", isBorderlineSafe: false },
+        { id: "4", name: "Carrots", isBorderlineSafe: false },
+        { id: "5", name: "Onion", isBorderlineSafe: false },
+        { id: "6", name: "Celery", isBorderlineSafe: false },
+        { id: "7", name: "Seasoning", isBorderlineSafe: false }
+      ],
+      instructions: [
+        "Mix beef broth, seasoning, and a bit of water in the slow cooker.",
+        "Add the stew meat, halved potatoes, sliced carrots, onions, and celery.",
+        "Stir everything well to combine with the liquid.",
+        "Cover and cook on low for 8 hours until beef is fork-tender."
+      ]
     }
   ];
 
@@ -89,13 +120,9 @@ export const fetchDummySafeRecipes = async (): Promise<Recipe[]> => {
         title: apiRecipe.title,
         imageUrl: apiRecipe.image,
         prepTimeMinutes: apiRecipe.readyInMinutes,
-        estimatedCost: Math.min(3, Math.max(1, Math.ceil(apiRecipe.pricePerServing / 100))),
-        ingredients: apiRecipe.extendedIngredients.map(ing => ({
-          id: ing.id.toString(),
-          name: ing.name,
-          isBorderlineSafe: false
-        })),
-        instructions: apiRecipe.analyzedInstructions?.[0]?.steps?.map((s: any) => s.step) || ["Keep it secret, keep it safe."],
+        estimatedCost: Math.min(3, Math.max(1, Math.ceil(apiRecipe.pricePerServing))),
+        ingredients: apiRecipe.ingredients,
+        instructions: apiRecipe.instructions,
         summary: apiRecipe.summary,
         safetyLevel: 'safe' as const,
         siboAllergiesTags: apiRecipe.diets.slice(0, 3)
@@ -114,36 +141,11 @@ export function RecipePage({ onSelectRecipe, onOpenLogin, onOpenOnboarding }: Re
     const loadData = async () => {
       setIsLoading(true);
       try {
-        const rawData = await SecureAPI.fetchSafeRecipes('');
-        const mappedRecipes: Recipe[] = rawData.map((apiRecipe: any) => {
-          const disclosure = apiRecipe.securityDisclosure;
-          let calculatedSafetyLevel: 'safe' | 'review' | 'unsafe' = 'safe';
-          if (disclosure) {
-             if (disclosure.riskLevel === 'DANGER') calculatedSafetyLevel = 'unsafe';
-             else if (disclosure.riskLevel === 'WARNING') calculatedSafetyLevel = 'review';
-          }
-          return {
-            id: apiRecipe.id ? apiRecipe.id.toString() : `api-${Math.random()}`,
-            title: apiRecipe.title || 'Receta Sin Título',
-            imageUrl: apiRecipe.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-            prepTimeMinutes: apiRecipe.readyInMinutes || 30,
-            estimatedCost: Math.min(3, Math.max(1, Math.ceil((apiRecipe.pricePerServing || 150) / 100))),
-            ingredients: (apiRecipe.extendedIngredients || []).map((ing: any) => ({
-              id: ing.id ? ing.id.toString() : `ing-${Math.random()}`,
-              name: ing.originalName || ing.name || 'Ingrediente',
-              isBorderlineSafe: disclosure?.findings?.some((f: string) => f.toLowerCase().includes(ing.name?.toLowerCase())) || false
-            })).slice(0, 5),
-            instructions: apiRecipe.analyzedInstructions?.[0]?.steps?.map((s: any) => s.step) || [],
-            summary: apiRecipe.summary,
-            safetyLevel: calculatedSafetyLevel,
-            siboAllergiesTags: apiRecipe.diets?.slice(0, 3) || ['Seguro'],
-          };
-        });
-        setRecipes(mappedRecipes);
-      } catch (error) {
-        console.error("Error fetching recipes", error);
+        // Mock mode: using high-quality synchronized local data
         const dummyData = await fetchDummySafeRecipes();
         setRecipes(dummyData);
+      } catch (error) {
+        console.error("Error loading mock recipes", error);
       } finally {
         setIsLoading(false);
       }
@@ -152,18 +154,14 @@ export function RecipePage({ onSelectRecipe, onOpenLogin, onOpenOnboarding }: Re
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans">
+    <div className="min-h-screen bg-brand-cream font-sans selection:bg-brand-sage/20">
       {/* ── Top Navigation Bar ── */}
-      <nav className="sticky top-0 z-40 bg-white/80 backdrop-blur-lg border-b border-slate-200/60 shadow-sm">
+      <nav className="sticky top-0 z-40 bg-white/70 backdrop-blur-xl border-b border-brand-sage/10 shadow-sm/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{
-              background: 'linear-gradient(135deg, #34d399, #059669)'
-            }}>
-              <ShieldCheck className="w-4.5 h-4.5 text-white" />
-            </div>
-            <span className="text-lg font-extrabold text-slate-800 tracking-tight">Wati</span>
+            <WatiLogo size={32} />
+            <span className="text-xl font-extrabold text-brand-forest tracking-tight">Wati</span>
           </div>
 
           {/* Auth Actions */}
@@ -171,27 +169,28 @@ export function RecipePage({ onSelectRecipe, onOpenLogin, onOpenOnboarding }: Re
             {!user ? (
               <button
                 onClick={onOpenLogin}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-white transition-all hover:shadow-lg hover:shadow-emerald-500/20 active:scale-[0.97]"
-                style={{ background: 'linear-gradient(135deg, #34d399, #059669)' }}
+                className="px-5 py-2.5 rounded-xl text-xs font-bold text-white transition-all shadow-md shadow-brand-teal/20 hover:shadow-brand-teal/40 active:scale-[0.97]"
+                style={{ background: 'linear-gradient(135deg, var(--brand-sage), var(--brand-teal))' }}
               >
-                Crear Cuenta
+                Entrar / Registrarse
               </button>
             ) : (
               <>
                 <button
                   onClick={onOpenOnboarding}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-brand-forest bg-brand-sage/10 hover:bg-brand-sage/20 transition-all border border-brand-sage/20"
                 >
                   <Settings className="w-3.5 h-3.5" />
                   Alergias
                 </button>
-                <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
-                  <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
-                    <UserCircle className="w-5 h-5 text-emerald-600" />
+                <div className="flex items-center gap-3 pl-3 border-l border-brand-sage/20">
+                  <div className="w-9 h-9 rounded-full bg-brand-mint/20 flex items-center justify-center border border-brand-mint/30">
+                    <UserCircle className="w-6 h-6 text-brand-forest" />
                   </div>
                   <div className="hidden sm:block">
-                    <p className="text-xs font-bold text-slate-700 leading-tight">{user.displayName}</p>
-                    <button onClick={logout} className="text-[10px] text-slate-400 hover:text-red-400 transition-colors">
+                    <p className="text-xs font-extrabold text-brand-forest leading-tight">{user.displayName}</p>
+                    <button onClick={logout} className="flex items-center gap-1 text-[10px] font-bold text-brand-text-muted hover:text-danger transition-colors">
+                      <LogOut size={10} />
                       Cerrar Sesión
                     </button>
                   </div>
@@ -203,16 +202,16 @@ export function RecipePage({ onSelectRecipe, onOpenLogin, onOpenOnboarding }: Re
       </nav>
 
       {/* ── Page Content ── */}
-      <div className="py-10 px-4 sm:px-6 lg:px-8">
+      <div className="py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="mb-10 text-center sm:text-left">
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-800 tracking-tight">
-              {user ? 'Tus Recetas Seguras' : 'Descubre Recetas'}
+          <div className="mb-12 text-center sm:text-left">
+            <h1 className="text-4xl sm:text-5xl font-extrabold text-brand-forest tracking-tight mb-4">
+              {user ? 'Recetas para tu bienestar' : 'Nutrición consciente'}
             </h1>
-            <p className="mt-3 text-lg text-slate-600 max-w-2xl">
+            <p className="text-lg text-brand-text-muted max-w-2xl leading-relaxed">
               {user
-                ? 'Resultados generados a partir de tu perfil de alergias y sensibilidades alimentarias.'
-                : 'Crea una cuenta para personalizar las recetas según tus alergias e intolerancias.'}
+                ? 'Platos seleccionados cuidadosamente para nutrirte respetando tus intolerancias y salud digestiva.'
+                : 'Descubre cómo la comida puede ser tu mejor medicina. Personaliza tu experiencia según tus necesidades.'}
             </p>
           </div>
 

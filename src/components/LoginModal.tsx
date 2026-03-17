@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { X, Mail, Lock, User, ArrowRight, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { X, Mail, Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { WatiLogo } from './WatiLogo';
 
 interface LoginModalProps {
   onClose: () => void;
@@ -46,32 +47,26 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
 
       {/* Modal */}
       <div
-        className="relative z-10 w-full max-w-md rounded-3xl p-7 border border-white/10 shadow-2xl animate-in"
-        style={{
-          background: 'linear-gradient(145deg, rgba(30,41,59,0.97), rgba(15,23,42,0.98))',
-          backdropFilter: 'blur(24px)',
-        }}
+        className="relative z-10 w-full max-w-md rounded-3xl p-7 border border-white/5 shadow-2xl animate-in glass-organic"
         onClick={e => e.stopPropagation()}
       >
         {/* Close */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-brand-cream/60 hover:text-white transition-colors"
         >
           <X className="w-4 h-4" />
         </button>
 
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl mb-3" style={{
-            background: 'linear-gradient(135deg, #34d399, #059669)'
-          }}>
-            <ShieldCheck className="w-6 h-6 text-white" />
+          <div className="inline-flex items-center justify-center mb-3">
+            <WatiLogo size={48} />
           </div>
-          <h2 className="text-xl font-extrabold text-white">
+          <h2 className="text-xl font-extrabold text-white tracking-tight">
             {isRegister ? 'Crear Cuenta' : 'Iniciar Sesión'}
           </h2>
-          <p className="text-slate-500 text-xs mt-1">Personaliza tus recetas según tus alergias</p>
+          <p className="text-brand-cream/80 text-xs mt-1 font-medium">Tu bienestar empieza con lo que comes</p>
         </div>
 
         {/* Error */}
@@ -109,19 +104,19 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
           </div>
 
           <div className="relative group">
-            <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-emerald-400 transition-colors" />
+            <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-cream/40 group-focus-within:text-brand-mint transition-colors" />
             <input
               type={showPassword ? 'text' : 'password'}
               placeholder="Contraseña"
               value={password}
               onChange={e => setPassword(e.target.value)}
               required
-              className="w-full pl-11 pr-11 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all"
+              className="w-full pl-11 pr-11 py-3 rounded-xl bg-white/5 border border-white/20 text-white placeholder-brand-cream/40 text-sm focus:outline-none focus:ring-2 focus:ring-brand-mint/50 focus:border-brand-mint/50 transition-all"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-brand-cream/40 hover:text-white transition-colors"
             >
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
@@ -130,14 +125,14 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full py-3 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all duration-300 disabled:opacity-50 hover:shadow-lg hover:shadow-emerald-500/20 active:scale-[0.98]"
-            style={{ background: 'linear-gradient(135deg, #34d399, #059669)' }}
+            className="w-full py-3.5 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all duration-300 disabled:opacity-50 hover:shadow-lg hover:shadow-brand-teal/20 active:scale-[0.98]"
+            style={{ background: 'linear-gradient(135deg, var(--brand-sage), var(--brand-teal))' }}
           >
             {isSubmitting ? (
               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             ) : (
               <>
-                {isRegister ? 'Crear Cuenta' : 'Entrar'}
+                {isRegister ? 'Empieza tu camino' : 'Entrar'}
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
@@ -145,12 +140,12 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
         </form>
 
         {/* Toggle */}
-        <p className="text-center text-slate-500 text-xs mt-5">
+        <p className="text-center text-brand-cream/70 text-xs mt-5 font-medium">
           {isRegister ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?'}{' '}
           <button
             type="button"
             onClick={() => { setIsRegister(!isRegister); setError(''); }}
-            className="text-emerald-400 font-semibold hover:text-emerald-300 transition-colors"
+            className="text-brand-mint font-bold hover:text-white transition-colors"
           >
             {isRegister ? 'Inicia Sesión' : 'Crear Cuenta'}
           </button>

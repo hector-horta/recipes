@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { X, ShieldCheck, ChevronRight, AlertTriangle, Check } from 'lucide-react';
+import { WatiLogo } from './WatiLogo';
+import { X, ChevronRight, Check } from 'lucide-react';
 
 const INTOLERANCE_CATALOG = [
   { id: 'dairy',     label: 'Lácteos',            emoji: '🥛', desc: 'Leche, queso, mantequilla' },
@@ -20,10 +21,10 @@ const INTOLERANCE_CATALOG = [
 ];
 
 const SEVERITY_OPTIONS: { value: 'mild' | 'moderate' | 'severe' | 'anaphylactic'; label: string; color: string; bgColor: string }[] = [
-  { value: 'mild',         label: 'Leve',       color: 'text-sky-400',    bgColor: 'bg-sky-500/15 border-sky-500/30' },
-  { value: 'moderate',     label: 'Moderada',   color: 'text-amber-400',  bgColor: 'bg-amber-500/15 border-amber-500/30' },
-  { value: 'severe',       label: 'Severa',     color: 'text-orange-400', bgColor: 'bg-orange-500/15 border-orange-500/30' },
-  { value: 'anaphylactic', label: 'Anafilaxis', color: 'text-red-400',    bgColor: 'bg-red-500/15 border-red-500/30' },
+  { value: 'mild',         label: 'Leve',       color: 'text-brand-mint',  bgColor: 'bg-brand-mint/10 border-brand-mint/20' },
+  { value: 'moderate',     label: 'Moderada',   color: 'text-brand-peach', bgColor: 'bg-brand-peach/10 border-brand-peach/20' },
+  { value: 'severe',       label: 'Severa',     color: 'text-orange-400',  bgColor: 'bg-orange-500/10 border-orange-500/20' },
+  { value: 'anaphylactic', label: 'Anafilaxis', color: 'text-red-400',     bgColor: 'bg-red-500/10 border-red-500/20' },
 ];
 
 interface OnboardingModalProps {
@@ -82,46 +83,40 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-brand-forest/60 backdrop-blur-sm" />
 
       {/* Modal */}
       <div
-        className="relative z-10 w-full max-w-2xl max-h-[85vh] rounded-3xl border border-white/10 shadow-2xl flex flex-col"
-        style={{
-          background: 'linear-gradient(145deg, rgba(30,41,59,0.97), rgba(15,23,42,0.98))',
-          backdropFilter: 'blur(24px)',
-        }}
+        className="relative z-10 w-full max-w-2xl max-h-[85vh] rounded-3xl border border-white/5 shadow-2xl flex flex-col glass-organic"
         onClick={e => e.stopPropagation()}
       >
         {/* Close */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+          className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/40 hover:text-white transition-colors"
         >
           <X className="w-4 h-4" />
         </button>
 
         {/* Header */}
-        <div className="pt-7 pb-4 px-7 text-center shrink-0">
-          <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl mb-2" style={{
-            background: 'linear-gradient(135deg, #34d399, #059669)'
-          }}>
-            <ShieldCheck className="w-5 h-5 text-white" />
+        <div className="pt-8 pb-4 px-8 text-center shrink-0">
+          <div className="inline-flex items-center justify-center mb-2">
+            <WatiLogo size={48} />
           </div>
-          <h2 className="text-xl font-extrabold text-white">
-            {step === 'select' ? '¿Qué alimentos debes evitar?' : 'Nivel de severidad'}
+          <h2 className="text-2xl font-black text-white tracking-tight">
+            {step === 'select' ? '¿Qué debemos cuidar?' : 'Nivel de sensibilidad'}
           </h2>
-          <p className="text-slate-500 text-xs mt-1">
+          <p className="text-white/70 text-xs mt-1 font-medium italic">
             {step === 'select'
-              ? 'Selecciona tus intolerancias. Puedes cambiarlas más tarde.'
-              : 'Ajusta la severidad para personalizar alertas.'}
+              ? 'Selecciona tus intolerancias para que Wati cuide de ti.'
+              : 'Ajusta la sensibilidad para personalizar tus recetas.'}
           </p>
         </div>
 
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto px-7 pb-4">
+        <div className="flex-1 overflow-y-auto px-8 pb-4">
           {step === 'select' ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {INTOLERANCE_CATALOG.map(item => {
                 const isSelected = selectedIds.includes(item.id);
                 return (
@@ -130,54 +125,56 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
                     type="button"
                     onClick={() => toggleIntolerance(item.id)}
                     className={`
-                      relative flex flex-col items-center text-center p-4 rounded-2xl border transition-all duration-300
+                      relative flex flex-col items-center text-center p-5 rounded-2xl border transition-all duration-300
                       ${isSelected
-                        ? 'bg-emerald-500/15 border-emerald-500/40 shadow-lg shadow-emerald-900/20'
+                        ? 'bg-brand-mint/20 border-brand-mint shadow-lg shadow-brand-forest/40'
                         : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'}
                     `}
                   >
-                    {isSelected && (
-                      <div className="absolute top-2 right-2 w-4.5 h-4.5 rounded-full bg-emerald-500 flex items-center justify-center">
-                        <Check className="w-2.5 h-2.5 text-white" />
-                      </div>
-                    )}
-                    <span className="text-2xl mb-1.5">{item.emoji}</span>
-                    <span className={`text-xs font-bold ${isSelected ? 'text-emerald-300' : 'text-white'}`}>
+                    <div className={`
+                      absolute top-3 right-3 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300
+                      ${isSelected 
+                        ? 'bg-brand-mint border-brand-mint scale-110 shadow-md shadow-brand-mint/20' 
+                        : 'bg-transparent border-white/20 scale-100'}
+                    `}>
+                      <Check className={`w-3.5 h-3.5 transition-colors ${isSelected ? 'text-white stroke-[4]' : 'text-transparent'}`} />
+                    </div>
+                    <span className="text-3xl mb-2">{item.emoji}</span>
+                    <span className="text-xs font-black tracking-wide text-white">
                       {item.label}
                     </span>
-                    <span className="text-[9px] text-slate-500 mt-0.5 leading-tight">{item.desc}</span>
+                    <span className="text-[10px] text-white/60 mt-1 font-bold leading-tight">{item.desc}</span>
                   </button>
                 );
               })}
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {selectedIds.map(id => {
                 const item = INTOLERANCE_CATALOG.find(c => c.id === id)!;
                 const currentSeverity = severities[id] || 'moderate';
                 return (
-                  <div key={id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                    <div className="flex items-center gap-2.5 mb-3">
-                      <span className="text-xl">{item.emoji}</span>
+                  <div key={id} className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                    <div className="flex items-center gap-3 mb-4">
+                      <span className="text-2xl">{item.emoji}</span>
                       <div>
-                        <p className="text-white font-bold text-sm">{item.label}</p>
-                        <p className="text-slate-500 text-[10px]">{item.desc}</p>
+                        <p className="text-white font-black text-sm">{item.label}</p>
+                        <p className="text-brand-cream text-[10px] font-bold opacity-70">{item.desc}</p>
                       </div>
                     </div>
-                    <div className="grid grid-cols-4 gap-1.5">
+                    <div className="grid grid-cols-4 gap-2">
                       {SEVERITY_OPTIONS.map(opt => (
                         <button
                           key={opt.value}
                           type="button"
                           onClick={() => setSeverities(prev => ({ ...prev, [id]: opt.value }))}
                           className={`
-                            py-2 px-2 rounded-xl text-[10px] font-bold border transition-all duration-200
+                            py-2.5 px-2 rounded-xl text-[10px] font-black border transition-all duration-200 uppercase tracking-tighter
                             ${currentSeverity === opt.value
-                              ? `${opt.bgColor} ${opt.color}`
-                              : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}
+                              ? `${opt.bgColor} ${opt.color} border-current`
+                              : 'bg-white/5 border-white/10 text-brand-cream/40 hover:bg-white/10'}
                           `}
                         >
-                          {opt.value === 'anaphylactic' && <AlertTriangle className="w-2.5 h-2.5 inline mr-0.5" />}
                           {opt.label}
                         </button>
                       ))}
@@ -190,12 +187,12 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
         </div>
 
         {/* Footer */}
-        <div className="px-7 pb-6 pt-3 flex gap-2.5 shrink-0 border-t border-white/5">
+        <div className="px-8 pb-8 pt-4 flex gap-3 shrink-0 border-t border-white/5">
           {step === 'severity' && (
             <button
               type="button"
               onClick={() => setStep('select')}
-              className="flex-1 py-3 rounded-xl font-bold text-sm text-slate-300 bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
+              className="flex-1 py-3.5 rounded-xl font-bold text-sm text-brand-cream/60 bg-white/5 border border-white/5 hover:bg-white/10 transition-all"
             >
               Atrás
             </button>
@@ -204,8 +201,8 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
             type="button"
             onClick={step === 'select' ? handleNext : handleSave}
             disabled={isSaving}
-            className="flex-1 py-3 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all duration-300 disabled:opacity-50 hover:shadow-lg hover:shadow-emerald-500/20 active:scale-[0.98]"
-            style={{ background: 'linear-gradient(135deg, #34d399, #059669)' }}
+            className="flex-1 py-3.5 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all duration-300 disabled:opacity-50 hover:shadow-lg hover:shadow-brand-teal/20 active:scale-[0.98]"
+            style={{ background: 'linear-gradient(135deg, var(--brand-sage), var(--brand-teal))' }}
           >
             {isSaving ? (
               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
