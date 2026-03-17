@@ -1,24 +1,18 @@
 import { MedicalProfile } from '../security/SecureVault';
+import { MedicalRegistry, DEFAULT_MEDICAL_TRIGGERS } from './MedicalRegistry';
 
-// Diccionario de "Threat Signatures" (Firmas de Riesgo) — Spoonacular Intolerances + SIBO
-const HIDDEN_TRIGGERS_DB: Record<string, string[]> = {
-    'dairy':     ['casein', 'whey', 'lactose', 'ghee', 'lactalbumin', 'nougat', 'butter fat', 'cream', 'cheese', 'milk'],
-    'egg':       ['albumin', 'lysozyme', 'mayonnaise', 'meringue', 'ovalbumin', 'surimi'],
-    'gluten':    ['maltodextrin', 'modified food starch', 'hydrolyzed wheat protein', 'seitan', 'triticale', 'spelt', 'kamut', 'semolina', 'durum'],
-    'grain':     ['barley', 'buckwheat', 'bulgur', 'couscous', 'farro', 'millet', 'oats', 'quinoa', 'rice', 'rye', 'sorghum'],
-    'peanut':    ['arachis oil', 'groundnut', 'beer nuts', 'monkey nuts', 'peanut butter', 'peanut flour'],
-    'seafood':   ['anchovy', 'cod', 'fish sauce', 'herring', 'mackerel', 'salmon', 'sardine', 'tilapia', 'trout', 'tuna'],
-    'sesame':    ['benne seeds', 'gingelly oil', 'halvah', 'hummus', 'sesame oil', 'tahini'],
-    'shellfish': ['crab', 'crayfish', 'lobster', 'prawn', 'shrimp', 'scallop', 'clam', 'mussel', 'oyster', 'squid'],
-    'soy':       ['edamame', 'miso', 'natto', 'soy sauce', 'soy lecithin', 'soy protein', 'tempeh', 'tofu', 'soya'],
-    'sulfite':   ['sulfur dioxide', 'sodium bisulfite', 'sodium metabisulfite', 'potassium bisulfite', 'dried fruit', 'wine'],
-    'tree_nut':  ['almond', 'brazil nut', 'cashew', 'chestnut', 'hazelnut', 'macadamia', 'marzipan', 'pecan', 'pine nut', 'pistachio', 'walnut', 'praline'],
-    'wheat':     ['bread flour', 'bulgur', 'couscous', 'durum', 'einkorn', 'emmer', 'flour', 'semolina', 'spelt'],
-    'corn':      ['high fructose corn syrup', 'dextrose', 'sorbitol', 'xanthan gum', 'maize', 'cornstarch', 'corn flour'],
-    'sibo':      ['garlic', 'garlic powder', 'onion', 'onion powder', 'inulin', 'chicory root', 'agave', 'honey', 'xylitol', 'apple', 'pear', 'watermelon', 'mango', 'asparagus', 'artichoke', 'cauliflower', 'mushroom', 'wheat', 'rye', 'milk', 'yogurt', 'ice cream']
-};
+// Variable de estado para disparadores médicos (se inicializa con valores por defecto)
+let ACTIVE_TRIGGERS: Record<string, string[]> = DEFAULT_MEDICAL_TRIGGERS;
 
 export const SecurityScrubber = {
+    /** 
+     * Inicializa el escáner con los datos más recientes del registro médico.
+     */
+    async initialize() {
+        ACTIVE_TRIGGERS = await MedicalRegistry.getLatestTriggers();
+        console.log('[SecurityScrubber] Engine initialized with latest medical signatures.');
+    },
+
     analyze(recipe: any, profile: MedicalProfile) {
         const findings: string[] = [];
 
@@ -26,7 +20,7 @@ export const SecurityScrubber = {
         const rawIngredients = [
             ...(recipe.extendedIngredients?.map((i: any) => i.name) || []),
             ...(recipe.analyzedInstructions?.flatMap((inst: any) =>
-                inst.steps.flatMap((step: any) => step.ingredients.map((i: any) => i.name))
+                inst.steps?.flatMap((step: any) => step.ingredients?.map((i: any) => i.name) || []) || []
             ) || [])
         ].map(name => name.toLowerCase());
 
@@ -38,9 +32,9 @@ export const SecurityScrubber = {
 
         let maxRiskLevel: 'SAFE' | 'WARNING' | 'DANGER' = 'SAFE';
 
-        // Capa 2: Evaluación profunda de diccionarios (Hidden Triggers)
+        // Capa 2: Evaluación profunda usando las firmas dinámicas (ACTIVE_TRIGGERS)
         for (const threat of activeThreats) {
-            const signatures = [threat, ...(HIDDEN_TRIGGERS_DB[threat] || [])];
+            const signatures = [threat, ...(ACTIVE_TRIGGERS[threat] || [])];
 
             for (const signature of signatures) {
                 if (rawIngredients.some(ing => ing.includes(signature))) {

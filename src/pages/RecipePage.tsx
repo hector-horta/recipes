@@ -3,7 +3,8 @@ import { RecipeCard, RecipeCardSkeleton } from '../components/RecipeCard';
 import { Recipe } from '../types/recipe';
 import { useAuth } from '../context/AuthContext';
 import { WatiLogo } from '../components/WatiLogo';
-import { UserCircle, Settings, LogOut } from 'lucide-react';
+import { UserCircle, Settings, LogOut, RefreshCw, Search, FlaskConical, Radio } from 'lucide-react';
+import { SecureAPI } from '../api/PrivacyProxy';
 
 interface RecipePageProps {
   onSelectRecipe: (recipe: Recipe) => void;
@@ -12,144 +13,51 @@ interface RecipePageProps {
 }
 
 // ... fetchDummySafeRecipes stays same (internal logic) ...
-export const fetchDummySafeRecipes = async (): Promise<Recipe[]> => {
-  const mockApiResults = [
-    {
-      id: 715415,
-      title: "Red Lentil Soup with Chicken and Turnips",
-      image: "https://img.spoonacular.com/recipes/715415-556x370.jpg",
-      readyInMinutes: 55,
-      pricePerServing: 2.44,
-      diets: ["gluten free", "dairy free"],
-      summary: "A hearty and nutritious soup with lentils, chicken, and fresh vegetables. One portion contains about 25g of protein and 340 calories.",
-      ingredients: [
-        { id: "1", name: "Red lentils", isBorderlineSafe: false },
-        { id: "2", name: "Chicken breast", isBorderlineSafe: false },
-        { id: "3", name: "Turnips", isBorderlineSafe: false },
-        { id: "4", name: "Carrots", isBorderlineSafe: false },
-        { id: "5", name: "Celery", isBorderlineSafe: false },
-        { id: "6", name: "Onion", isBorderlineSafe: false },
-        { id: "7", name: "Garlic", isBorderlineSafe: false },
-        { id: "8", name: "Vegetable stock", isBorderlineSafe: false }
-      ],
-      instructions: [
-        "Sauté onion, carrots, and celery in a large pot until softened.",
-        "Add garlic and red lentils, stirring for 1 minute.",
-        "Add vegetable stock and chicken breast.",
-        "Bring to a boil, then simmer for 25-30 minutes until lentils are soft and chicken is cooked.",
-        "Shred chicken and serve hot."
-      ]
-    },
-    {
-      id: 716406,
-      title: "Asparagus and Pea Soup",
-      image: "https://img.spoonacular.com/recipes/716406-556x370.jpg",
-      readyInMinutes: 20,
-      pricePerServing: 1.85,
-      diets: ["gluten free", "dairy free", "paleolithic"],
-      summary: "This fresh, green soup is perfect for a light lunch. It's packed with vitamins from asparagus and peas.",
-      ingredients: [
-        { id: "1", name: "Asparagus", isBorderlineSafe: false },
-        { id: "2", name: "Peas", isBorderlineSafe: false },
-        { id: "3", name: "Onion", isBorderlineSafe: false },
-        { id: "4", name: "Garlic", isBorderlineSafe: false },
-        { id: "5", name: "Vegetable broth", isBorderlineSafe: false },
-        { id: "6", name: "Olive oil", isBorderlineSafe: false }
-      ],
-      instructions: [
-        "Chop the onion, garlic, and asparagus.",
-        "Sauté onion and garlic in olive oil until translucent.",
-        "Add asparagus and peas, cooking for 2 minutes.",
-        "Pour in the vegetable broth and simmer for 10-12 minutes.",
-        "Blend the soup until smooth and creamy."
-      ]
-    },
-    {
-      id: 644387,
-      title: "Garlicky Kale",
-      image: "https://img.spoonacular.com/recipes/644387-556x370.jpg",
-      readyInMinutes: 45,
-      pricePerServing: 0.69,
-      diets: ["gluten free", "dairy free", "paleolithic"],
-      summary: "A simple and delicious side dish that pairs well with any protein. High in Vitamin K and A.",
-      ingredients: [
-        { id: "1", name: "Kale", isBorderlineSafe: false },
-        { id: "2", name: "Garlic", isBorderlineSafe: false },
-        { id: "3", name: "Olive oil", isBorderlineSafe: false },
-        { id: "4", name: "Salt", isBorderlineSafe: false }
-      ],
-      instructions: [
-        "Wash and thoroughly dry the kale leaves.",
-        "Remove the tough stems and chop the leaves into bite-sized pieces.",
-        "Heat olive oil in a large pan over medium heat.",
-        "Sauté minced garlic until fragrant but not brown.",
-        "Add kale in batches, stirring until wilted and tender.",
-        "Season with salt and serve."
-      ]
-    },
-    {
-      id: 715446,
-      title: "Slow Cooker Beef Stew",
-      image: "https://img.spoonacular.com/recipes/715446-556x370.jpg",
-      readyInMinutes: 490,
-      pricePerServing: 3.25,
-      diets: ["gluten free", "dairy free"],
-      summary: "A comforting, slow-cooked beef stew perfect for chilly days. Tender beef and well-developed flavors.",
-      ingredients: [
-        { id: "1", name: "Beef broth", isBorderlineSafe: false },
-        { id: "2", name: "Stew meat", isBorderlineSafe: false },
-        { id: "3", name: "New potatoes", isBorderlineSafe: false },
-        { id: "4", name: "Carrots", isBorderlineSafe: false },
-        { id: "5", name: "Onion", isBorderlineSafe: false },
-        { id: "6", name: "Celery", isBorderlineSafe: false },
-        { id: "7", name: "Seasoning", isBorderlineSafe: false }
-      ],
-      instructions: [
-        "Mix beef broth, seasoning, and a bit of water in the slow cooker.",
-        "Add the stew meat, halved potatoes, sliced carrots, onions, and celery.",
-        "Stir everything well to combine with the liquid.",
-        "Cover and cook on low for 8 hours until beef is fork-tender."
-      ]
-    }
-  ];
-
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const mapped = mockApiResults.map(apiRecipe => ({
-        id: apiRecipe.id.toString(),
-        title: apiRecipe.title,
-        imageUrl: apiRecipe.image,
-        prepTimeMinutes: apiRecipe.readyInMinutes,
-        estimatedCost: Math.min(3, Math.max(1, Math.ceil(apiRecipe.pricePerServing))),
-        ingredients: apiRecipe.ingredients,
-        instructions: apiRecipe.instructions,
-        summary: apiRecipe.summary,
-        safetyLevel: 'safe' as const,
-        siboAllergiesTags: apiRecipe.diets.slice(0, 3)
-      }));
-      resolve(mapped);
-    }, 1500);
-  });
-};
+// ── Components ──
 
 export function RecipePage({ onSelectRecipe, onOpenLogin, onOpenOnboarding }: RecipePageProps) {
   const { user, logout } = useAuth();
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  const API_MODE = import.meta.env.VITE_API_MODE || 'MOCK';
+
+  const loadData = async (force = false, query = 'healthy') => {
+    if (force) setIsRefreshing(true);
+    else setIsLoading(true);
+
+    try {
+      const results = await SecureAPI.fetchSafeRecipes(query, undefined, force);
+      
+      const mapped: Recipe[] = results.map((r: any) => ({
+        id: r.id.toString(),
+        title: r.title,
+        imageUrl: r.image,
+        prepTimeMinutes: r.readyInMinutes,
+        estimatedCost: Math.min(3, Math.max(1, Math.ceil(r.pricePerServing / 100))), // Spoonacular price is often in cents
+        ingredients: r.extendedIngredients?.map((i: any) => ({
+          id: i.id.toString(),
+          name: i.name,
+          isBorderlineSafe: false
+        })) || [],
+        instructions: r.analyzedInstructions?.[0]?.steps.map((s: any) => s.step) || [r.instructions || ''],
+        summary: r.summary,
+        safetyLevel: r.securityDisclosure.riskLevel === 'SAFE' ? 'safe' : (r.securityDisclosure.riskLevel === 'WARNING' ? 'review' : 'unsafe'),
+        siboAllergiesTags: r.diets?.slice(0, 3) || []
+      }));
+
+      setRecipes(mapped);
+    } catch (error) {
+      console.error("Error loading recipes", error);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
 
   useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true);
-      try {
-        // Mock mode: using high-quality synchronized local data
-        const dummyData = await fetchDummySafeRecipes();
-        setRecipes(dummyData);
-      } catch (error) {
-        console.error("Error loading mock recipes", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
     loadData();
   }, []);
 
@@ -161,7 +69,13 @@ export function RecipePage({ onSelectRecipe, onOpenLogin, onOpenOnboarding }: Re
           {/* Logo */}
           <div className="flex items-center gap-2.5">
             <WatiLogo size={32} />
-            <span className="text-xl font-extrabold text-brand-forest tracking-tight">Wati</span>
+            <div className="flex flex-col">
+              <span className="text-xl font-extrabold text-brand-forest tracking-tight">Wati</span>
+              <div className={`flex items-center gap-1 text-[8px] font-bold px-1.5 py-0.5 rounded-full border border-current uppercase tracking-widest ${API_MODE === 'MOCK' ? 'text-brand-sage border-brand-sage/30 bg-brand-sage/5' : 'text-brand-celeste border-brand-celeste/30 bg-brand-celeste/5'}`}>
+                {API_MODE === 'MOCK' ? <FlaskConical size={8} /> : <Radio size={8} />}
+                {API_MODE === 'MOCK' ? 'Desarrollo' : 'En Vivo'}
+              </div>
+            </div>
           </div>
 
           {/* Auth Actions */}
@@ -204,15 +118,32 @@ export function RecipePage({ onSelectRecipe, onOpenLogin, onOpenOnboarding }: Re
       {/* ── Page Content ── */}
       <div className="py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="mb-12 text-center sm:text-left">
-            <h1 className="text-4xl sm:text-5xl font-extrabold text-brand-forest tracking-tight mb-4">
-              {user ? 'Recetas para tu bienestar' : 'Nutrición consciente'}
-            </h1>
-            <p className="text-lg text-brand-text-muted max-w-2xl leading-relaxed">
-              {user
-                ? 'Platos seleccionados cuidadosamente para nutrirte respetando tus intolerancias y salud digestiva.'
-                : 'Descubre cómo la comida puede ser tu mejor medicina. Personaliza tu experiencia según tus necesidades.'}
-            </p>
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-12">
+            <div className="text-center sm:text-left">
+              <h1 className="text-4xl sm:text-5xl font-extrabold text-brand-forest tracking-tight mb-4">
+                {user ? 'Recetas para tu bienestar' : 'Nutrición consciente'}
+              </h1>
+              {/* Search Bar */}
+              <div className="relative max-w-md w-full mt-6 group">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-text-muted group-focus-within:text-brand-teal transition-colors" />
+                <input 
+                  type="text"
+                  placeholder="Buscar ingredientes o platos..."
+                  className="w-full pl-11 pr-4 py-3.5 bg-white border border-brand-sage/20 rounded-2xl text-sm text-brand-forest placeholder:text-brand-text-muted/60 focus:outline-none focus:ring-2 focus:ring-brand-teal/20 focus:border-brand-teal transition-all shadow-sm"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && loadData(false, searchQuery)}
+                />
+              </div>
+            </div>
+            <button 
+                onClick={() => loadData(true, searchQuery || 'healthy')}
+                disabled={isRefreshing}
+                className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-white border border-brand-sage/20 text-brand-forest font-bold text-sm hover:bg-brand-sage/5 transition-all shadow-sm active:scale-95 disabled:opacity-50"
+            >
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Actualizar
+            </button>
           </div>
 
           {/* RecipeGrid */}
