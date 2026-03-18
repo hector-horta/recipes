@@ -45,6 +45,37 @@ VITE_API_MODE=MOCK
 npm run dev
 ```
 
+## 🐳 Docker
+
+Para aquellos que prefieren usar Docker, proporcionamos configuraciones para entornos de desarrollo y producción.
+
+### 🛠️ Entorno de Desarrollo
+
+Utilizamos Docker Compose para facilitar el desarrollo. Esto incluye soporte para recarga en caliente (Hot Reload).
+
+**Pasos:**
+1. Asegúrate de tener configurado tu archivo `.env` (o usa los valores por defecto en `docker-compose.yml`).
+2. Inicia el contenedor:
+   ```bash
+   docker-compose up
+   ```
+3. Accede a la aplicación en `http://localhost:5173`.
+
+### 🚀 Entorno de Producción
+
+Para producción, usamos un build multi-etapa para generar una imagen optimizada servida por Nginx.
+
+**Pasos:**
+1. Construye la imagen de producción:
+   ```bash
+   docker build --target production -t wati-app .
+   ```
+2. Ejecuta el contenedor:
+   ```bash
+   docker run -d -p 8080:80 wati-app
+   ```
+3. La aplicación estará disponible en `http://localhost:8080`.
+
 ## 🏗️ Estructura del Proyecto
 
 - `/src/api`: Lógica de comunicación con Spoonacular, Privacy Proxy y Medical Registry.
