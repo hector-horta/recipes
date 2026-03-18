@@ -76,13 +76,30 @@ Para producción, usamos un build multi-etapa para generar una imagen optimizada
    ```
 3. La aplicación estará disponible en `http://localhost:8080`.
 
+## 🧪 Pruebas Unitarias
+
+La aplicación cuenta con una suite de pruebas unitarias implementada con **Vitest** para garantizar la integridad de la lógica médica y de seguridad.
+
+### Ejecutar pruebas
+```bash
+npm run test
+```
+
+### Ver cobertura de código
+```bash
+npm run coverage
+```
+
 ## 🏗️ Estructura del Proyecto
 
-- `/src/api`: Lógica de comunicación con Spoonacular, Privacy Proxy y Medical Registry.
-- `/src/security`: Motor de cifrado y Security Scrubber.
+- `/src/api`: Lógica de comunicación, Privacy Proxy y Medical Registry.
+  - `*.test.ts`: Pruebas unitarias de la lógica de API y seguridad.
+- `/src/security`: Motor de cifrado y Vault seguro.
+  - `*.test.ts`: Pruebas de cifrado y manejo de perfiles.
 - `/src/db`: Esquemas de base de datos local (Dexie).
-- `/src/pages`: Vistas principales (Lista de recetas, detalles, onboarding).
-- `/public`: Service Worker (`sw.js`) para soporte offline.
+- `/src/pages`: Vistas principales de la aplicación.
+- `/src/test`: Configuración y utilidades de pruebas.
+- `/public`: Service Worker y activos estáticos.
 
 ---
 **Wati** — *Cuidando tu salud, ingrediente por ingrediente.*
