@@ -1,24 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { WatiLogo } from './WatiLogo';
 import { X, ChevronRight, Check } from 'lucide-react';
 
-const INTOLERANCE_CATALOG = [
-  { id: 'dairy',     label: 'Lácteos',            emoji: '🥛', desc: 'Leche, queso, mantequilla' },
-  { id: 'egg',       label: 'Huevo',              emoji: '🥚', desc: 'Huevo y derivados' },
-  { id: 'gluten',    label: 'Gluten',             emoji: '🌾', desc: 'Trigo, cebada, centeno' },
-  { id: 'grain',     label: 'Grano',              emoji: '🌿', desc: 'Avena, arroz, quinoa' },
-  { id: 'peanut',    label: 'Maní',               emoji: '🥜', desc: 'Maní y derivados' },
-  { id: 'seafood',   label: 'Pescado',            emoji: '🐟', desc: 'Salmón, atún, anchoas' },
-  { id: 'sesame',    label: 'Sésamo',             emoji: '🫘', desc: 'Semillas y aceite de sésamo' },
-  { id: 'shellfish', label: 'Mariscos',           emoji: '🦐', desc: 'Camarón, langosta, cangrejo' },
-  { id: 'soy',       label: 'Soja',               emoji: '🫛', desc: 'Tofu, salsa de soja, tempeh' },
-  { id: 'sulfite',   label: 'Sulfitos',           emoji: '🍷', desc: 'Vino, frutos secos, conservas' },
-  { id: 'tree_nut',  label: 'Frutos Secos',       emoji: '🌰', desc: 'Almendras, nueces, avellanas' },
-  { id: 'wheat',     label: 'Trigo',              emoji: '🍞', desc: 'Harina, pan, sémola' },
-  { id: 'corn',      label: 'Maíz',               emoji: '🌽', desc: 'Jarabe de maíz, dextrosa' },
-  { id: 'sibo',      label: 'SIBO',               emoji: '🦠', desc: 'Dieta baja en FODMAPs' },
-];
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const SEVERITY_OPTIONS: { value: 'mild' | 'moderate' | 'severe' | 'anaphylactic'; label: string; activeClasses: string }[] = [
   { value: 'mild',         label: 'Leve',       activeClasses: '!bg-[#74C6E6] !text-white border-[#74C6E6]' },
@@ -27,6 +12,13 @@ const SEVERITY_OPTIONS: { value: 'mild' | 'moderate' | 'severe' | 'anaphylactic'
   { value: 'anaphylactic', label: 'Anafilaxis', activeClasses: '!bg-red-600 !text-white border-red-600' },
 ];
 
+interface IntoleranceItem {
+  id: string;
+  label: string;
+  emoji: string;
+  desc: string;
+}
+
 interface OnboardingModalProps {
   onClose: () => void;
 }
@@ -34,10 +26,28 @@ interface OnboardingModalProps {
 export function OnboardingModal({ onClose }: OnboardingModalProps) {
   const { user, updateUserProfile } = useAuth();
 
+  const [catalog, setCatalog] = useState<IntoleranceItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>(user?.intolerances || []);
   const [severities, setSeverities] = useState<Record<string, 'mild' | 'moderate' | 'severe' | 'anaphylactic'>>(user?.severities || {});
   const [step, setStep] = useState<'select' | 'severity'>('select');
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchCatalog() {
+      try {
+        const response = await fetch(`${API_URL}/api/medical/catalog`);
+        if (!response.ok) throw new Error('Failed to fetch catalog');
+        const data = await response.json();
+        setCatalog(data);
+      } catch (err) {
+        console.error('[Onboarding] Error fetching catalog:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchCatalog();
+  }, []);
 
   const toggleIntolerance = (id: string) => {
     setSelectedIds(prev =>
@@ -115,9 +125,14 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
 
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto px-8 pb-4">
-          {step === 'select' ? (
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
+              <div className="w-8 h-8 border-4 border-brand-mint/30 border-t-brand-mint rounded-full animate-spin" />
+              <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest">Cargando catálogo...</p>
+            </div>
+          ) : step === 'select' ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {INTOLERANCE_CATALOG.map(item => {
+              {catalog.map(item => {
                 const isSelected = selectedIds.includes(item.id);
                 return (
                   <button
@@ -151,7 +166,8 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
           ) : (
             <div className="space-y-4">
               {selectedIds.map(id => {
-                const item = INTOLERANCE_CATALOG.find(c => c.id === id)!;
+                const item = catalog.find(c => c.id === id);
+                if (!item) return null;
                 const currentSeverity = severities[id] || 'moderate';
                 return (
                   <div key={id} className="rounded-2xl border border-brand-mint bg-brand-mint/20 p-5 shadow-lg shadow-brand-forest/40">
@@ -200,7 +216,7 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
           <button
             type="button"
             onClick={step === 'select' ? handleNext : handleSave}
-            disabled={isSaving}
+            disabled={isSaving || isLoading}
             className="flex-1 py-3.5 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all duration-300 disabled:opacity-50 hover:shadow-lg hover:shadow-brand-teal/20 active:scale-[0.98]"
             style={{ background: 'linear-gradient(135deg, var(--brand-sage), var(--brand-teal))' }}
           >

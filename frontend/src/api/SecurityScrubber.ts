@@ -1,8 +1,8 @@
 import { MedicalProfile } from '../security/SecureVault';
-import { MedicalRegistry, DEFAULT_MEDICAL_TRIGGERS } from './MedicalRegistry';
+import { MedicalRegistry } from './MedicalRegistry';
 
-// Variable de estado para disparadores médicos (se inicializa con valores por defecto)
-let ACTIVE_TRIGGERS: Record<string, string[]> = DEFAULT_MEDICAL_TRIGGERS;
+// Variable de estado para disparadores médicos (se inicializa vacío y se puebla en initialize)
+let ACTIVE_TRIGGERS: Record<string, string[]> = {};
 
 export const SecurityScrubber = {
     /** 

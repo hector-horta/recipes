@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { MedicalRegistry, DEFAULT_MEDICAL_TRIGGERS } from '../api/MedicalRegistry';
+import { MedicalRegistry } from '../api/MedicalRegistry';
 import { db } from '../db/db';
+
+const MOCK_TRIGGERS = { 'dairy': ['milk'] };
 
 // Mock Dexie db
 vi.mock('../db/db', () => ({
@@ -12,16 +14,23 @@ vi.mock('../db/db', () => ({
     }
 }));
 
+// Mock Fetch
+global.fetch = vi.fn();
+
 describe('MedicalRegistry', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        (global.fetch as any).mockResolvedValue({
+            ok: true,
+            json: async () => MOCK_TRIGGERS
+        });
     });
 
-    it('should return default triggers if no cached data exists', async () => {
+    it('should return updated triggers if no cached data exists', async () => {
         (db.medicalMetadata.get as any).mockResolvedValue(null);
         
         const triggers = await MedicalRegistry.getLatestTriggers();
-        expect(triggers).toEqual(DEFAULT_MEDICAL_TRIGGERS);
+        expect(triggers).toEqual(MOCK_TRIGGERS);
     });
 
     it('should return cached triggers if they exist', async () => {
@@ -48,7 +57,7 @@ describe('MedicalRegistry', () => {
         const triggers = await MedicalRegistry.syncTriggers();
         
         expect(db.medicalMetadata.put).toHaveBeenCalled();
-        expect(triggers).toEqual(DEFAULT_MEDICAL_TRIGGERS);
+        expect(triggers).toEqual(MOCK_TRIGGERS);
     });
 
     it('should fallback to cached data on error', async () => {
@@ -61,7 +70,7 @@ describe('MedicalRegistry', () => {
         // However, the error is caught in syncTriggers.
         
         // Let's mock a network error after the initial check
-        vi.spyOn(global, 'setTimeout').mockImplementation((cb: any) => { throw new Error('Network error'); });
+        vi.spyOn(global, 'setTimeout').mockImplementation((_cb: any) => { throw new Error('Network error'); });
 
         (db.medicalMetadata.get as any).mockResolvedValueOnce(mockCached); // Fallback call in catch block
 

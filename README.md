@@ -1,105 +1,89 @@
-# Wati: Nutrición Consciente
+# Wati: Nutrición Consciente (Monorepo)
 
-Wati es una aplicación web progresiva (PWA) de recetas diseñada para usuarios con necesidades dietéticas específicas (FODMAPs, alergias, sensibilidades). A diferencia de otras aplicaciones de cocina, Wati prioriza la **seguridad médica** y la **privacidad extrema** mediante protocolos de cifrado y análisis de riesgo en tiempo real.
-
-## 🌟 Características Principales
-
-- **Dual-Mode API**: Funciona en modo `MOCK` (desarrollo rápido, sin costo) o `LIVE` (datos reales de Spoonacular).
-- **Security Scrubber**: Motor de análisis que escanea ingredientes y pasos de preparación contra tu perfil personal.
-- **Local-First & Offline**: Navegación completa sin internet gracias a Service Workers y almacenamiento local en IndexedDB (Dexie).
-- **Privacidad Grado Médico**: Perfiles de salud cifrados localmente con AES-256 (CryptoJS) para que tus datos nunca salgan de tu dispositivo.
-- **Sincronización Dinámica**: Actualización automática de la base de datos de alérgenos y FODMAPs en cada inicio.
-
-## 🛠️ Tecnologías y Dependencias
-
-La aplicación está construida con el stack más moderno de desarrollo web:
-
-- **Core**: [React 18](https://reactjs.org/) + [TypeScript](https://www.typescriptlang.org/)
-- **Bundler**: [Vite](https://vitejs.dev/)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/) (Diseño premium con Glassmorphism)
-- **Base de Datos**: [Dexie.js](https://dexie.org/) (IndexedDB wrapper)
-- **Seguridad**:
-  - [CryptoJS](https://cryptojs.gitbook.io/docs/): Cifrado de perfiles.
-  - [DOMPurify](https://github.com/cure53/dompurify): Sanitización de entradas.
-- **Iconografía**: [Lucide React](https://lucide.dev/)
-
-## 🚀 Instalación y Uso
-
-### 1. Clonar el repositorio e instalar dependencias
-```bash
-npm install
-```
-
-### 2. Configuración del Entorno
-Crea un archivo `.env` en la raíz del proyecto (o edita el existente):
-```env
-# Tu llave de Spoonacular API
-VITE_SPOONACULAR_KEY=tu_api_key_aqui
-
-# Modo de funcionamiento: MOCK o LIVE
-VITE_API_MODE=MOCK
-```
-
-### 3. Ejecutar en Desarrollo
-```bash
-npm run dev
-```
-
-## 🐳 Docker
-
-Para aquellos que prefieren usar Docker, proporcionamos configuraciones para entornos de desarrollo y producción.
-
-### 🛠️ Entorno de Desarrollo
-
-Utilizamos Docker Compose para facilitar el desarrollo. Esto incluye soporte para recarga en caliente (Hot Reload).
-
-**Pasos:**
-1. Asegúrate de tener configurado tu archivo `.env` (o usa los valores por defecto en `docker-compose.yml`).
-2. Inicia el contenedor:
-   ```bash
-   docker-compose up
-   ```
-3. Accede a la aplicación en `http://localhost:5173`.
-
-### 🚀 Entorno de Producción
-
-Para producción, usamos un build multi-etapa para generar una imagen optimizada servida por Nginx.
-
-**Pasos:**
-1. Construye la imagen de producción:
-   ```bash
-   docker build --target production -t wati-app .
-   ```
-2. Ejecuta el contenedor:
-   ```bash
-   docker run -d -p 8080:80 wati-app
-   ```
-3. La aplicación estará disponible en `http://localhost:8080`.
-
-## 🧪 Pruebas Unitarias
-
-La aplicación cuenta con una suite de pruebas unitarias implementada con **Vitest** para garantizar la integridad de la lógica médica y de seguridad.
-
-### Ejecutar pruebas
-```bash
-npm run test
-```
-
-### Ver cobertura de código
-```bash
-npm run coverage
-```
+Wati es una plataforma de recetas diseñada para usuarios con necesidades dietéticas específicas (FODMAPs, alergias, sensibilidades). Esta versión ha evolucionado a una **arquitectura de microservicios** gestionada en un **Monorepo**.
 
 ## 🏗️ Estructura del Proyecto
 
-- `/src/api`: Lógica de comunicación, Privacy Proxy y Medical Registry.
-  - `*.test.ts`: Pruebas unitarias de la lógica de API y seguridad.
-- `/src/security`: Motor de cifrado y Vault seguro.
-  - `*.test.ts`: Pruebas de cifrado y manejo de perfiles.
-- `/src/db`: Esquemas de base de datos local (Dexie).
-- `/src/pages`: Vistas principales de la aplicación.
-- `/src/test`: Configuración y utilidades de pruebas.
-- `/public`: Service Worker y activos estáticos.
+El proyecto se divide en dos grandes bloques:
+
+- **`/frontend`**: Aplicación Single Page Application (SPA) construida con **Vite + React + TypeScript**. Gestiona la interfaz de usuario, el cifrado local (AES-256) y la persistencia en IndexedDB.
+- **`/backend`**: Microservicio en **Node.js + Express**. Actúa como un proxy seguro para APIs externas (Spoonacular) y maneja la lógica de servidor centralizada.
+- **Raíz**: Contenedores globales, configuración de orquestación y documentación.
+
+## 🌟 Características Principales
+
+- **Arquitectura de Microservicios**: Frontend y Backend desacoplados.
+- **Secure Proxy**: El backend mitiga riesgos de exposición de llaves de API filtrando peticiones desde el cliente.
+- **Dual-Mode API**: Funciona en modo `MOCK` o `LIVE` (Spoonacular) dinámicamente.
+- **Privacidad Extrema**: Perfiles de salud cifrados localmente; el backend nunca almacena datos sensibles del usuario.
+- **Local-First**: Persistencia con Dexie.js para funcionamiento offline.
+- **Datos Médicos Centralizados**: El catálogo de intolerancias y detonantes médicos se gestiona en el backend, permitiendo actualizaciones dinámicas sin tocar el frontend.
+
+## 🛠️ Tecnologías
+
+### Frontend
+- **React 18** + **TypeScript** + **Vite**
+- **Tailwind CSS** (Glassmorphism UI)
+- **Dexie.js** (IndexedDB)
+- **CryptoJS** & **DOMPurify**
+
+### Backend
+- **Node.js** + **Express**
+- **CORS** (Configurado para el origen del frontend)
+- **Dotenv**
+- **Endpoints de Datos**: Serve el catálogo (`/api/medical/catalog`) y detonantes (`/api/medical/triggers`) centralizadamente.
+
+## 🚀 Instalación y Uso (Docker Compose)
+
+La forma recomendada de ejecutar el proyecto es mediante **Docker Compose**, que levanta ambos servicios y configura la red interna automáticamente.
+
+### 1. Requisitos
+- Docker y Docker Compose instalados.
+
+### 2. Configuración
+La plataforma se gestiona desde un archivo `.env` en la raíz que centraliza el host, el puerto y las llaves de API:
+
+```env
+# Puerto del Backend y URL para el Frontend
+PORT=5001
+VITE_API_URL=http://localhost:5001
+
+# Estrategia de API
+VITE_SPOONACULAR_KEY=tu_api_key
+VITE_API_MODE=MOCK
+```
+
+> [!NOTE]
+> Al cambiar `VITE_API_URL`, la Política de Seguridad de Contenido (CSP) se actualiza automáticamente durante la construcción del frontend mediante un hook nativo en `vite.config.ts`.
+
+### 3. Levantar la plataforma
+```bash
+docker compose up -d --build
+```
+
+- **Frontend**: [http://localhost:5173](http://localhost:5173)
+- **Backend API**: [http://localhost:5001/api/status](http://localhost:5001/api/status)
+
+## 🧪 Desarrollo y Pruebas
+
+### Frontend
+Para ejecutar o probar solo el frontend localmente:
+```bash
+cd frontend
+npm install
+npm run dev
+npm run test      # Suite de pruebas unitarias (Vitest)
+npm run coverage  # Reporte de cobertura
+```
+
+### Backend
+Para el servidor de desarrollo:
+```bash
+cd backend
+npm install
+npm run dev
+```
 
 ---
 **Wati** — *Cuidando tu salud, ingrediente por ingrediente.*
+
