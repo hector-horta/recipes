@@ -4,7 +4,7 @@ import { SecurityScrubber } from './SecurityScrubber';
 import { db } from '../db/db';
 import { MOCK_RECIPE_DATA } from './MockData';
 
-const API_DOMAIN = 'https://api.spoonacular.com/recipes';
+const API_DOMAIN = import.meta.env.VITE_API_URL || 'https://api.spoonacular.com/recipes';
 const API_MODE = import.meta.env.VITE_API_MODE || 'MOCK';
 
 export const InputSanitizer = {

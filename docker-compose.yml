@@ -1,16 +1,41 @@
+version: "3.8"
+
 services:
-  app:
+  frontend:
     build:
-      context: .
+      context: ./frontend
       target: base
     ports:
       - "5173:5173"
     volumes:
-      - .:/app
+      - ./frontend:/app
       - /app/node_modules
     environment:
       - VITE_SPOONACULAR_KEY=${VITE_SPOONACULAR_KEY}
       - VITE_API_MODE=${VITE_API_MODE}
+      - VITE_API_URL=http://backend:5000
       - NODE_ENV=development
+    networks:
+      - app-network
+    depends_on:
+      - backend
     stdin_open: true
     tty: true
+
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - FRONTEND_URL=http://localhost:5173
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
