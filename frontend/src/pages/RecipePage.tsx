@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { RecipeCard, RecipeCardSkeleton } from '../components/RecipeCard';
 import { Recipe } from '../types/recipe';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../AuthContext';
 import { WatiLogo } from '../components/WatiLogo';
 import { UserCircle, Settings, LogOut, RefreshCw, Search, FlaskConical, Radio } from 'lucide-react';
 import { SecureAPI } from '../api/PrivacyProxy';

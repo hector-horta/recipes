@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { AuthDB, type UserProfile } from '../db/db';
+import { AuthDB, type UserProfile } from './db/db';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -11,14 +11,12 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
-
 const SESSION_KEY = 'sb_session_uid';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Restaurar sesión al cargar
   useEffect(() => {
     const restoreSession = async () => {
       try {

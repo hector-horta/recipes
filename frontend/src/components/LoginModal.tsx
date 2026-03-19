@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
+import React, { useState } from 'react';
+import { useAuth } from '../AuthContext';
 import { X, Mail, Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { WatiLogo } from './WatiLogo';
 

@@ -10,6 +10,7 @@ const ASSETS_TO_CACHE = [
 ];
 
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS_TO_CACHE);
@@ -18,8 +19,17 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Ignorar peticiones de la API (Spoonacular o nuestro Backend)
-  if (event.request.url.includes('spoonacular.com') || event.request.url.includes('/api/')) {
+  const url = new URL(event.request.url);
+
+  // Ignorar SIEMPRE en desarrollo de Vite
+  if (
+    url.pathname.startsWith('/@') || 
+    url.pathname.startsWith('/node_modules/') || 
+    url.pathname.includes('.hot-update.') ||
+    url.hostname === 'localhost' && !url.pathname.match(/\.(html|css|js|tsx|png|jpg|svg)$/) ||
+    url.href.includes('spoonacular.com') || 
+    url.href.includes('/api/')
+  ) {
     return;
   }
 
@@ -31,6 +41,7 @@ self.addEventListener('fetch', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
+  event.waitUntil(clients.claim());
   const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
     caches.keys().then((cacheNames) => {

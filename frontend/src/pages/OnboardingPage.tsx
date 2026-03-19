@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../AuthContext';
 import { ShieldCheck, ChevronRight, AlertTriangle, Check } from 'lucide-react';
 
 // ── Catálogo de intolerancias (keys del HIDDEN_TRIGGERS_DB) ──

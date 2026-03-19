@@ -4,7 +4,7 @@ FROM node:20-alpine AS base
 WORKDIR /app
 
 # Install dependencies (using cache)
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json* ./
 RUN npm install
 
 # Copy source code
