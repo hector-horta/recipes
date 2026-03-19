@@ -18,8 +18,8 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Ignorar peticiones de la API de Spoonacular (ya manejadas por Dexie)
-  if (event.request.url.includes('spoonacular.com')) {
+  // Ignorar peticiones de la API (Spoonacular o nuestro Backend)
+  if (event.request.url.includes('spoonacular.com') || event.request.url.includes('/api/')) {
     return;
   }
 

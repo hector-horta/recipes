@@ -17,6 +17,7 @@ El proyecto se divide en dos grandes bloques:
 - **Dual-Mode API**: Funciona en modo `MOCK` o `LIVE` (Spoonacular) dinámicamente.
 - **Privacidad Extrema**: Perfiles de salud cifrados localmente; el backend nunca almacena datos sensibles del usuario.
 - **Local-First**: Persistencia con Dexie.js para funcionamiento offline.
+- **Datos Médicos Centralizados**: El catálogo de intolerancias y detonantes médicos se gestiona en el backend, permitiendo actualizaciones dinámicas sin tocar el frontend.
 
 ## 🛠️ Tecnologías
 
@@ -30,6 +31,7 @@ El proyecto se divide en dos grandes bloques:
 - **Node.js** + **Express**
 - **CORS** (Configurado para el origen del frontend)
 - **Dotenv**
+- **Endpoints de Datos**: Serve el catálogo (`/api/medical/catalog`) y detonantes (`/api/medical/triggers`) centralizadamente.
 
 ## 🚀 Instalación y Uso (Docker Compose)
 
@@ -39,19 +41,28 @@ La forma recomendada de ejecutar el proyecto es mediante **Docker Compose**, que
 - Docker y Docker Compose instalados.
 
 ### 2. Configuración
-Crea un archivo `.env` en la raíz (opcional, el `docker-compose.yml` tiene valores por defecto):
+La plataforma se gestiona desde un archivo `.env` en la raíz que centraliza el host, el puerto y las llaves de API:
+
 ```env
+# Puerto del Backend y URL para el Frontend
+PORT=5001
+VITE_API_URL=http://localhost:5001
+
+# Estrategia de API
 VITE_SPOONACULAR_KEY=tu_api_key
 VITE_API_MODE=MOCK
 ```
 
+> [!NOTE]
+> Al cambiar `VITE_API_URL`, la Política de Seguridad de Contenido (CSP) se actualiza automáticamente durante la construcción del frontend mediante un hook nativo en `vite.config.ts`.
+
 ### 3. Levantar la plataforma
 ```bash
-docker compose up --build
+docker compose up -d --build
 ```
 
 - **Frontend**: [http://localhost:5173](http://localhost:5173)
-- **Backend API**: [http://localhost:5000/api/status](http://localhost:5000/api/status)
+- **Backend API**: [http://localhost:5001/api/status](http://localhost:5001/api/status)
 
 ## 🧪 Desarrollo y Pruebas
 
