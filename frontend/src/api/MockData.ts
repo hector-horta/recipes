@@ -1,69 +1,62 @@
 // ── Semilla de Datos de Grado Médico (Desarrollo) ──────────────────
-// Estos datos simulan la estructura de respuesta de Spoonacular
-// permitiendo desarrollo Offline y sin consumo de Cuota.
+// Estos datos simulan una respuesta de la API interna para desarrollo offline.
 
 export const MOCK_RECIPE_DATA = [
   {
-    id: 715415,
+    id: "715415",
     title: "Red Lentil Soup with Chicken and Turnips",
-    image: "https://img.spoonacular.com/recipes/715415-556x370.jpg",
-    readyInMinutes: 55,
-    pricePerServing: 244,
-    diets: ["gluten free", "dairy free"],
+    imageUrl: "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&q=80&w=556&h=370",
+    prepTimeMinutes: 55,
+    estimatedCost: 3,
+    siboAllergiesTags: ["gluten free", "dairy free"],
     summary: "A hearty and nutritious soup with lentils, chicken, and fresh vegetables.",
-    extendedIngredients: [
-      { id: 1, name: "red lentils" },
-      { id: 2, name: "chicken breast" },
-      { id: 3, name: "turnips" },
-      { id: 4, name: "carrots" },
-      { id: 5, name: "onion" },
-      { id: 6, name: "garlic" } // TRIGGER: SIBO
+    ingredients: [
+      { id: "1", name: "red lentils" },
+      { id: "2", name: "chicken breast" },
+      { id: "3", name: "turnips" },
+      { id: "4", name: "carrots" },
+      { id: "5", name: "onion" },
+      { id: "6", name: "garlic" }
     ],
-    analyzedInstructions: [{
-      steps: [
-        { step: "Sauté onion, carrots and garlic." },
-        { step: "Add lentils and chicken and simmer." }
-      ]
-    }]
+    instructions: [
+      "Sauté onion, carrots and garlic.",
+      "Add lentils and chicken and simmer."
+    ]
   },
   {
-    id: 716406,
+    id: "716406",
     title: "Fresh Asparagus and Pea Soup",
-    image: "https://img.spoonacular.com/recipes/716406-556x370.jpg",
-    readyInMinutes: 20,
-    pricePerServing: 185,
-    diets: ["gluten free", "dairy free", "paleolithic"],
+    imageUrl: "https://images.unsplash.com/photo-1548943487-a2e4f43b4850?auto=format&fit=crop&q=80&w=556&h=370",
+    prepTimeMinutes: 20,
+    estimatedCost: 2,
+    siboAllergiesTags: ["gluten free", "dairy free", "paleolithic"],
     summary: "This fresh, green soup is perfect for a light lunch.",
-    extendedIngredients: [
-      { id: 1, name: "asparagus" }, // TRIGGER: SIBO
-      { id: 2, name: "peas" },
-      { id: 3, name: "onion" } // TRIGGER: SIBO
+    ingredients: [
+      { id: "1", name: "asparagus" },
+      { id: "2", name: "peas" },
+      { id: "3", name: "onion" }
     ],
-    analyzedInstructions: [{
-      steps: [
-        { step: "Chop the onion and asparagus." },
-        { step: "Blend everything until smooth." }
-      ]
-    }]
+    instructions: [
+      "Chop the onion and asparagus.",
+      "Blend everything until smooth."
+    ]
   },
   {
-    id: 644387,
+    id: "644387",
     title: "Garlicky Kale with Olive Oil",
-    image: "https://img.spoonacular.com/recipes/644387-556x370.jpg",
-    readyInMinutes: 15,
-    pricePerServing: 69,
-    diets: ["gluten free", "dairy free", "paleolithic"],
+    imageUrl: "https://images.unsplash.com/photo-1528659556157-122e26090c2a?auto=format&fit=crop&q=80&w=556&h=370",
+    prepTimeMinutes: 15,
+    estimatedCost: 1,
+    siboAllergiesTags: ["gluten free", "dairy free", "paleolithic"],
     summary: "A simple and delicious side dish.",
-    extendedIngredients: [
-      { id: 1, name: "kale" },
-      { id: 2, name: "garlic" }, // TRIGGER: SIBO
-      { id: 3, name: "olive oil" }
+    ingredients: [
+      { id: "1", name: "kale" },
+      { id: "2", name: "garlic" },
+      { id: "3", name: "olive oil" }
     ],
-    analyzedInstructions: [{
-      steps: [
-        { step: "Sauté garlic in olive oil." },
-        { step: "Add kale and wilt." }
-      ]
-    }]
+    instructions: [
+      "Sauté garlic in olive oil.",
+      "Add kale and wilt."
+    ]
   }
 ];

@@ -27,7 +27,7 @@ self.addEventListener('fetch', (event) => {
     url.pathname.startsWith('/node_modules/') || 
     url.pathname.includes('.hot-update.') ||
     url.hostname === 'localhost' && !url.pathname.match(/\.(html|css|js|tsx|png|jpg|svg)$/) ||
-    url.href.includes('spoonacular.com') || 
+
     url.href.includes('/api/')
   ) {
     return;
