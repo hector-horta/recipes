@@ -16,13 +16,9 @@ export const SecurityScrubber = {
     analyze(recipe: any, profile: MedicalProfile) {
         const findings: string[] = [];
 
-        // Flat-map de todos los ingredientes (Directos y en listas de instrucciones)
-        const rawIngredients = [
-            ...(recipe.extendedIngredients?.map((i: any) => i.name) || []),
-            ...(recipe.analyzedInstructions?.flatMap((inst: any) =>
-                inst.steps?.flatMap((step: any) => step.ingredients?.map((i: any) => i.name) || []) || []
-            ) || [])
-        ].map(name => name.toLowerCase());
+        // Extracción de ingredientes desde el formato normalizado. 
+        // Si no existen (viejo cache), usamos una lista vacía para no romper la app.
+        const rawIngredients = (recipe.ingredients || []).map((i: any) => (i.name || '').toLowerCase());
 
         const activeThreats = [
             ...profile.allergies,

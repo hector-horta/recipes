@@ -41,7 +41,7 @@ La forma recomendada de ejecutar el proyecto es mediante **Docker Compose**, que
 - Docker y Docker Compose instalados.
 
 ### 2. Configuración
-La plataforma se gestiona desde un archivo `.env` en la raíz que centraliza el host, el puerto y las llaves de API:
+La plataforma se gestiona desde un archivo `.env` en la raíz que centraliza el host, el puerto y las llaves de API. Ahora la llave de Spoonacular es **exclusiva del backend**:
 
 ```env
 # Puerto del Backend y URL para el Frontend
@@ -49,19 +49,19 @@ PORT=5001
 VITE_API_URL=http://localhost:5001
 
 # Estrategia de API
-VITE_SPOONACULAR_KEY=tu_api_key
-VITE_API_MODE=MOCK
+VITE_API_MODE=LIVE (MOCK | LIVE)
+SPOONACULAR_KEY=tu_api_key_aqui
 ```
 
-> [!NOTE]
-> Al cambiar `VITE_API_URL`, la Política de Seguridad de Contenido (CSP) se actualiza automáticamente durante la construcción del frontend mediante un hook nativo en `vite.config.ts`.
+> [!IMPORTANT]
+> El Frontend ya **no conoce** a Spoonacular. Solo se comunica con el Backend en `/api/recipes`, el cual normaliza los datos y protege la API Key.
 
 ### 3. Levantar la plataforma
 ```bash
 docker compose up -d --build
 ```
 
-- **Frontend**: [http://localhost:5173](http://localhost:5173)
+- **Frontend (Vite)**: [http://localhost:5173](http://localhost:5173)
 - **Backend API**: [http://localhost:5001/api/status](http://localhost:5001/api/status)
 
 ## 🧪 Desarrollo y Pruebas

@@ -34,18 +34,17 @@ export function RecipePage({ onSelectRecipe, onOpenLogin, onOpenOnboarding }: Re
       const mapped: Recipe[] = results.map((r: any) => ({
         id: r.id.toString(),
         title: r.title,
-        imageUrl: r.image,
-        prepTimeMinutes: r.readyInMinutes,
-        estimatedCost: Math.min(3, Math.max(1, Math.ceil(r.pricePerServing / 100))), // Spoonacular price is often in cents
-        ingredients: r.extendedIngredients?.map((i: any) => ({
-          id: i.id.toString(),
-          name: i.name,
+        imageUrl: r.imageUrl,
+        prepTimeMinutes: r.prepTimeMinutes,
+        estimatedCost: r.estimatedCost,
+        ingredients: (r.ingredients || []).map((i: any) => ({
+          ...i,
           isBorderlineSafe: false
-        })) || [],
-        instructions: r.analyzedInstructions?.[0]?.steps.map((s: any) => s.step) || [r.instructions || ''],
+        })),
+        instructions: r.instructions,
         summary: r.summary,
-        safetyLevel: r.securityDisclosure.riskLevel === 'SAFE' ? 'safe' : (r.securityDisclosure.riskLevel === 'WARNING' ? 'review' : 'unsafe'),
-        siboAllergiesTags: r.diets?.slice(0, 3) || []
+        safetyLevel: r.securityDisclosure?.riskLevel === 'SAFE' ? 'safe' : (r.securityDisclosure?.riskLevel === 'WARNING' ? 'review' : 'unsafe'),
+        siboAllergiesTags: r.siboAllergiesTags
       }));
 
       setRecipes(mapped);

@@ -67,16 +67,11 @@ app.get('/api/medical/triggers', (req, res) => {
   res.json(MEDICAL_TRIGGERS);
 });
 
-app.get('/complexSearch', async (req, res) => {
+import { RecipeProvider } from './services/RecipeProvider.js';
+
+app.get('/api/recipes', async (req, res) => {
   try {
-    const params = new URLSearchParams(req.query);
-    const domain = 'https://api.spoonacular.com/recipes';
-    // Forward the request to Spoonacular
-    const response = await fetch(`${domain}/complexSearch?${params.toString()}`);
-    if (!response.ok) {
-      return res.status(response.status).json({ error: 'Error fetching recipes' });
-    }
-    const data = await response.json();
+    const data = await RecipeProvider.getRecipes(req.query);
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: 'Internal Server Error' });

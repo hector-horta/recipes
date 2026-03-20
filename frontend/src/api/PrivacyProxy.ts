@@ -4,7 +4,7 @@ import { SecurityScrubber } from './SecurityScrubber';
 import { db } from '../db/db';
 import { MOCK_RECIPE_DATA } from './MockData';
 
-const API_DOMAIN = import.meta.env.VITE_API_URL || 'https://api.spoonacular.com/recipes';
+const API_DOMAIN = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 const API_MODE = import.meta.env.VITE_API_MODE || 'MOCK';
 
 console.log(`[PrivacyProxy] Initialized: Mode=${API_MODE}, Domain=${API_DOMAIN}`);
@@ -42,8 +42,16 @@ export const SecureAPI = {
                 .toArray();
             
             if (cached.length > 0) {
-                console.log(`[Cache] Cargando recetas (${API_MODE}) desde almacenamiento local...`);
-                return cached.map(item => item.data);
+                // Validación de esquema: Si el cache tiene el formato viejo (Spoonacular) sin 'ingredients', lo ignoramos.
+                const hasNewSchema = cached.every(item => item.data && Array.isArray(item.data.ingredients));
+                
+                if (hasNewSchema) {
+                    console.log(`[Cache] Cargando recetas (${API_MODE}) desde almacenamiento local...`);
+                    return cached.map(item => item.data);
+                } else {
+                    console.warn('[Cache] Schema antiguo detectado. Ignorando cache para forzar actualización.');
+                    await db.cachedRecipes.where('query').equals(safeQuery.toLowerCase()).delete();
+                }
             }
         }
 
@@ -77,14 +85,11 @@ export const SecureAPI = {
             query: safeQuery,
             excludeIngredients: threatExclusions,
             diet: hasSIBO ? 'Low FODMAP' : '',
-            apiKey: import.meta.env.VITE_SPOONACULAR_KEY || '',
-            addRecipeInformation: 'true',
-            fillIngredients: 'true',
             number: '12'
         });
 
         try {
-            const res = await fetch(`${API_DOMAIN}/complexSearch?${params.toString()}`, {
+            const res = await fetch(`${API_DOMAIN}/api/recipes?${params.toString()}`, {
                 method: 'GET',
                 headers: { 'Accept': 'application/json' },
                 mode: 'cors'
@@ -94,7 +99,7 @@ export const SecureAPI = {
             const data = await res.json();
 
             // 4. Capas 2 & 3: Escáner de seguridad y evaluación de severidad
-            const analyzedRecipes = data.results.map((recipe: any) => SecurityScrubber.analyze(recipe, profile));
+            const analyzedRecipes = data.map((recipe: any) => SecurityScrubber.analyze(recipe, profile));
 
             // 5. Persistencia en caché
             const cacheEntries = analyzedRecipes.map((recipe: any) => ({

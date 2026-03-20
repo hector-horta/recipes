@@ -3,19 +3,18 @@
 <head>
     <!-- 
     Content Security Policy (CSP):
-    - Impide llamadas a cualquier API excepto Spoonacular.
+    - Impide llamadas a cualquier API externa de terceros directamente.
     - Bloquea iFrames, Plugins u Objectos incrustados.
     - Fuerz siempre la actualización a HTTPS.
   -->
     <meta http-equiv="Content-Security-Policy" content="
     default-src 'self'; 
-    connect-src 'self' https://api.spoonacular.com; 
+    connect-src 'self'; 
     script-src 'self'; 
     style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
     font-src 'self' https://fonts.gstatic.com;
-    img-src 'self' data: https://spoonacular.com;
+    img-src 'self' data: https:;
     object-src 'none';
     frame-ancestors 'none';
-    upgrade-insecure-requests;
-  ">
+    ">
 </head>
