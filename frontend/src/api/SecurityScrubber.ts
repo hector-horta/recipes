@@ -33,7 +33,7 @@ export const SecurityScrubber = {
             const signatures = [threat, ...(ACTIVE_TRIGGERS[threat] || [])];
 
             for (const signature of signatures) {
-                if (rawIngredients.some(ing => ing.includes(signature))) {
+                if (rawIngredients.some((ing: string) => ing.includes(signature))) {
                     findings.push(`Trigger oculto detectado: ${signature} (Categoría: ${threat.toUpperCase()})`);
 
                     // Capa 3: Etiquetado de severidad (Risk Disclosure)

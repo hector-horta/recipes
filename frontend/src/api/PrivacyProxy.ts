@@ -43,11 +43,11 @@ export const SecureAPI = {
             
             if (cached.length > 0) {
                 // Validación de esquema: Si el cache tiene el formato viejo (Spoonacular) sin 'ingredients', lo ignoramos.
-                const hasNewSchema = cached.every(item => item.data && Array.isArray(item.data.ingredients));
+                const hasNewSchema = cached.every((item: any) => item.data && Array.isArray(item.data.ingredients));
                 
                 if (hasNewSchema) {
                     console.log(`[Cache] Cargando recetas (${API_MODE}) desde almacenamiento local...`);
-                    return cached.map(item => item.data);
+                    return cached.map((item: any) => item.data);
                 } else {
                     console.warn('[Cache] Schema antiguo detectado. Ignorando cache para forzar actualización.');
                     await db.cachedRecipes.where('query').equals(safeQuery.toLowerCase()).delete();
