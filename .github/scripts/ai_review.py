@@ -83,7 +83,9 @@ def main():
         return
 
     system_prompt = """Actúa como un Senior Staff Engineer experto en Clean Code. 
-    Busca: Nombres poco claros, funciones gigantes, falta de modularidad y riesgos de seguridad.
+    Busca: deuda técnica, nombres poco claros, funciones gigantes, funciones que no cumplen el SRP (Single Responsibility Principle), falta de modularidad, problemas de OWASP Top 10 y riesgos de seguridad.
+
+
     RESPONDE ÚNICAMENTE EN JSON:
     {
       "has_issues": true,
