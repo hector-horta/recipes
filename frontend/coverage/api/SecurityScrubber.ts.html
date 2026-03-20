@@ -25,28 +25,28 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>25/25</span>
+                <span class='fraction'>21/21</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">70% </span>
+                <span class="strong">75% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>14/20</span>
+                <span class='fraction'>12/16</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>8/8</span>
+                <span class='fraction'>4/4</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>22/22</span>
+                <span class='fraction'>19/19</span>
             </div>
         
             
@@ -122,11 +122,7 @@
 <a name='L57'></a><a href='#L57'>57</a>
 <a name='L58'></a><a href='#L58'>58</a>
 <a name='L59'></a><a href='#L59'>59</a>
-<a name='L60'></a><a href='#L60'>60</a>
-<a name='L61'></a><a href='#L61'>61</a>
-<a name='L62'></a><a href='#L62'>62</a>
-<a name='L63'></a><a href='#L63'>63</a>
-<a name='L64'></a><a href='#L64'>64</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L60'></a><a href='#L60'>60</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -145,15 +141,11 @@
 <span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">10x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">14x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">5x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -165,7 +157,7 @@
 <span class="cline-any cline-yes">14x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">14x</span>
-<span class="cline-any cline-yes">121x</span>
+<span class="cline-any cline-yes">90x</span>
 <span class="cline-any cline-yes">6x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -190,10 +182,10 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { MedicalProfile } from '../security/SecureVault';
-import { MedicalRegistry, DEFAULT_MEDICAL_TRIGGERS } from './MedicalRegistry';
+import { MedicalRegistry } from './MedicalRegistry';
 &nbsp;
-// Variable de estado para disparadores médicos (se inicializa con valores por defecto)
-let ACTIVE_TRIGGERS: Record&lt;string, string[]&gt; = DEFAULT_MEDICAL_TRIGGERS;
+// Variable de estado para disparadores médicos (se inicializa vacío y se puebla en initialize)
+let ACTIVE_TRIGGERS: Record&lt;string, string[]&gt; = {};
 &nbsp;
 export const SecurityScrubber = {
     /** 
@@ -207,13 +199,9 @@ export const SecurityScrubber = {
     analyze(recipe: any, profile: MedicalProfile) {
         const findings: string[] = [];
 &nbsp;
-        // Flat-map de todos los ingredientes (Directos y en listas de instrucciones)
-        const rawIngredients = [
-            ...(recipe.extendedIngredients?.map((i: any) =&gt; i.name) || <span class="branch-1 cbranch-no" title="branch not covered" >[])</span>,
-            ...(recipe.analyzedInstructions?.flatMap((inst: any) =&gt;
-                inst.steps?.flatMap((step: any) =&gt; step.ingredients?.map((i: any) =&gt; i.name) || <span class="branch-1 cbranch-no" title="branch not covered" >[])</span> || <span class="branch-1 cbranch-no" title="branch not covered" >[]</span>
-            ) || <span class="branch-1 cbranch-no" title="branch not covered" >[])</span>
-        ].map(name =&gt; name.toLowerCase());
+        // Extracción de ingredientes desde el formato normalizado. 
+        // Si no existen (viejo cache), usamos una lista vacía para no romper la app.
+        const rawIngredients = (recipe.ingredients || <span class="branch-1 cbranch-no" title="branch not covered" >[])</span>.map((i: any) =&gt; (i.name || <span class="branch-1 cbranch-no" title="branch not covered" >'').t</span>oLowerCase());
 &nbsp;
         const activeThreats = [
             ...profile.allergies,
@@ -259,7 +247,7 @@ export const SecurityScrubber = {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-18T13:20:38.842Z
+                at 2026-03-20T00:46:31.235Z
             </div>
         <script src="../prettify.js"></script>
         <script>

@@ -13,26 +13,26 @@ describe('SecurityScrubber', () => {
 
     const safeRecipe = {
         title: 'Fresh Salad',
-        extendedIngredients: [{ name: 'Lettuce' }, { name: 'Tomato' }],
-        analyzedInstructions: [{ steps: [{ ingredients: [] }] }]
+        ingredients: [{ name: 'Lettuce' }, { name: 'Tomato' }],
+        instructions: ['Wash and chop vegetables.', 'Mix everything.']
     };
 
     const dangerousRecipe = {
         title: 'Peanut Butter Cookies',
-        extendedIngredients: [{ name: 'Peanut butter' }, { name: 'Flour' }],
-        analyzedInstructions: [{ steps: [{ ingredients: [{ name: 'Peanut butter' }] }] }]
+        ingredients: [{ name: 'Peanut butter' }, { name: 'Flour' }],
+        instructions: ['Mix peanut butter and flour.']
     };
 
     const warningRecipe = {
         title: 'Cheese Cake',
-        extendedIngredients: [{ name: 'Cream cheese' }, { name: 'Milk' }],
-        analyzedInstructions: [{ steps: [{ ingredients: [{ name: 'Milk' }] }] }]
+        ingredients: [{ name: 'Cream cheese' }, { name: 'Milk' }],
+        instructions: ['Mix cheese and milk.']
     };
 
     const siboRecipe = {
         title: 'Garlic Pasta',
-        extendedIngredients: [{ name: 'Pasta' }, { name: 'Garlic' }],
-        analyzedInstructions: [{ steps: [{ ingredients: [{ name: 'Garlic' }] }] }]
+        ingredients: [{ name: 'Pasta' }, { name: 'Garlic' }],
+        instructions: ['Cook pasta with garlic.']
     };
 
     beforeEach(async () => {

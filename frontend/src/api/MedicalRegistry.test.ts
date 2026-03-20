@@ -42,11 +42,12 @@ describe('MedicalRegistry', () => {
     });
 
     it('should skip sync if version is up to date', async () => {
-        const mockCached = { version: "2024.03.17.01", data: { 'test': ['trigger'] } };
+        const mockCached = { version: "2024.03.19.01", data: { 'test': ['trigger'] } };
         (db.medicalMetadata.get as any).mockResolvedValue(mockCached);
         
         const triggers = await MedicalRegistry.syncTriggers();
         
+        // Use spyOn inside each test to avoid interference if needed, but here we just check put wasn't called
         expect(db.medicalMetadata.put).not.toHaveBeenCalled();
         expect(triggers).toEqual(mockCached.data);
     });
@@ -63,20 +64,19 @@ describe('MedicalRegistry', () => {
     it('should fallback to cached data on error', async () => {
         const mockCached = { data: { 'fallback': ['trigger'] } };
         
-        // Mock REMOTE_VERSION check to pass, then throw error during "download"
-        (db.medicalMetadata.get as any).mockResolvedValueOnce(null); // Initial check
+        // Initial check before sync
+        (db.medicalMetadata.get as any).mockResolvedValueOnce(null); 
         
-        // We need to mock the delay/timer to throw or just mock the logic inside syncTriggers
-        // However, the error is caught in syncTriggers.
-        
-        // Let's mock a network error after the initial check
-        vi.spyOn(global, 'setTimeout').mockImplementation((_cb: any) => { throw new Error('Network error'); });
+        // Mock fetch error
+        (global.fetch as any).mockResolvedValueOnce({
+            ok: false,
+            status: 500
+        });
 
-        (db.medicalMetadata.get as any).mockResolvedValueOnce(mockCached); // Fallback call in catch block
+        // Fallback call in catch block
+        (db.medicalMetadata.get as any).mockResolvedValueOnce(mockCached); 
 
         const triggers = await MedicalRegistry.syncTriggers();
         expect(triggers).toEqual(mockCached.data);
-        
-        vi.restoreAllMocks();
     });
 });
