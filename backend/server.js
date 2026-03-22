@@ -93,7 +93,12 @@ app.get('/api/recipes', optionalAuthenticateToken, async (req, res) => {
     const data = await RecipeProvider.getRecipes(req.query, userProfile);
     res.json(data);
   } catch (error) {
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error('[Error] Fallo en la ruta /api/recipes:', error.message);
+    const status = error.status || 500;
+    res.status(status).json({ 
+        error: status === 402 ? 'Quota Exhausted' : 'Internal Server Error',
+        details: error.message 
+    });
   }
 });
 

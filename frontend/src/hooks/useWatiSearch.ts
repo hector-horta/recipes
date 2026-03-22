@@ -77,11 +77,18 @@ export function useWatiSearch() {
       }));
 
       setResults(mappedResults);
-    } catch (err: any) {
-      console.error('[useWatiSearch] Error:', err);
-      
-      // 3. Optimización y Ahorro de Créditos (Error 402 fallback)
-      if (err.message?.includes('402') || err.message?.includes('quota') || err.message?.includes('aborted')) {
+    } catch (error: any) {
+      console.error('[useWatiSearch] Error:', error);
+      setError(error.message);
+      if (error.message.includes('Quota Exhausted')) {
+        setIsQuotaExhausted(true);
+        // Fallback a datos locales (keeping original fallback logic for quota exhaustion)
+        const fallback = MOCK_RECIPE_DATA.map((r: any) => ({
+          ...r,
+          safetyLevel: 'safe' as const
+        }));
+        setResults(fallback);
+      } else if (error.message?.includes('402') || error.message?.includes('quota') || error.message?.includes('aborted')) {
         setIsQuotaExhausted(true);
         // Fallback a datos locales
         const fallback = MOCK_RECIPE_DATA.map((r: any) => ({

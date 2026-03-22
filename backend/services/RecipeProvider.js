@@ -70,6 +70,11 @@ export class RecipeProvider {
       });
 
       if (!res.ok) {
+        if (res.status === 402) {
+            const quotaError = new Error('Quota Exhausted');
+            quotaError.status = 402;
+            throw quotaError;
+        }
         throw new Error(`Spoonacular API error: ${res.statusText}`);
       }
 
@@ -122,7 +127,7 @@ export class RecipeProvider {
         prepTimeMinutes: r.readyInMinutes || 0,
         estimatedCost: Math.min(3, Math.max(1, Math.ceil((r.pricePerServing || 0) / 100))),
         ingredients: Array.from(ingredientMap.values()),
-        instructions: r.analyzedInstructions?.[0]?.steps.map(s => s.step) || [r.instructions || ''],
+        instructions: r.analyzedInstructions?.[0]?.steps?.map(s => s.step) || [r.instructions || 'Sin instrucciones disponibles.'],
         summary: r.summary || '',
         siboAllergiesTags: r.diets?.slice(0, 3) || []
       };

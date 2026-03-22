@@ -118,7 +118,12 @@ export const SecureAPI = {
                 mode: 'cors'
             });
 
-            if (!res.ok) throw new Error('[Network] Petición abortada.');
+            if (!res.ok) {
+                if (res.status === 402) {
+                    throw new Error('Quota Exhausted');
+                }
+                throw new Error('[Network] Petición abortada.');
+            }
             const data = await res.json();
 
             // 4. Capas 2 & 3: Escáner de seguridad y evaluación de severidad

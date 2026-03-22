@@ -200,12 +200,7 @@ export function RecipePage({
               <p className="text-brand-text-muted max-w-xs mb-8">
                 Prueba con otros ingredientes o términos más generales para que podamos ayudarte.
               </p>
-              <button 
-                onClick={() => setSearchQuery('')}
-                className="px-6 py-3 rounded-2xl bg-brand-forest text-white font-bold text-sm shadow-lg shadow-brand-forest/20 hover:scale-105 transition-all"
-              >
-                Ver recomendaciones
-              </button>
+
             </div>
           ) : (
             <>
