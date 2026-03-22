@@ -1,89 +1,92 @@
 # Wati: Nutrición Consciente (Monorepo)
 
-Wati es una plataforma de recetas diseñada para usuarios con necesidades dietéticas específicas (FODMAPs, alergias, sensibilidades). Esta versión ha evolucionado a una **arquitectura de microservicios** gestionada en un **Monorepo**.
+Wati es una plataforma de recetas diseñada para usuarios con necesidades dietéticas específicas (FODMAPs, alergias, sensibilidades). Esta versión ha evolucionado a una **Arquitectura Multi-Usuario Cloud-Ready** gestionada en un **Monorepo**, con altos estándares de seguridad y cumplimiento **GDPR**.
 
 ## 🏗️ Estructura del Proyecto
 
-El proyecto se divide en dos grandes bloques:
+El proyecto se divide en diferentes servicios orquestados:
 
-- **`/frontend`**: Aplicación Single Page Application (SPA) construida con **Vite + React + TypeScript**. Gestiona la interfaz de usuario, el cifrado local (AES-256) y la persistencia en IndexedDB.
-- **`/backend`**: Microservicio en **Node.js + Express**. Actúa como un proxy seguro para APIs externas (Spoonacular) y maneja la lógica de servidor centralizada.
-- **Raíz**: Contenedores globales, configuración de orquestación y documentación.
+- **`/frontend`**: Aplicación Single Page Application (SPA) construida con **Vite + React + TypeScript**. Gestiona la interfaz de usuario, perfiles de salud y consumo seguro por JWT.
+- **`/backend`**: Microservicio central en **Node.js + Express**. Actúa como motor de reglas de negocio, proxy inteligente (con inyección de dietas), gestión de usuarios y caché.
+- **Almacenamiento (PostgreSQL & Redis)**: Persistencia relacional segura e In-Memory Database para performance y protección de cotas de APIs externas.
 
 ## 🌟 Características Principales
 
-- **Arquitectura de Microservicios**: Frontend y Backend desacoplados.
-- **Secure Proxy**: El backend mitiga riesgos de exposición de llaves de API filtrando peticiones desde el cliente.
-- **Dual-Mode API**: Funciona en modo `MOCK` o `LIVE` (Spoonacular) dinámicamente.
-- **Privacidad Extrema**: Perfiles de salud cifrados localmente; el backend nunca almacena datos sensibles del usuario.
-- **Local-First**: Persistencia con Dexie.js para funcionamiento offline.
-- **Datos Médicos Centralizados**: El catálogo de intolerancias y detonantes médicos se gestiona en el backend, permitiendo actualizaciones dinámicas sin tocar el frontend.
+- **Privacidad y Cumplimiento GDPR**: Perfiles de salud encriptados en base de datos. Completo flujo legal de aceptación de términos y endpoint `DELETE /api/auth/me` con borrado en Cascada garantizando el Derecho al Olvido.
+- **Autenticación Segura (JWT & Bcrypt)**: Cuentas individuales únicas identificadas mediante **UUID v4** en PostgreSQL. Contraseñas protegidas mediante algoritmos de encriptado salt.
+- **Proxy Inteligente con Spoonacular**: El backend protege las llaves de terceros e inyecta dinámicamente las restricciones médicas del usuario antes de lanzar la búsqueda (p. ej. Mapeo transparente de SIBO a dietas permitidas).
+- **Sistema de Caché Optimizada (Redis)**: Un TTL inteligente de 15 minutos en el backend cachea peticiones repetidas a Spoonacular, salvaguardando presupuestos y reduciendo la latencia espectacularmente.
 
-## 🛠️ Tecnologías
+## 🛠️ Stack Tecnológico
 
 ### Frontend
 - **React 18** + **TypeScript** + **Vite**
-- **Tailwind CSS** (Glassmorphism UI)
-- **Dexie.js** (IndexedDB)
-- **CryptoJS** & **DOMPurify**
+- **Tailwind CSS** (Glassmorphism & Componentes Nativos)
+- **Vitest** (Test Unitarios)
+- Autenticación asíncrona mediante Context API & LocalStorage JWT.
 
-### Backend
+### Backend e Infraestructura
 - **Node.js** + **Express**
-- **CORS** (Configurado para el origen del frontend)
-- **Dotenv**
-- **Endpoints de Datos**: Serve el catálogo (`/api/medical/catalog`) y detonantes (`/api/medical/triggers`) centralizadamente.
+- **PostgreSQL 15** + **Sequelize CLI** (Gestión de Modelos & Migraciones)
+- **Redis 7** (In-Memory Data Store)
+- **JSON Web Tokens (JWT)** & **Bcryptjs** (Seguridad)
+- **Cors** & **Dotenv**
+- Despliegue empaquetado 100% sobre **Docker Desktop** / **Docker Compose**.
 
 ## 🚀 Instalación y Uso (Docker Compose)
 
-La forma recomendada de ejecutar el proyecto es mediante **Docker Compose**, que levanta ambos servicios y configura la red interna automáticamente.
+La plataforma corre sobre múltiples contenedores aislados. Sólo necesitas Docker.
 
 ### 1. Requisitos
-- Docker y Docker Compose instalados.
+- [Docker](https://www.docker.com/) y Docker Compose instalados.
 
-### 2. Configuración
-La plataforma se gestiona desde un archivo `.env` en la raíz que centraliza el host, el puerto y las llaves de API. Ahora la llave de Spoonacular es **exclusiva del backend**:
+### 2. Variables de Entorno
+Asegúrate de tener configurado tu archivo `.env` en la raíz (o que los valores del `.env.example` estén definidos). 
 
 ```env
-# Puerto del Backend y URL para el Frontend
+# Puertos y Comunicación
 PORT=5001
 VITE_API_URL=http://localhost:5001
 
-# Estrategia de API
-VITE_API_MODE=LIVE (MOCK | LIVE)
+# Claves Secretas
 SPOONACULAR_KEY=tu_api_key_aqui
+JWT_SECRET=tu_secreto_impenetrable_aqui
+
+# Conexiones de Base de Datos
+DATABASE_URL=postgres://wati_user:wati_password@postgres:5432/wati_db
+REDIS_URL=redis://redis:6379
 ```
 
-> [!IMPORTANT]
-> El Frontend ya **no conoce** a Spoonacular. Solo se comunica con el Backend en `/api/recipes`, el cual normaliza los datos y protege la API Key.
-
-### 3. Levantar la plataforma
+### 3. Levantar la Plataforma
+En la carpeta raíz del proyecto, construye las imágenes y lanza la flota de contenedores en "detached mode":
 ```bash
 docker compose up -d --build
 ```
 
-- **Frontend (Vite)**: [http://localhost:5173](http://localhost:5173)
-- **Backend API**: [http://localhost:5001/api/status](http://localhost:5001/api/status)
+### 4. Inicializar la Base de Datos (Migraciones)
+Una vez que el backend esté corriendo, **es obligatorio crear las tablas de PostgreSQL**. Ejecuta el Sequelize CLI directo en el contenedor para propagar las 3 migraciones (`users`, `profiles`, `favorite_recipes`):
+```bash
+docker compose exec backend npx sequelize-cli db:migrate
+```
+
+*Nota: Ante cualquier error extraño en `node_modules` tras actualizar pull requests, puedes usar el comando destructivo temporal `docker compose rm -f -s -v backend` y volver a levantar.*
 
 ## 🧪 Desarrollo y Pruebas
 
-### Frontend
-Para ejecutar o probar solo el frontend localmente:
+### Pruebas Automatizadas (Frontend & Backend)
+El frontend cuenta con suites exhaustivas de inyección Médica (SecurityScrubber) testeados bajo Vitest, y el Backend igualmente configurado:
+
 ```bash
+# Frontend
 cd frontend
 npm install
-npm run dev
-npm run test      # Suite de pruebas unitarias (Vitest)
-npm run coverage  # Reporte de cobertura
-```
+npm test
 
-### Backend
-Para el servidor de desarrollo:
-```bash
+# Backend (Requiere tener servicios corriendo si hay tests de integración)
 cd backend
 npm install
-npm run dev
+npm run coverage
 ```
 
 ---
-**Wati** — *Cuidando tu salud, ingrediente por ingrediente.*
-
+**Wati** — *Seguridad alimentaria impulsada por IA, ahora multicapa.*
