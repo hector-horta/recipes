@@ -37,7 +37,8 @@ export class RecipeProvider {
       addRecipeInformation: 'true',
       fillIngredients: 'true',
       maxReadyTime: '30',
-      number: number || '12'
+      sort: params.sort || '',
+      number: number || '10'
     });
 
     // Create a cache key excluding the API key for security/consistency if key changes

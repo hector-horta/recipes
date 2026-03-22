@@ -1,5 +1,6 @@
-import { ArrowLeft, Clock, ChefHat, ListChecks } from 'lucide-react';
+import { ArrowLeft, Clock, ChefHat, ListChecks, Heart } from 'lucide-react';
 import { Recipe } from '../types/recipe';
+import { useFavorites } from '../hooks/useFavorites';
 
 interface RecipeDetailPageProps {
   recipe: Recipe;
@@ -7,6 +8,14 @@ interface RecipeDetailPageProps {
 }
 
 export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
+  const { toggleFavorite, isFavorited } = useFavorites();
+  const favorited = isFavorited(recipe.id);
+
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleFavorite({ id: recipe.id, title: recipe.title, imageUrl: recipe.imageUrl });
+  };
+
   return (
     <div className="min-h-screen bg-brand-cream font-sans">
       {/* Hero Section with Image */}
@@ -28,6 +37,18 @@ export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
             aria-label="Volver"
           >
             <ArrowLeft className="w-6 h-6 drop-shadow-sm" />
+          </button>
+
+          <button 
+            onClick={handleToggle}
+            className={`p-3 rounded-2xl backdrop-blur-xl transition-all border shadow-xl active:scale-95 ${
+              favorited 
+                ? 'bg-red-500 text-white border-red-400' 
+                : 'bg-black/20 text-white hover:bg-black/30 border-white/10'
+            }`}
+            aria-label={favorited ? "Quitar de favoritos" : "Agregar a favoritos"}
+          >
+            <Heart className={`w-6 h-6 ${favorited ? 'fill-current' : ''}`} />
           </button>
         </div>
 

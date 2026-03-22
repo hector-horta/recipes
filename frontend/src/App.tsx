@@ -8,11 +8,14 @@ import { Recipe } from './types/recipe';
 import { MedicalRegistry } from './api/MedicalRegistry';
 import { SecurityScrubber } from './api/SecurityScrubber';
 
+import { useWatiSearch } from './hooks/useWatiSearch';
+
 // ── App Component ──────────────────────────────────────────
 export type ModalState = 'none' | 'login' | 'onboarding';
 
 function App() {
   const { user } = useAuth();
+  const searchProps = useWatiSearch();
   const [isInitialized, setIsInitialized] = React.useState(false);
 
   useEffect(() => {
@@ -65,6 +68,7 @@ function App() {
         />
       ) : (
         <RecipePage
+          {...searchProps}
           onSelectRecipe={setSelectedRecipe}
           onOpenLogin={() => setActiveModal('login')}
           onOpenOnboarding={() => setActiveModal('onboarding')}
