@@ -16,6 +16,7 @@ const corsOptions = {
 };
 
 import authRoutes from './routes/auth.js';
+import favoritesRoutes from './routes/favorites.js';
 import { connectDB } from './config/database.js';
 import { connectRedis } from './config/redis.js';
 
@@ -27,6 +28,7 @@ connectDB();
 connectRedis();
 
 app.use('/api/auth', authRoutes);
+app.use('/api/favorites', favoritesRoutes);
 
 // Data previously hardcoded in frontend
 const INTOLERANCE_CATALOG = [

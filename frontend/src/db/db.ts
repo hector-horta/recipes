@@ -3,6 +3,7 @@ import Dexie, { type Table } from 'dexie';
 // ── Base de datos IndexedDB vía Dexie ──────────────────
 class WatiDB extends Dexie {
   cachedRecipes!: Table<any>;
+  searchCache!: Table<any>;
   medicalMetadata!: Table<any>;
 
   constructor() {
@@ -14,6 +15,11 @@ class WatiDB extends Dexie {
 
     this.version(2).stores({
       cachedRecipes: 'id, query'
+    });
+
+    this.version(3).stores({
+      searchCache: 'query',
+      cachedRecipes: 'id' // Keep id as primary key
     });
   }
 }
