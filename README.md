@@ -15,7 +15,9 @@ El proyecto se divide en diferentes servicios orquestados:
 - **Privacidad y Cumplimiento GDPR**: Perfiles de salud encriptados en base de datos. Completo flujo legal de aceptación de términos y endpoint `DELETE /api/auth/me` con borrado en Cascada garantizando el Derecho al Olvido.
 - **Autenticación Segura (JWT & Bcrypt)**: Cuentas individuales únicas identificadas mediante **UUID v4** en PostgreSQL. Contraseñas protegidas mediante algoritmos de encriptado salt.
 - **Proxy Inteligente con Spoonacular**: El backend protege las llaves de terceros e inyecta dinámicamente las restricciones médicas del usuario antes de lanzar la búsqueda (p. ej. Mapeo transparente de SIBO a dietas permitidas).
-- **Sistema de Caché Optimizada (Redis)**: Un TTL inteligente de 15 minutos en el backend cachea peticiones repetidas a Spoonacular, salvaguardando presupuestos y reduciendo la latencia espectacularmente.
+- **Sistema de Caché Optimizada (Redis & IndexedDB)**: Un TTL inteligente de 15 minutos en el backend protege Spoonacular. En el frontend, un motor de búsqueda indexado mediante **Dexie (IndexedDB)** persistente (`searchCache`) garantiza resultados instantáneos y consistentes, incluso con términos de búsqueda que se solapan.
+- **Persistencia de Navegación**: El estado de búsqueda y los resultados se mantienen vivos al navegar entre el listado y el detalle de las recetas, mejorando drásticamente la experiencia de usuario (UX).
+- **Deduplicación de Contenido**: Motor inteligente que asegura que las recetas favoritas no aparezcan repetidas en las recomendaciones del día.
 
 ## 🛠️ Stack Tecnológico
 
@@ -80,7 +82,8 @@ El frontend cuenta con suites exhaustivas de inyección Médica (SecurityScrubbe
 # Frontend
 cd frontend
 npm install
-npm test
+npm test           # Ejecutar tests unitarios
+npm run coverage   # Generar informe de cobertura (Capa Médica & PrivacyProxy)
 
 # Backend (Requiere tener servicios corriendo si hay tests de integración)
 cd backend
