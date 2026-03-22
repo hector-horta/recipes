@@ -27,7 +27,7 @@ export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite }:
   return (
     <article 
       onClick={() => onCookNow(recipe)}
-      className="group relative flex flex-col bg-white rounded-2xl border border-brand-sage/10 overflow-hidden cursor-pointer hover-lift shadow-sm"
+      className="group relative flex flex-col bg-white rounded-2xl border border-brand-sage/10 overflow-hidden cursor-pointer hover-lift shadow-sm animate-fade-in"
     >
       {/* Image Container */}
       <div className="relative h-56 w-full overflow-hidden shrink-0 bg-brand-cream">
@@ -108,7 +108,7 @@ export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite }:
 
 export function RecipeCardSkeleton() {
   return (
-    <div className="flex flex-col bg-white rounded-2xl overflow-hidden border border-slate-100 animate-pulse shadow-sm">
+    <div className="flex flex-col bg-white rounded-2xl overflow-hidden border border-slate-100 animate-pulse shadow-sm animate-fade-in">
       <div className="h-56 w-full bg-slate-200/60"></div>
       <div className="p-5 flex flex-col flex-1">
         <div className="flex justify-between gap-4 mb-4">
