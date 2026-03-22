@@ -125,6 +125,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
     if (updates.intolerances !== undefined) profile.intolerances = updates.intolerances;
     if (updates.excluded_ingredients !== undefined) profile.excluded_ingredients = updates.excluded_ingredients;
     if (updates.daily_calories !== undefined) profile.daily_calories = updates.daily_calories;
+    if (updates.onboarding_completed !== undefined) profile.onboarding_completed = updates.onboarding_completed;
 
     await profile.save();
     res.json(profile);

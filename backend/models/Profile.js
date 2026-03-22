@@ -37,6 +37,11 @@ export const Profile = sequelize.define('Profile', {
     type: DataTypes.INTEGER,
     allowNull: true,
     defaultValue: 2000
+  },
+  onboarding_completed: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
   }
 }, {
   tableName: 'profiles',

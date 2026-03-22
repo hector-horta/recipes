@@ -36,6 +36,7 @@ export class RecipeProvider {
       apiKey: process.env.SPOONACULAR_KEY || '',
       addRecipeInformation: 'true',
       fillIngredients: 'true',
+      maxReadyTime: '30',
       number: number || '12'
     });
 

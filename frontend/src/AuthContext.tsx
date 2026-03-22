@@ -20,8 +20,8 @@ export interface UserProfile {
 interface AuthContextType {
   user: UserProfile | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, displayName: string, acceptedTerms: boolean) => Promise<void>;
+  login: (email: string, password: string) => Promise<UserProfile | null>;
+  register: (email: string, password: string, displayName: string, acceptedTerms: boolean) => Promise<UserProfile | null>;
   logout: () => void;
   updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;
 }
@@ -49,8 +49,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               email: data.email,
               displayName: data.displayName,
               avatarUrl: data.avatarUrl,
-              ...data.profile, // spreads intolerances, conditions, etc.
-              onboardingComplete: data.profile.onboarding_complete
+              ...data.profile,
+              onboardingComplete: data.profile.onboarding_completed
             });
           } else {
             localStorage.removeItem(TOKEN_KEY);
@@ -82,12 +82,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     if (profileRes.ok) {
         const pData = await profileRes.json();
-        setUser({
+        const fullUser = {
             ...pData,
             ...pData.profile,
-            onboardingComplete: pData.profile?.onboarding_complete || false
-        });
+            onboardingComplete: pData.profile?.onboarding_completed || false
+        };
+        console.log('[Auth] Login successful. Onboarding status:', fullUser.onboardingComplete);
+        setUser(fullUser);
+        return fullUser;
     }
+    return null;
   };
 
   const register = async (email: string, password: string, displayName: string, acceptedTerms: boolean) => {
@@ -106,12 +110,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       if (profileRes.ok) {
           const pData = await profileRes.json();
-          setUser({
+          const fullUser = {
               ...pData,
               ...pData.profile,
-              onboardingComplete: pData.profile?.onboarding_complete || false
-          });
+              onboardingComplete: pData.profile?.onboarding_completed || false
+          };
+          console.log('[Auth] Registration successful. Onboarding status:', fullUser.onboardingComplete);
+          setUser(fullUser);
+          return fullUser;
       }
+      return null;
   };
 
   const logout = () => {
@@ -123,13 +131,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const token = localStorage.getItem(TOKEN_KEY);
     if (!token) return;
 
+    const backendUpdates: any = { ...updates };
+    if (updates.onboardingComplete !== undefined) {
+      backendUpdates.onboarding_completed = updates.onboardingComplete;
+      delete backendUpdates.onboardingComplete;
+    }
+
     const res = await fetch(`${API_URL}/api/auth/profile`, {
         method: 'PUT',
         headers: { 
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(updates)
+        body: JSON.stringify(backendUpdates)
     });
 
     if (!res.ok) {

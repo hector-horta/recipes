@@ -5,7 +5,7 @@ import { WatiLogo } from './WatiLogo';
 
 interface LoginModalProps {
   onClose: () => void;
-  onLoginSuccess: () => void;
+  onLoginSuccess: (userData?: any) => void;
 }
 
 export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
@@ -26,15 +26,16 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
     setIsSubmitting(true);
 
     try {
+      let userData = null;
       if (isRegister) {
         if (!displayName.trim()) { setError('Ingresa tu nombre.'); setIsSubmitting(false); return; }
         if (password.length < 6) { setError('Mínimo 6 caracteres.'); setIsSubmitting(false); return; }
         if (!acceptedTerms) { setError('Debes aceptar la Política de Privacidad y Términos (GDPR) para continuar.'); setIsSubmitting(false); return; }
-        await register(email.trim().toLowerCase(), password, displayName.trim(), acceptedTerms);
+        userData = await register(email.trim().toLowerCase(), password, displayName.trim(), acceptedTerms);
       } else {
-        await login(email.trim().toLowerCase(), password);
+        userData = await login(email.trim().toLowerCase(), password);
       }
-      onLoginSuccess();
+      onLoginSuccess(userData);
     } catch (err: any) {
       setError(err.message || 'Error inesperado.');
     } finally {

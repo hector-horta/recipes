@@ -6,7 +6,7 @@ export const MOCK_RECIPE_DATA = [
     id: "715415",
     title: "Red Lentil Soup with Chicken and Turnips",
     imageUrl: "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&q=80&w=556&h=370",
-    prepTimeMinutes: 55,
+    prepTimeMinutes: 25,
     estimatedCost: 3,
     siboAllergiesTags: ["gluten free", "dairy free"],
     summary: "A hearty and nutritious soup with lentils, chicken, and fresh vegetables.",

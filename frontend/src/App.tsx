@@ -31,9 +31,15 @@ function App() {
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [activeModal, setActiveModal] = useState<ModalState>('none');
 
-  const handleLoginSuccess = () => {
-    // After login/register, check if onboarding is needed
-    setActiveModal('onboarding');
+  const handleLoginSuccess = (userData?: any) => {
+    // Check if onboarding is needed (use userData if available, otherwise fallback)
+    const needsOnboarding = userData ? !userData.onboardingComplete : !user?.onboardingComplete;
+    
+    if (needsOnboarding) {
+      setActiveModal('onboarding');
+    } else {
+      setActiveModal('none');
+    }
   };
 
   const handleOnboardingClose = () => {
