@@ -1,5 +1,5 @@
 import CryptoJS from 'crypto-js';
-import type { UserProfile } from '../db/db';
+import type { UserProfile } from '../AuthContext';
 
 // En un entorno de grado médico, esta clave derivaría de un protocolo de autenticación robusto (ej. PBKDF2 desde un PIN de usuario) o un enclave seguro (WebCyrpto API).
 const VAULT_KEY = import.meta.env.VITE_VAULT_KEY || 'WATI_MEDICAL_FALLBACK_KEY_0x99';
@@ -41,7 +41,7 @@ export const SecureVault = {
         }
     },
 
-    /** Convierte un UserProfile de Dexie al formato MedicalProfile usado por SecurityScrubber */
+    /** Convierte un UserProfile del contexto unificado al formato MedicalProfile usado por SecurityScrubber */
     fromUserProfile: (userProfile: UserProfile): MedicalProfile => {
         return {
             allergies: [],

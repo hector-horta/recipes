@@ -34,8 +34,12 @@ export function OnboardingPage() {
 
   const [selectedIds, setSelectedIds] = useState<string[]>(user?.intolerances || []);
   const [severities, setSeverities] = useState<Record<string, 'mild' | 'moderate' | 'severe' | 'anaphylactic'>>(user?.severities || {});
+  const [diet, setDiet] = useState<string>(user?.diet || 'None');
+  const [dailyCalories, setDailyCalories] = useState<number>(user?.daily_calories || 2000);
   const [step, setStep] = useState<'select' | 'severity'>('select');
   const [isSaving, setIsSaving] = useState(false);
+  
+  const DIET_OPTIONS = ['None', 'Vegan', 'Vegetarian', 'Keto', 'Paleo', 'SIBO'];
 
   const toggleIntolerance = (id: string) => {
     setSelectedIds(prev =>
@@ -62,11 +66,10 @@ export function OnboardingPage() {
     setIsSaving(true);
     try {
       const conditions: string[] = [];
-      const intolerances = selectedIds.filter(id => {
-        if (id === 'sibo') { conditions.push('SIBO'); return false; }
-        return true;
-      });
+      const intolerances = selectedIds;
       await updateUserProfile({
+        diet,
+        daily_calories: dailyCalories,
         intolerances,
         severities,
         conditions,
@@ -105,9 +108,44 @@ export function OnboardingPage() {
       <div className="flex-1 overflow-y-auto px-4 pb-32">
         <div className="max-w-2xl mx-auto">
           {step === 'select' ? (
-            /* ── Grid de intolerancias ── */
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {INTOLERANCE_CATALOG.map(item => {
+            <div className="space-y-8">
+              {/* ── Dieta y Calorías ── */}
+              <div className="bg-white/5 border border-white/10 rounded-3xl p-6">
+                <h3 className="text-white font-bold mb-4 flex items-center gap-2">
+                  <span className="text-xl">🥗</span> Tu perfil nutricional
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-slate-400 text-xs font-bold mb-2">Dieta Principal</label>
+                    <select 
+                      value={diet} 
+                      onChange={(e) => setDiet(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white appearance-none focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                    >
+                      {DIET_OPTIONS.map(opt => (
+                        <option key={opt} value={opt} className="bg-slate-800 text-white">{opt}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-slate-400 text-xs font-bold mb-2">Objetivo Diario (Calorías)</label>
+                    <input 
+                      type="number"
+                      value={dailyCalories}
+                      onChange={(e) => setDailyCalories(Number(e.target.value))}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Grid de intolerancias ── */}
+              <div>
+                <h3 className="text-white font-bold mb-4 flex items-center gap-2">
+                  <span className="text-xl">⚠️</span> Intervenciones (Alergias / Intolerancias)
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {INTOLERANCE_CATALOG.map(item => {
                 const isSelected = selectedIds.includes(item.id);
                 return (
                   <button
@@ -135,6 +173,8 @@ export function OnboardingPage() {
                   </button>
                 );
               })}
+                </div>
+              </div>
             </div>
           ) : (
             /* ── Lista de severidades ── */

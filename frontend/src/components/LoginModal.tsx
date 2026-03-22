@@ -16,6 +16,7 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -28,7 +29,8 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
       if (isRegister) {
         if (!displayName.trim()) { setError('Ingresa tu nombre.'); setIsSubmitting(false); return; }
         if (password.length < 6) { setError('Mínimo 6 caracteres.'); setIsSubmitting(false); return; }
-        await register(email.trim().toLowerCase(), password, displayName.trim());
+        if (!acceptedTerms) { setError('Debes aceptar la Política de Privacidad y Términos (GDPR) para continuar.'); setIsSubmitting(false); return; }
+        await register(email.trim().toLowerCase(), password, displayName.trim(), acceptedTerms);
       } else {
         await login(email.trim().toLowerCase(), password);
       }
@@ -121,6 +123,21 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
+
+          {isRegister && (
+            <div className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                id="acceptedTermsModal"
+                checked={acceptedTerms}
+                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                className="mt-1 w-4 h-4 rounded border-brand-mint/50 bg-white/5 text-brand-mint focus:ring-brand-mint/50"
+              />
+              <label htmlFor="acceptedTermsModal" className="text-xs text-white/70">
+                Acepto la Política de Privacidad y Términos, incluyendo el tratamiento de mis datos de salud (GDPR).
+              </label>
+            </div>
+          )}
 
           <button
             type="submit"

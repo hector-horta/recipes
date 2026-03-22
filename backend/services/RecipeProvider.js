@@ -1,6 +1,33 @@
+import { redisClient } from '../config/redis.js';
+
 export class RecipeProvider {
-  static async getRecipes(params) {
-    const { query, excludeIngredients, diet, number } = params;
+  static async getRecipes(params, userProfile) {
+    let { query, excludeIngredients, diet, number } = params;
+
+    // Smart Injection: Automate GDPR/Health limits server-side
+    if (userProfile) {
+      if (userProfile.diet && userProfile.diet !== 'None') {
+        diet = userProfile.diet === 'SIBO' ? 'Low FODMAP' : userProfile.diet; 
+        // Map SIBO to Spoonacular's equivalent Low FODMAP
+      }
+      if (userProfile.intolerances && userProfile.intolerances.length > 0) {
+        const finalIntolerances = userProfile.intolerances.filter(item => {
+          if (item.toLowerCase() === 'sibo') {
+            diet = 'Low FODMAP'; // Elevate SIBO intolerance to Diet parameter
+            return false;
+          }
+          return true;
+        });
+
+        if (finalIntolerances.length > 0) {
+          const intolerancesStr = finalIntolerances.join(',');
+          excludeIngredients = excludeIngredients ? `${excludeIngredients},${intolerancesStr}` : intolerancesStr;
+        }
+      }
+      if (userProfile.excluded_ingredients) {
+        excludeIngredients = excludeIngredients ? `${excludeIngredients},${userProfile.excluded_ingredients}` : userProfile.excluded_ingredients;
+      }
+    }
 
     const queryParams = new URLSearchParams({
       query: query || '',
@@ -11,6 +38,23 @@ export class RecipeProvider {
       fillIngredients: 'true',
       number: number || '12'
     });
+
+    // Create a cache key excluding the API key for security/consistency if key changes
+    const cacheKeyParams = new URLSearchParams(queryParams);
+    cacheKeyParams.delete('apiKey');
+    const cacheKey = `recipes:${cacheKeyParams.toString()}`;
+
+    try {
+      if (redisClient.isReady) {
+        const cached = await redisClient.get(cacheKey);
+        if (cached) {
+          console.log(`[Cache] Redis Hit para clave: ${cacheKey}`);
+          return JSON.parse(cached);
+        }
+      }
+    } catch (err) {
+      console.warn('[Cache] Error leyendo de Redis:', err.message);
+    }
 
     const SPOONACULAR_API_URL = 'https://api.spoonacular.com/recipes';
     const url = `${SPOONACULAR_API_URL}/complexSearch?${queryParams.toString()}`;
@@ -28,7 +72,18 @@ export class RecipeProvider {
       }
 
       const data = await res.json();
-      return this.normalizeRecipes(data.results || []);
+      const normalized = this.normalizeRecipes(data.results || []);
+
+      try {
+        if (redisClient.isReady) {
+          await redisClient.setEx(cacheKey, 900, JSON.stringify(normalized)); // 900s = 15 min
+          console.log(`[Cache] Guardado en Redis: ${cacheKey}`);
+        }
+      } catch (err) {
+        console.warn('[Cache] Error guardando en Redis:', err.message);
+      }
+
+      return normalized;
     } catch (error) {
       console.error('[RecipeProvider] Error fetching recipes:', error);
       throw error;
