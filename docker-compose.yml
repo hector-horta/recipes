@@ -15,10 +15,9 @@ services:
       - .env
     environment:
       - NODE_ENV=development
-    networks:
-      - app-network
     depends_on:
-      - backend
+      - postgres
+      - redis
     stdin_open: true
     tty: true
 
@@ -35,9 +34,38 @@ services:
     environment:
       - NODE_ENV=development
       - FRONTEND_URL=http://localhost:5173
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - app-network
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: wati_user
+      POSTGRES_PASSWORD: wati_password
+      POSTGRES_DB: wati_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
     networks:
       - app-network
 
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

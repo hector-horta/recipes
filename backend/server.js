@@ -15,8 +15,18 @@ const corsOptions = {
   optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
 };
 
+import authRoutes from './routes/auth.js';
+import { connectDB } from './config/database.js';
+import { connectRedis } from './config/redis.js';
+
 app.use(cors(corsOptions));
 app.use(express.json());
+
+// Initialize external services
+connectDB();
+connectRedis();
+
+app.use('/api/auth', authRoutes);
 
 // Data previously hardcoded in frontend
 const INTOLERANCE_CATALOG = [
@@ -68,10 +78,17 @@ app.get('/api/medical/triggers', (req, res) => {
 });
 
 import { RecipeProvider } from './services/RecipeProvider.js';
+import { optionalAuthenticateToken } from './middleware/auth.js';
+import { Profile } from './models/Profile.js';
 
-app.get('/api/recipes', async (req, res) => {
+app.get('/api/recipes', optionalAuthenticateToken, async (req, res) => {
   try {
-    const data = await RecipeProvider.getRecipes(req.query);
+    let userProfile = null;
+    if (req.user) {
+      userProfile = await Profile.findOne({ where: { user_id: req.user.id } });
+    }
+
+    const data = await RecipeProvider.getRecipes(req.query, userProfile);
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: 'Internal Server Error' });

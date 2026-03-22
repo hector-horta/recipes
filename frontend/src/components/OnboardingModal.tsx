@@ -72,10 +72,7 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
     setIsSaving(true);
     try {
       const conditions: string[] = [];
-      const intolerances = selectedIds.filter(id => {
-        if (id === 'sibo') { conditions.push('SIBO'); return false; }
-        return true;
-      });
+      const intolerances = selectedIds;
       await updateUserProfile({
         intolerances,
         severities,

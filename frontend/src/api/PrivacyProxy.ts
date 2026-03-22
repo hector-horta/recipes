@@ -89,9 +89,15 @@ export const SecureAPI = {
         });
 
         try {
+            const token = localStorage.getItem('wati_jwt');
+            const headers: Record<string, string> = { 'Accept': 'application/json' };
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
             const res = await fetch(`${API_DOMAIN}/api/recipes?${params.toString()}`, {
                 method: 'GET',
-                headers: { 'Accept': 'application/json' },
+                headers,
                 mode: 'cors'
             });
 
