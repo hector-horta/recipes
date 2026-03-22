@@ -76,7 +76,7 @@ export const SecureAPI = {
             if (!isRandom) {
                 // Persistent storage for recipes
                 const recipeEntries = analyzedMocks.map(recipe => ({
-                    id: recipe.id,
+                    id: recipe.id.toString(),
                     data: recipe,
                     timestamp: Date.now()
                 }));
@@ -85,7 +85,7 @@ export const SecureAPI = {
                 // Query results index
                 await db.searchCache.put({
                     query: safeQuery.toLowerCase(),
-                    results: analyzedMocks.map(r => r.id),
+                    results: analyzedMocks.map(r => r.id.toString()),
                     timestamp: Date.now()
                 });
             }
@@ -125,19 +125,21 @@ export const SecureAPI = {
             const analyzedRecipes = data.map((recipe: any) => SecurityScrubber.analyze(recipe, profile));
 
             // 5. Persistencia en caché (Idempotente)
-            const recipeEntries = analyzedRecipes.map((recipe: any) => ({
-                id: recipe.id,
-                data: recipe,
-                timestamp: Date.now()
-            }));
-            await db.cachedRecipes.bulkPut(recipeEntries);
+            if (!isRandom) {
+                const recipeEntries = analyzedRecipes.map((recipe: any) => ({
+                    id: recipe.id.toString(),
+                    data: recipe,
+                    timestamp: Date.now()
+                }));
+                await db.cachedRecipes.bulkPut(recipeEntries);
 
-            // Guardar el índice de resultados para esta query
-            await db.searchCache.put({
-                query: safeQuery.toLowerCase(),
-                results: analyzedRecipes.map((r: any) => r.id),
-                timestamp: Date.now()
-            });
+                // Guardar el índice de resultados para esta query
+                await db.searchCache.put({
+                    query: safeQuery.toLowerCase(),
+                    results: analyzedRecipes.map((r: any) => r.id.toString()),
+                    timestamp: Date.now()
+                });
+            }
             
             return analyzedRecipes;
 
