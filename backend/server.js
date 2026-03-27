@@ -2,6 +2,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 
 dotenv.config({ path: '../.env' });
 dotenv.config(); // Fallback to local .env if exists
@@ -19,6 +21,29 @@ import authRoutes from './routes/auth.js';
 import favoritesRoutes from './routes/favorites.js';
 import { connectDB } from './config/database.js';
 import { connectRedis } from './config/redis.js';
+
+app.use(helmet());
+
+// TODO: trust proxy if we deploy behind a reverse proxy (e.g., Nginx, Heroku, Cloudflare)
+// app.set('trust proxy', 1);
+
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 100, // Limit each IP to 100 requests per `window`
+  standardHeaders: true, 
+  legacyHeaders: false, 
+  message: { error: 'Too many requests from this IP, please try again after 15 minutes' }
+});
+
+const recipeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, 
+  limit: 100, // 100 recipe searches per IP per 15 min
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Se han agotado las búsquedas permitidas por este dispositivo durante 15 minutos.' }
+});
+
+app.use('/api/', globalLimiter);
 
 app.use(cors(corsOptions));
 app.use(express.json());
@@ -82,8 +107,10 @@ app.get('/api/medical/triggers', (req, res) => {
 import { RecipeProvider } from './services/RecipeProvider.js';
 import { optionalAuthenticateToken } from './middleware/auth.js';
 import { Profile } from './models/Profile.js';
+import { validateQuery } from './middleware/validate.js';
+import { recipeQuerySchema } from './models/validators.js';
 
-app.get('/api/recipes', optionalAuthenticateToken, async (req, res) => {
+app.get('/api/recipes', optionalAuthenticateToken, recipeLimiter, validateQuery(recipeQuerySchema), async (req, res, next) => {
   try {
     let userProfile = null;
     if (req.user) {
@@ -93,13 +120,27 @@ app.get('/api/recipes', optionalAuthenticateToken, async (req, res) => {
     const data = await RecipeProvider.getRecipes(req.query, userProfile);
     res.json(data);
   } catch (error) {
-    console.error('[Error] Fallo en la ruta /api/recipes:', error.message);
-    const status = error.status || 500;
-    res.status(status).json({ 
-        error: status === 402 ? 'Quota Exhausted' : 'Internal Server Error',
-        details: error.message 
-    });
+    next(error); // Pass to global error handler
   }
+});
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error('[Global Error Guard]', err.message);
+
+  const status = err.status || 500;
+  let message = 'Vaya, ocurrió un problema inesperado. Inténtalo más tarde.';
+
+  if (status === 402) {
+    message = 'Se ha agotado la cuota de la API externa para hoy. Por favor, vuelve mañana.';
+  } else if (status === 504) {
+    message = 'La búsqueda tardó más de lo esperado en responder. Inténtalo de nuevo.';
+  } else if (status === 400 && err.error === 'Petición malformada.') {
+    // Preserve validaton error text explicitly
+    return res.status(status).json(err);
+  }
+
+  res.status(status).json({ error: message });
 });
 
 app.listen(port, () => {
