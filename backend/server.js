@@ -19,7 +19,7 @@ const corsOptions = {
 
 import authRoutes from './routes/auth.js';
 import favoritesRoutes from './routes/favorites.js';
-import { connectDB } from './config/database.js';
+import { connectDB, sequelize } from './config/database.js';
 import { connectRedis } from './config/redis.js';
 
 app.use(helmet());
@@ -49,7 +49,8 @@ app.use(cors(corsOptions));
 app.use(express.json());
 
 // Initialize external services
-connectDB();
+await connectDB();
+await sequelize.sync(); // Auto-create tables if they don't exist
 connectRedis();
 
 app.use('/api/auth', authRoutes);
@@ -117,7 +118,7 @@ app.get('/api/recipes', optionalAuthenticateToken, recipeLimiter, validateQuery(
       userProfile = await Profile.findOne({ where: { user_id: req.user.id } });
     }
 
-    const data = await RecipeProvider.getRecipes(req.query, userProfile);
+    const data = await RecipeProvider.getRecipes(req.validatedQuery, userProfile);
     res.json(data);
   } catch (error) {
     next(error); // Pass to global error handler

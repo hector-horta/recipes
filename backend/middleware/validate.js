@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const validateQuery = (schema) => (req, res, next) => {
   try {
-    req.query = schema.parse(req.query);
+    req.validatedQuery = schema.parse(req.query);
     next();
   } catch (err) {
     if (err instanceof z.ZodError) {

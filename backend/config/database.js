@@ -10,7 +10,7 @@ const connectionString = process.env.DATABASE_URL || 'postgres://wati_user:wati_
 
 export const sequelize = new Sequelize(connectionString, {
   dialect: 'postgres',
-  logging: false, // Set to console.log to see SQL queries during migrations
+  logging: console.log, // Enabled to debug SQL errors
   define: {
     timestamps: true,
     underscored: true

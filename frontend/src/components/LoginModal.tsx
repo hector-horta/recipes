@@ -35,7 +35,12 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
       } else {
         userData = await login(email.trim().toLowerCase(), password);
       }
-      onLoginSuccess(userData);
+      
+      // Delay to mitigate browser autofill extension crash (e.g. bootstrap-autofill-overlay.js)
+      // Allows the browser to finish form submission events before React unmounts the modal.
+      setTimeout(() => {
+        onLoginSuccess(userData);
+      }, 50);
     } catch (err: any) {
       setError(err.message || 'Error inesperado.');
     } finally {
@@ -86,6 +91,9 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
               <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within:text-brand-mint transition-colors" />
               <input
                 type="text"
+                name="name"
+                id="reg-name"
+                autoComplete="name"
                 placeholder="Tu nombre"
                 value={displayName}
                 onChange={e => setDisplayName(e.target.value)}
@@ -98,6 +106,9 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
             <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within:text-brand-mint transition-colors" />
             <input
               type="email"
+              name="email"
+              id="login-email"
+              autoComplete="email"
               placeholder="correo@ejemplo.com"
               value={email}
               onChange={e => setEmail(e.target.value)}
@@ -110,6 +121,9 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
             <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within:text-brand-mint transition-colors" />
             <input
               type={showPassword ? 'text' : 'password'}
+              name="password"
+              id="login-password"
+              autoComplete={isRegister ? 'new-password' : 'current-password'}
               placeholder="Contraseña"
               value={password}
               onChange={e => setPassword(e.target.value)}

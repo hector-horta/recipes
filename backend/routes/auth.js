@@ -45,7 +45,7 @@ router.post('/register', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('[Auth] Error de DB o servidor durante el registro.');
+    console.error('[Auth] Error de DB o servidor durante el registro:', error);
     res.status(500).json({ error: 'Error interno del servidor.' });
   }
 });

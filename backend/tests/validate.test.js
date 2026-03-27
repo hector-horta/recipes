@@ -51,5 +51,7 @@ describe('Validation Middleware & Schemas', () => {
     middleware(req, res, next);
 
     expect(next).toHaveBeenCalledTimes(1);
+    expect(req.validatedQuery).toBeDefined();
+    expect(req.validatedQuery.query).toBe('chicken');
   });
 });

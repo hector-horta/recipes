@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { SecureVault } from './security/SecureVault';
 
 export interface UserProfile {
   id?: string;
@@ -44,14 +45,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           });
           if (res.ok) {
             const data = await res.json();
-            setUser({
+            const fullUserProfile: UserProfile = {
               id: data.id,
               email: data.email,
               displayName: data.displayName,
               avatarUrl: data.avatarUrl,
               ...data.profile,
               onboardingComplete: data.profile.onboarding_completed
-            });
+            };
+            setUser(fullUserProfile);
+            // Sync to Vault
+            SecureVault.saveProfile(SecureVault.fromUserProfile(fullUserProfile));
           } else {
             localStorage.removeItem(TOKEN_KEY);
           }
@@ -82,13 +86,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     if (profileRes.ok) {
         const pData = await profileRes.json();
-        const fullUser = {
+        const fullUser: UserProfile = {
             ...pData,
             ...pData.profile,
             onboardingComplete: pData.profile?.onboarding_completed || false
         };
         console.log('[Auth] Login successful. Onboarding status:', fullUser.onboardingComplete);
         setUser(fullUser);
+        SecureVault.saveProfile(SecureVault.fromUserProfile(fullUser));
         return fullUser;
     }
     return null;
@@ -110,13 +115,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       if (profileRes.ok) {
           const pData = await profileRes.json();
-          const fullUser = {
+          const fullUser: UserProfile = {
               ...pData,
               ...pData.profile,
               onboardingComplete: pData.profile?.onboarding_completed || false
           };
           console.log('[Auth] Registration successful. Onboarding status:', fullUser.onboardingComplete);
           setUser(fullUser);
+          SecureVault.saveProfile(SecureVault.fromUserProfile(fullUser));
           return fullUser;
       }
       return null;
@@ -152,7 +158,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     // Actualizar el estado local con la respuesta (o simplemente parchear)
-    setUser(prev => prev ? { ...prev, ...updates } : null);
+    setUser(prev => {
+        if (!prev) return null;
+        const updated = { ...prev, ...updates };
+        SecureVault.saveProfile(SecureVault.fromUserProfile(updated));
+        return updated;
+    });
   };
 
   return (
