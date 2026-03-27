@@ -3,7 +3,7 @@ import { useAuth } from '../AuthContext';
 import { WatiLogo } from './WatiLogo';
 import { X, ChevronRight, Check } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 const SEVERITY_OPTIONS: { value: 'mild' | 'moderate' | 'severe' | 'anaphylactic'; label: string; activeClasses: string }[] = [
   { value: 'mild',         label: 'Leve',       activeClasses: '!bg-[#74C6E6] !text-white border-[#74C6E6]' },

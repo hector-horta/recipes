@@ -1,16 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Recipe } from '../types/recipe';
 import { SecureAPI } from '../api/PrivacyProxy';
+import { SecureVault } from '../security/SecureVault';
+import { useAuth } from '../AuthContext';
 import { MOCK_RECIPE_DATA } from '../api/MockData';
 
 // Regla de Oro: Ingredientes prohibidos para SIBO (FODMAPs críticos)
-const FORBIDDEN_INGREDIENTS = [
+// Solo se aplica si el usuario tiene SIBO activo en su perfil médico.
+const SIBO_FORBIDDEN_INGREDIENTS = [
   'ajo', 'cebolla', 'puerro', 'cebollín', 'chalota', 
   'garlic', 'onion', 'leek', 'shallot', 'scallion',
   'ajo en polvo', 'cebolla en polvo', 'garlic powder', 'onion powder'
 ];
 
 export function useWatiSearch() {
+  const { user } = useAuth();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Recipe[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -36,23 +40,28 @@ export function useWatiSearch() {
       // 1. Configuración de la Búsqueda
       const searchParams: any = { 
         query: trimmed, 
-        number: 10 
+        number: user ? 15 : 10 // Pide 15 si tiene cuenta para asegurar que queden 10 tras filtros de alergias/SIBO
       };
       
       if (isInitialOrEmpty) {
         searchParams.sort = 'random';
       }
 
-      const data = await SecureAPI.fetchSafeRecipes(trimmed, undefined, false, searchParams);
+        const medicalProfile = user ? SecureVault.fromUserProfile(user) : undefined;
+        const data = await SecureAPI.fetchSafeRecipes(trimmed, medicalProfile, false, searchParams);
       
       // 2. Seguridad de la Guatita (SIBO Filter - Client Side)
+      const hasSIBO = medicalProfile?.conditions?.includes('SIBO') || false;
+
       const safeResults = data.filter((recipe: any) => {
+        if (!hasSIBO) return true;
+
         const titleContent = (recipe.title || '').toLowerCase();
         const ingredientsContent = (recipe.ingredients || [])
           .map((i: any) => (i.name || '').toLowerCase())
           .join(' ');
         
-        const isForbidden = FORBIDDEN_INGREDIENTS.some(forbidden => 
+        const isForbidden = SIBO_FORBIDDEN_INGREDIENTS.some((forbidden: string) => 
           titleContent.includes(forbidden) || ingredientsContent.includes(forbidden)
         );
 
@@ -76,13 +85,17 @@ export function useWatiSearch() {
         siboAllergiesTags: r.siboAllergiesTags
       }));
 
-      setResults(mappedResults);
+      // Filtro final para asegurar exactamente 10 recetas que no sean inseguras
+      const finalSafeRecipes = mappedResults
+        .filter((r: Recipe) => r.safetyLevel !== 'unsafe')
+        .slice(0, 10);
+
+      setResults(finalSafeRecipes);
     } catch (error: any) {
       console.error('[useWatiSearch] Error:', error);
       setError(error.message);
       if (error.message.includes('Quota Exhausted')) {
         setIsQuotaExhausted(true);
-        // Fallback a datos locales (keeping original fallback logic for quota exhaustion)
         const fallback = MOCK_RECIPE_DATA.map((r: any) => ({
           ...r,
           safetyLevel: 'safe' as const
@@ -90,7 +103,6 @@ export function useWatiSearch() {
         setResults(fallback);
       } else if (error.message?.includes('402') || error.message?.includes('quota') || error.message?.includes('aborted')) {
         setIsQuotaExhausted(true);
-        // Fallback a datos locales
         const fallback = MOCK_RECIPE_DATA.map((r: any) => ({
           ...r,
           safetyLevel: 'safe' as const
@@ -102,7 +114,7 @@ export function useWatiSearch() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user]); // CRÍTICO: user debe estar en deps para evitar stale closure (user siempre null sin esto)
 
   // Debounce Effect: 600ms
   useEffect(() => {

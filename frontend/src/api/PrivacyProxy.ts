@@ -23,11 +23,11 @@ export const SecureAPI = {
         // ... Zero-Knowledge Profile Fetch stays same ...
         let profile = externalProfile || SecureVault.loadProfile();
         if (!profile) {
-            console.warn('[Privacy] No local profile authorized. Usando perfil estricto por defecto para la demo.');
+            console.warn('[Privacy] No local profile authorized. Usando perfil vacío para modo público.');
             profile = {
                 allergies: [],
-                intolerances: ['dairy'],
-                conditions: ['SIBO'],
+                intolerances: [],
+                conditions: [],
                 severities: {}
             };
         }
@@ -100,10 +100,13 @@ export const SecureAPI = {
         const params = new URLSearchParams({
             query: safeQuery,
             excludeIngredients: threatExclusions,
-            diet: hasSIBO ? 'Low FODMAP' : '',
             number: extraParams.number || '10',
             ...extraParams
         });
+        // Solo aplicar dieta Low FODMAP si el usuario tiene SIBO activo
+        if (hasSIBO) {
+            params.set('diet', 'Low FODMAP');
+        }
 
         try {
             const token = localStorage.getItem('wati_jwt');

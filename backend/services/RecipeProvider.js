@@ -61,13 +61,19 @@ export class RecipeProvider {
     const SPOONACULAR_API_URL = 'https://api.spoonacular.com/recipes';
     const url = `${SPOONACULAR_API_URL}/complexSearch?${queryParams.toString()}`;
     
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 seconds timeout
+
     try {
       const res = await fetch(url, {
         method: 'GET',
         headers: {
           'Accept': 'application/json'
-        }
+        },
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!res.ok) {
         if (res.status === 402) {
@@ -92,8 +98,15 @@ export class RecipeProvider {
 
       return normalized;
     } catch (error) {
-      console.error('[RecipeProvider] Error fetching recipes:', error);
-      throw error;
+      if (error.name === 'AbortError') {
+        console.error('[RecipeProvider] Timeout fetching Spoonacular API.');
+        const timeoutError = new Error('Gateway Timeout');
+        timeoutError.status = 504;
+        throw timeoutError;
+      }
+      console.error('[RecipeProvider] Error fetching recipes:', error.message);
+      // We do not leak full Spoonacular error specifics up the chain.
+      throw Object.assign(new Error('Downstream API Error'), { status: 500 });
     }
   }
 

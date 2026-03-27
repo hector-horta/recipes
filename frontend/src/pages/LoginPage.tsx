@@ -27,11 +27,14 @@ export function LoginPage() {
         if (password.length < 6) { setError('La contraseña debe tener al menos 6 caracteres.'); setIsSubmitting(false); return; }
         if (!acceptedTerms) { setError('Debes aceptar la Política de Privacidad y Términos (GDPR) para continuar.'); setIsSubmitting(false); return; }
         await register(email.trim().toLowerCase(), password, displayName.trim(), acceptedTerms);
-        navigate('/onboarding');
       } else {
         await login(email.trim().toLowerCase(), password);
-        navigate('/');
       }
+      
+      // Delay to mitigate browser autofill extension crash
+      setTimeout(() => {
+        navigate(isRegister ? '/onboarding' : '/');
+      }, 50);
     } catch (err: any) {
       setError(err.message || 'Error inesperado.');
     } finally {
@@ -108,8 +111,10 @@ export function LoginPage() {
               <div className="relative group">
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-500 group-focus-within:text-emerald-400 transition-colors" />
                 <input
-                  id="login-name"
+                  id="reg-name"
+                  name="name"
                   type="text"
+                  autoComplete="name"
                   placeholder="Tu nombre"
                   value={displayName}
                   onChange={e => setDisplayName(e.target.value)}
@@ -122,7 +127,9 @@ export function LoginPage() {
               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-500 group-focus-within:text-emerald-400 transition-colors" />
               <input
                 id="login-email"
+                name="email"
                 type="email"
+                autoComplete="email"
                 placeholder="correo@ejemplo.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
@@ -135,7 +142,9 @@ export function LoginPage() {
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-500 group-focus-within:text-emerald-400 transition-colors" />
               <input
                 id="login-password"
+                name="password"
                 type={showPassword ? 'text' : 'password'}
+                autoComplete={isRegister ? 'new-password' : 'current-password'}
                 placeholder="Contraseña"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
