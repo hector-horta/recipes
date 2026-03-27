@@ -25,3 +25,6 @@ frontend/coverage
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# TLS certificates (nunca commitear claves privadas)
+nginx/certs/

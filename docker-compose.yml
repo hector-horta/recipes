@@ -1,12 +1,28 @@
 version: "3.8"
 
 services:
+  # ── Nginx: Reverse Proxy TLS Post-Cuántico ──────────────────────────────
+  nginx:
+    build:
+      context: ./nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/certs:/etc/nginx/certs:ro # Certificados (solo lectura)
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - app-network
+
+  # ── Frontend (Vite + React) ─────────────────────────────────────────────
   frontend:
     build:
       context: ./frontend
       target: base
     ports:
-      - "5173:5173"
+      - "5173:5173"   # Expuesto solo para desarrollo directo (sin Nginx)
     volumes:
       - ./frontend:/app
       - /app/node_modules
@@ -20,14 +36,17 @@ services:
       - redis
     stdin_open: true
     tty: true
+    networks:
+      - app-network
 
+  # ── Backend (Node.js + Express 5) ──────────────────────────────────────
   backend:
     build:
       context: ./backend
     env_file:
       - .env
     ports:
-      - "${PORT:-5001}:${PORT:-5001}"
+      - "${PORT:-5001}:${PORT:-5001}"   # Expuesto solo para desarrollo directo
     volumes:
       - ./backend:/app
       - /app/node_modules
@@ -40,6 +59,7 @@ services:
     networks:
       - app-network
 
+  # ── PostgreSQL ──────────────────────────────────────────────────────────
   postgres:
     image: postgres:15-alpine
     environment:
@@ -53,6 +73,7 @@ services:
     networks:
       - app-network
 
+  # ── Redis ───────────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
     ports:
