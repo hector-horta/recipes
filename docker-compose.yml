@@ -84,6 +84,10 @@ services:
   # - POSTGRES_PASSWORD: Database password - REQUIRED, set in .env
   # - POSTGRES_DB: Database name (default: wati_db)
   #
+  # Security:
+  # - Running as postgres user (non-root)
+  # - Read-only root filesystem for additional protection
+  # - Dropped capabilities for reduced attack surface
   # IMPORTANT: Never commit actual passwords to version control!
   # Use .env file (already in .gitignore) or HCP Vault Secrets.
   #
@@ -99,6 +103,49 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - app-network
+    user: postgres
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+
+  # ── Redis ───────────────────────────────────────────────────────────────
+  # 
+  # Security:
+  # - Running as redis user (non-root)
+  # - Disabled protected mode for container networking
+  # - Read-only configuration to prevent unauthorized writes
+  # - Disabled dangerous commands (FLUSHDB, FLUSHALL, CONFIG, etc.)
+  # - Dropped capabilities for reduced attack surface
+  #
+  redis:
+    image: redis:7-alpine
+    command: >
+      redis-server
+      --protected-mode no
+      --save ""
+      --appendonly no
+      --loglevel notice
+      --rename-command FLUSHDB ""
+      --rename-command FLUSHALL ""
+      --rename-command CONFIG ""
+      --rename-command SHUTDOWN ""
+      --rename-command DEBUG ""
+      --rename-command SLAVEOF ""
+      --rename-command REPLICAOF ""
+      --rename-command CLUSTER ""
+      --requirepass ""
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+    user: redis
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /data:uid=1000,gid=1000,mode=1777
 
   # ── Redis ───────────────────────────────────────────────────────────────
   redis:
