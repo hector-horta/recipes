@@ -40,6 +40,20 @@ services:
       - app-network
 
   # ── Backend (Node.js + Express 5) ──────────────────────────────────────
+  # 
+  # Environment Variables (set in .env):
+  # - NODE_ENV: development or production
+  # - FRONTEND_URL: URL of the frontend for CORS
+  # - POSTGRES_HOST: Database hostname (postgres in Docker network)
+  # - HCP_CLIENT_ID: HCP service principal client ID (optional)
+  # - HCP_CLIENT_SECRET: HCP service principal client secret (optional)
+  # - HCP_PROJECT_ID: HCP project ID (optional)
+  # 
+  # HCP Vault Secrets:
+  # When HCP credentials are provided, the backend can retrieve secrets
+  # from HCP Vault instead of using environment variables directly.
+  # See: backend/config/vault.js
+  #
   backend:
     build:
       context: ./backend
@@ -53,6 +67,10 @@ services:
     environment:
       - NODE_ENV=development
       - FRONTEND_URL=http://localhost:5173
+      - POSTGRES_HOST=postgres
+      - HCP_CLIENT_ID=${HCP_CLIENT_ID}
+      - HCP_CLIENT_SECRET=${HCP_CLIENT_SECRET}
+      - HCP_PROJECT_ID=${HCP_PROJECT_ID}
     depends_on:
       - postgres
       - redis
@@ -70,6 +88,8 @@ services:
   # - Running as postgres user (non-root)
   # - Read-only root filesystem for additional protection
   # - Dropped capabilities for reduced attack surface
+  # IMPORTANT: Never commit actual passwords to version control!
+  # Use .env file (already in .gitignore) or HCP Vault Secrets.
   #
   postgres:
     image: postgres:15-alpine
