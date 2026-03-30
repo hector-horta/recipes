@@ -40,6 +40,20 @@ services:
       - app-network
 
   # ── Backend (Node.js + Express 5) ──────────────────────────────────────
+  # 
+  # Environment Variables (set in .env):
+  # - NODE_ENV: development or production
+  # - FRONTEND_URL: URL of the frontend for CORS
+  # - POSTGRES_HOST: Database hostname (postgres in Docker network)
+  # - HCP_CLIENT_ID: HCP service principal client ID (optional)
+  # - HCP_CLIENT_SECRET: HCP service principal client secret (optional)
+  # - HCP_PROJECT_ID: HCP project ID (optional)
+  # 
+  # HCP Vault Secrets:
+  # When HCP credentials are provided, the backend can retrieve secrets
+  # from HCP Vault instead of using environment variables directly.
+  # See: backend/config/vault.js
+  #
   backend:
     build:
       context: ./backend
@@ -53,6 +67,10 @@ services:
     environment:
       - NODE_ENV=development
       - FRONTEND_URL=http://localhost:5173
+      - POSTGRES_HOST=postgres
+      - HCP_CLIENT_ID=${HCP_CLIENT_ID}
+      - HCP_CLIENT_SECRET=${HCP_CLIENT_SECRET}
+      - HCP_PROJECT_ID=${HCP_PROJECT_ID}
     depends_on:
       - postgres
       - redis
@@ -60,12 +78,21 @@ services:
       - app-network
 
   # ── PostgreSQL ──────────────────────────────────────────────────────────
+  # 
+  # Database Configuration:
+  # - POSTGRES_USER: Database user (default: wati_user)
+  # - POSTGRES_PASSWORD: Database password - REQUIRED, set in .env
+  # - POSTGRES_DB: Database name (default: wati_db)
+  #
+  # IMPORTANT: Never commit actual passwords to version control!
+  # Use .env file (already in .gitignore) or HCP Vault Secrets.
+  #
   postgres:
     image: postgres:15-alpine
     environment:
-      POSTGRES_USER: wati_user
-      POSTGRES_PASSWORD: wati_password
-      POSTGRES_DB: wati_db
+      POSTGRES_USER: ${POSTGRES_USER:-wati_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-wati_db}
     ports:
       - "5432:5432"
     volumes:
