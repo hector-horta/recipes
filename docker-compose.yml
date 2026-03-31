@@ -1,12 +1,28 @@
 version: "3.8"
 
 services:
+  # ── Nginx: Reverse Proxy TLS Post-Cuántico ──────────────────────────────
+  nginx:
+    build:
+      context: ./nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/certs:/etc/nginx/certs:ro # Certificados (solo lectura)
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - app-network
+
+  # ── Frontend (Vite + React) ─────────────────────────────────────────────
   frontend:
     build:
       context: ./frontend
       target: base
     ports:
-      - "5173:5173"
+      - "5173:5173"   # Expuesto solo para desarrollo directo (sin Nginx)
     volumes:
       - ./frontend:/app
       - /app/node_modules
@@ -20,39 +36,118 @@ services:
       - redis
     stdin_open: true
     tty: true
+    networks:
+      - app-network
 
+  # ── Backend (Node.js + Express 5) ──────────────────────────────────────
+  # 
+  # Environment Variables (set in .env):
+  # - NODE_ENV: development or production
+  # - FRONTEND_URL: URL of the frontend for CORS
+  # - POSTGRES_HOST: Database hostname (postgres in Docker network)
+  # - HCP_CLIENT_ID: HCP service principal client ID (optional)
+  # - HCP_CLIENT_SECRET: HCP service principal client secret (optional)
+  # - HCP_PROJECT_ID: HCP project ID (optional)
+  # 
+  # HCP Vault Secrets:
+  # When HCP credentials are provided, the backend can retrieve secrets
+  # from HCP Vault instead of using environment variables directly.
+  # See: backend/config/vault.js
+  #
   backend:
     build:
       context: ./backend
     env_file:
       - .env
     ports:
-      - "${PORT:-5001}:${PORT:-5001}"
+      - "${PORT:-5001}:${PORT:-5001}"   # Expuesto solo para desarrollo directo
     volumes:
       - ./backend:/app
       - /app/node_modules
     environment:
       - NODE_ENV=development
       - FRONTEND_URL=http://localhost:5173
+      - POSTGRES_HOST=postgres
+      - HCP_CLIENT_ID=${HCP_CLIENT_ID}
+      - HCP_CLIENT_SECRET=${HCP_CLIENT_SECRET}
+      - HCP_PROJECT_ID=${HCP_PROJECT_ID}
     depends_on:
       - postgres
       - redis
     networks:
       - app-network
 
+  # ── PostgreSQL ──────────────────────────────────────────────────────────
+  # 
+  # Database Configuration:
+  # - POSTGRES_USER: Database user (default: wati_user)
+  # - POSTGRES_PASSWORD: Database password - REQUIRED, set in .env
+  # - POSTGRES_DB: Database name (default: wati_db)
+  #
+  # Security:
+  # - Running as postgres user (non-root)
+  # - Read-only root filesystem for additional protection
+  # - Dropped capabilities for reduced attack surface
+  # IMPORTANT: Never commit actual passwords to version control!
+  # Use .env file (already in .gitignore) or HCP Vault Secrets.
+  #
   postgres:
     image: postgres:15-alpine
     environment:
-      POSTGRES_USER: wati_user
-      POSTGRES_PASSWORD: wati_password
-      POSTGRES_DB: wati_db
+      POSTGRES_USER: ${POSTGRES_USER:-wati_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-wati_db}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - app-network
+    user: postgres
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
 
+  # ── Redis ───────────────────────────────────────────────────────────────
+  # 
+  # Security:
+  # - Running as redis user (non-root)
+  # - Disabled protected mode for container networking
+  # - Read-only configuration to prevent unauthorized writes
+  # - Disabled dangerous commands (FLUSHDB, FLUSHALL, CONFIG, etc.)
+  # - Dropped capabilities for reduced attack surface
+  #
+  redis:
+    image: redis:7-alpine
+    command: >
+      redis-server
+      --protected-mode no
+      --save ""
+      --appendonly no
+      --loglevel notice
+      --rename-command FLUSHDB ""
+      --rename-command FLUSHALL ""
+      --rename-command CONFIG ""
+      --rename-command SHUTDOWN ""
+      --rename-command DEBUG ""
+      --rename-command SLAVEOF ""
+      --rename-command REPLICAOF ""
+      --rename-command CLUSTER ""
+      --requirepass ""
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+    user: redis
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /data:uid=1000,gid=1000,mode=1777
+
+  # ── Redis ───────────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
     ports:

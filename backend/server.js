@@ -24,8 +24,9 @@ import { connectRedis } from './config/redis.js';
 
 app.use(helmet());
 
-// TODO: trust proxy if we deploy behind a reverse proxy (e.g., Nginx, Heroku, Cloudflare)
-// app.set('trust proxy', 1);
+// Nginx actúa como reverse proxy: Express debe confiar en X-Forwarded-For
+// para que el rate limiting vea la IP real del cliente, no la IP interna de Nginx.
+app.set('trust proxy', 1);
 
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes

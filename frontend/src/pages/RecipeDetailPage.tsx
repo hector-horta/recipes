@@ -1,4 +1,5 @@
 import { ArrowLeft, Clock, ChefHat, ListChecks, Heart } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import { Recipe } from '../types/recipe';
 import { useFavorites } from '../hooks/useFavorites';
 
@@ -84,7 +85,7 @@ export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
             {recipe.summary && (
               <div 
                 className="text-lg text-brand-text-muted mb-12 prose prose-brand leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: recipe.summary }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(recipe.summary) }}
               />
             )}
 

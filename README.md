@@ -98,12 +98,13 @@ npm install
 npm run coverage
 ```
 
+## 📚 Documentación Adicional
+
+| Documento | Descripción |
+|---|---|
+| [ArchitectureNotes.md](./ArchitectureNotes.md) | Notas de arquitectura: filtrado de recetas, Express 5, modos MOCK/LIVE, configuración TLS post-cuántica (ML-KEM-768 / FIPS 203) |
+| [ProductionChecklist.md](./ProductionChecklist.md) | Checklist paso a paso para poner la aplicación en producción |
+
+
 ---
 **Wati** — *Seguridad alimentaria impulsada por IA, ahora multicapa.*
-
-## 📝 Notas de Arquitectura
-
-- **Filtro de recetas**: En modo LIVE, el frontend solicita **15 recetas** cuando el usuario está autenticado (10 para anónimos) y aplica filtros de seguridad local, garantizando exactamente 10 resultados visibles.
-- **Filtro SIBO/Low FODMAP**: El parámetro `diet=Low FODMAP` solo se envía a Spoonacular si el perfil del usuario incluye `SIBO` en `conditions`. Nunca se aplica por defecto.
-- **Compatibilidad Express 5**: El middleware de validación usa `req.validatedQuery` en lugar de mutar `req.query`, que es de solo lectura en Express 5.
-- **Modo MOCK vs LIVE**: Controlado exclusivamente por `VITE_API_MODE` en `.env`. Los cambios requieren recrear los contenedores Docker.
