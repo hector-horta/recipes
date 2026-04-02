@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../AuthContext';
 import { X, Mail, Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { WatiLogo } from './WatiLogo';
+import { useTranslation } from 'react-i18next';
 
 interface LoginModalProps {
   onClose: () => void;
@@ -9,6 +10,7 @@ interface LoginModalProps {
 }
 
 export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
+  const { t } = useTranslation();
   const { login, register } = useAuth();
 
   const [isRegister, setIsRegister] = useState(false);
@@ -28,21 +30,19 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
     try {
       let userData = null;
       if (isRegister) {
-        if (!displayName.trim()) { setError('Ingresa tu nombre.'); setIsSubmitting(false); return; }
-        if (password.length < 6) { setError('Mínimo 6 caracteres.'); setIsSubmitting(false); return; }
-        if (!acceptedTerms) { setError('Debes aceptar la Política de Privacidad y Términos (GDPR) para continuar.'); setIsSubmitting(false); return; }
+        if (!displayName.trim()) { setError(t('auth.nameRequired')); setIsSubmitting(false); return; }
+        if (password.length < 6) { setError(t('auth.minChars')); setIsSubmitting(false); return; }
+        if (!acceptedTerms) { setError(t('auth.termsRequired')); setIsSubmitting(false); return; }
         userData = await register(email.trim().toLowerCase(), password, displayName.trim(), acceptedTerms);
       } else {
         userData = await login(email.trim().toLowerCase(), password);
       }
       
-      // Delay to mitigate browser autofill extension crash (e.g. bootstrap-autofill-overlay.js)
-      // Allows the browser to finish form submission events before React unmounts the modal.
       setTimeout(() => {
         onLoginSuccess(userData);
       }, 50);
     } catch (err: any) {
-      setError(err.message || 'Error inesperado.');
+      setError(err.message || t('auth.unexpectedError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -72,9 +72,9 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
             <WatiLogo size={48} />
           </div>
           <h2 className="text-xl font-extrabold text-white tracking-tight">
-            {isRegister ? 'Crear Cuenta' : 'Iniciar Sesión'}
+            {isRegister ? t('auth.createAccount') : t('auth.signIn')}
           </h2>
-          <p className="text-white/70 text-xs mt-1 font-medium italic">Tu bienestar empieza con lo que comes</p>
+          <p className="text-white/70 text-xs mt-1 font-medium italic">{t('auth.subtitle')}</p>
         </div>
 
         {/* Error */}
@@ -94,7 +94,7 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
                 name="name"
                 id="reg-name"
                 autoComplete="name"
-                placeholder="Tu nombre"
+                placeholder={t('auth.yourName')}
                 value={displayName}
                 onChange={e => setDisplayName(e.target.value)}
                 className="w-full pl-11 pr-4 py-3 rounded-xl bg-white/5 border border-white/20 text-white placeholder-white/40 text-sm focus:outline-none focus:ring-2 focus:ring-brand-mint/50 focus:border-brand-mint/50 transition-all"
@@ -109,7 +109,7 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
               name="email"
               id="login-email"
               autoComplete="email"
-              placeholder="correo@ejemplo.com"
+              placeholder={t('auth.emailPlaceholder')}
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
@@ -124,7 +124,7 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
               name="password"
               id="login-password"
               autoComplete={isRegister ? 'new-password' : 'current-password'}
-              placeholder="Contraseña"
+              placeholder={t('auth.passwordPlaceholder')}
               value={password}
               onChange={e => setPassword(e.target.value)}
               required
@@ -149,7 +149,7 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
                 className="mt-1 w-4 h-4 rounded border-brand-mint/50 bg-white/5 text-brand-mint focus:ring-brand-mint/50"
               />
               <label htmlFor="acceptedTermsModal" className="text-xs text-white/70">
-                Acepto la Política de Privacidad y Términos, incluyendo el tratamiento de mis datos de salud (GDPR).
+                {t('auth.acceptTerms')}
               </label>
             </div>
           )}
@@ -164,7 +164,7 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             ) : (
               <>
-                {isRegister ? 'Empieza tu camino' : 'Entrar'}
+                {isRegister ? t('auth.startJourney') : t('auth.enter')}
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
@@ -173,13 +173,13 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
 
         {/* Toggle */}
         <p className="text-center text-white/70 text-xs mt-5 font-medium">
-          {isRegister ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?'}{' '}
+          {isRegister ? t('auth.haveAccount') : t('auth.noAccount')}{' '}
           <button
             type="button"
             onClick={() => { setIsRegister(!isRegister); setError(''); }}
             className="text-brand-mint font-extrabold underline hover:text-white transition-colors"
           >
-            {isRegister ? 'Inicia Sesión' : 'Crear Cuenta'}
+            {isRegister ? t('auth.signInLink') : t('auth.createAccountLink')}
           </button>
         </p>
       </div>

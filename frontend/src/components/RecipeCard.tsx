@@ -1,5 +1,6 @@
 import { AlertCircle, Clock, Heart } from 'lucide-react';
 import { Recipe } from '../types/recipe';
+import { useTranslation } from 'react-i18next';
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -9,9 +10,9 @@ interface RecipeCardProps {
 }
 
 export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite }: RecipeCardProps) {
+  const { t } = useTranslation();
   const hasBorderlineIngredients = recipe.ingredients.some(ing => ing.isBorderlineSafe);
 
-  // Configuración visual según el nivel de seguridad
   const safetyColor = recipe.safetyLevel === 'safe' 
     ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
     : recipe.safetyLevel === 'review'
@@ -19,10 +20,10 @@ export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite }:
       : 'bg-red-50 text-red-900 border-red-200';
 
   const safetyText = recipe.safetyLevel === 'safe'
-    ? 'Seguro'
+    ? t('recipe.safe')
     : recipe.safetyLevel === 'review'
-      ? 'Revisar Ingredientes'
-      : 'Evitar';
+      ? t('recipe.review')
+      : t('recipe.avoid');
 
   return (
     <article 
@@ -37,17 +38,14 @@ export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite }:
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
           loading="lazy"
         />
-        {/* Gradiente sutil inferior para legibilidad */}
         <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-slate-900/60 to-transparent pointer-events-none"></div>
         
-        {/* Badge de Seguridad */}
         <div className="absolute top-4 left-4 flex gap-2">
           <span className={`px-3 py-1.5 rounded-full text-xs font-bold shadow-sm border tracking-wide uppercase ${safetyColor}`}>
             {safetyText}
           </span>
         </div>
 
-        {/* Botón de Favorito */}
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -62,29 +60,26 @@ export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite }:
           <Heart className={`w-4 h-4 ${isFavorited ? 'fill-current' : ''}`} />
         </button>
 
-        {/* Tiempo de Preparación (Movido un poco hacia abajo o izquierda para no chocar) */}
         <div className="absolute bottom-4 left-4">
           <span className="px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-md bg-white/90 text-slate-700 shadow-sm border border-slate-200/50 tracking-wide flex items-center gap-1.5">
             <Clock className="w-3.5 h-3.5" />
-            {recipe.prepTimeMinutes} min
+            {recipe.prepTimeMinutes} {t('common.min')}
           </span>
         </div>
       </div>
 
-      {/* Contenido Principal */}
+      {/* Content */}
       <div className="flex flex-col flex-1 p-5">
         <div className="flex justify-between items-start mb-3 gap-3">
           <h3 className="text-xl font-bold text-brand-forest leading-tight line-clamp-2">
             {recipe.title}
           </h3>
           
-          {/* Alerta de ingredientes al límite */}
           {hasBorderlineIngredients && (
             <div className="group/tooltip relative shrink-0 pt-0.5">
               <AlertCircle className="w-5 h-5 text-amber-500 cursor-help" />
-              {/* Tooltip */}
               <div className="absolute right-0 bottom-full mb-2 w-56 p-2.5 bg-slate-800 text-white text-xs rounded-lg opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-10 shadow-xl font-medium">
-                Contiene ingredientes (ej. Fructanos) que rozan tu límite de tolerancia personal.
+                {t('recipe.borderlineTooltip')}
                 <svg className="absolute text-slate-800 h-2 w-full left-0 top-full translate-x-[4.5rem]" x="0px" y="0px" viewBox="0 0 255 255" xmlSpace="preserve">
                   <polygon className="fill-current" points="0,0 127.5,127.5 255,0"/>
                 </svg>
@@ -93,7 +88,6 @@ export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite }:
           )}
         </div>
 
-        {/* Etiquetas Dinámicas SIBO/Alergias */}
         <div className="flex flex-wrap gap-2 mb-2">
           {recipe.siboAllergiesTags.map(tag => (
             <span key={tag} className="px-2.5 py-1 rounded-md bg-brand-forest/5 text-brand-forest text-[10px] font-bold tracking-wider uppercase border border-brand-forest/10">
@@ -124,4 +118,3 @@ export function RecipeCardSkeleton() {
     </div>
   );
 }
-

@@ -122,7 +122,7 @@ export const SecureAPI = {
             });
 
             if (!res.ok) {
-                if (res.status === 402) {
+                if (res.status === 402 || res.status >= 500) {
                     throw new Error('Quota Exhausted');
                 }
                 throw new Error('[Network] Petición abortada.');

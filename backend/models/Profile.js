@@ -42,6 +42,11 @@ export const Profile = sequelize.define('Profile', {
     type: DataTypes.BOOLEAN,
     allowNull: false,
     defaultValue: false
+  },
+  language: {
+    type: DataTypes.STRING(5),
+    allowNull: false,
+    defaultValue: 'en'
   }
 }, {
   tableName: 'profiles',

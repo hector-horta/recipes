@@ -76,7 +76,8 @@ export class RecipeProvider {
       clearTimeout(timeoutId);
 
       if (!res.ok) {
-        if (res.status === 402) {
+        // Spoonacular returns 402 or 5xx when daily quota is depleted
+        if (res.status === 402 || res.status >= 500) {
             const quotaError = new Error('Quota Exhausted');
             quotaError.status = 402;
             throw quotaError;

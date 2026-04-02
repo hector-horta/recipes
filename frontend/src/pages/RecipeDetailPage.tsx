@@ -2,6 +2,7 @@ import { ArrowLeft, Clock, ChefHat, ListChecks, Heart } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { Recipe } from '../types/recipe';
 import { useFavorites } from '../hooks/useFavorites';
+import { useTranslation } from 'react-i18next';
 
 interface RecipeDetailPageProps {
   recipe: Recipe;
@@ -9,6 +10,7 @@ interface RecipeDetailPageProps {
 }
 
 export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
+  const { t } = useTranslation();
   const { toggleFavorite, isFavorited } = useFavorites();
   const favorited = isFavorited(recipe.id);
 
@@ -27,7 +29,6 @@ export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-brand-forest/90 via-brand-forest/40 to-transparent"></div>
-        {/* Top Scrim for Back Button Visibility */}
         <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/50 to-transparent"></div>
         
         {/* Navigation Header */}
@@ -35,7 +36,7 @@ export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
           <button 
             onClick={onBack}
             className="p-2 sm:p-3 rounded-2xl bg-black/20 backdrop-blur-xl text-white hover:bg-black/30 transition-all border border-white/10 shadow-xl"
-            aria-label="Volver"
+            aria-label={t('common.back')}
           >
             <ArrowLeft className="w-6 h-6 drop-shadow-sm" />
           </button>
@@ -47,7 +48,7 @@ export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
                 ? 'bg-red-500 text-white border-red-400' 
                 : 'bg-black/20 text-white hover:bg-black/30 border-white/10'
             }`}
-            aria-label={favorited ? "Quitar de favoritos" : "Agregar a favoritos"}
+            aria-label={favorited ? t('recipe.removeFavorite') : t('recipe.addFavorite')}
           >
             <Heart className={`w-6 h-6 ${favorited ? 'fill-current' : ''}`} />
           </button>
@@ -69,7 +70,7 @@ export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
             <div className="flex items-center gap-6 text-sm font-medium">
               <span className="flex items-center gap-3 bg-white/10 px-4 py-2.5 rounded-2xl backdrop-blur-md border border-white/10">
                 <Clock className="w-5 h-5 text-brand-mint" />
-                {recipe.prepTimeMinutes} min. de preparación
+                {t('recipe.prepTime', { min: recipe.prepTimeMinutes })}
               </span>
             </div>
           </div>
@@ -97,7 +98,7 @@ export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
                   <div className="p-3 bg-brand-sage/10 rounded-2xl text-brand-forest border border-brand-sage/20">
                     <ListChecks className="w-6 h-6" />
                   </div>
-                  <h2 className="text-2xl font-black text-brand-forest">Ingredientes</h2>
+                  <h2 className="text-2xl font-black text-brand-forest">{t('recipe.ingredients')}</h2>
                 </div>
                 <ul className="space-y-3.5">
                   {recipe.ingredients.map((ing, idx) => (
@@ -108,7 +109,7 @@ export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
                       <span className="text-brand-text font-bold capitalize">{ing.name}</span>
                       {ing.isBorderlineSafe && (
                         <span className="ml-auto px-2 py-1 text-[9px] font-black bg-brand-peach/20 text-brand-forest border border-brand-peach/40 rounded-lg uppercase tracking-tight">
-                          Límite Personal
+                          {t('recipe.personalLimit')}
                         </span>
                       )}
                     </li>
@@ -122,7 +123,7 @@ export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
                   <div className="p-3 bg-brand-mint/10 rounded-2xl text-brand-forest border border-brand-mint/20">
                     <ChefHat className="w-6 h-6" />
                   </div>
-                  <h2 className="text-2xl font-black text-brand-forest">Preparación</h2>
+                  <h2 className="text-2xl font-black text-brand-forest">{t('recipe.preparation')}</h2>
                 </div>
                 <div className="space-y-10">
                   {recipe.instructions.length > 0 ? (
@@ -137,7 +138,7 @@ export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
                       </div>
                     ))
                   ) : (
-                    <p className="text-brand-text-muted italic">No hay instrucciones disponibles para esta receta.</p>
+                    <p className="text-brand-text-muted italic">{t('recipe.noInstructions')}</p>
                   )}
                 </div>
               </section>
@@ -149,7 +150,7 @@ export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
       {/* Footer / CTA */}
       <div className="border-t border-brand-sage/10 py-16 text-center bg-brand-sage/5">
         <p className="text-brand-text-muted text-sm font-bold tracking-wide flex items-center justify-center gap-2">
-          Nutrición Consciente <span className="text-brand-teal">•</span> Wati
+          {t('recipe.mindfulNutrition')} <span className="text-brand-teal">&bull;</span> Wati
         </p>
       </div>
     </div>
