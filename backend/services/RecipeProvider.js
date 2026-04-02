@@ -62,7 +62,7 @@ export class RecipeProvider {
     const url = `${SPOONACULAR_API_URL}/complexSearch?${queryParams.toString()}`;
     
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 seconds timeout
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 seconds timeout
 
     try {
       const res = await fetch(url, {
