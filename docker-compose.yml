@@ -136,8 +136,6 @@ services:
       --requirepass ""
     ports:
       - "6379:6379"
-    volumes:
-      - redis_data:/data
     networks:
       - app-network
     user: redis
@@ -147,15 +145,6 @@ services:
     tmpfs:
       - /data:uid=1000,gid=1000,mode=1777
 
-  # ── Redis ───────────────────────────────────────────────────────────────
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - app-network
 
 networks:
   app-network:
@@ -163,4 +152,3 @@ networks:
 
 volumes:
   postgres_data:
-  redis_data:
