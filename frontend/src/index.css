@@ -14,16 +14,16 @@
     --brand-celeste: #74C6E6;
     --brand-text: #1B2621;
     --brand-text-muted: #57635E;
-    
+
     /* Functional Colors */
     --surface-light: #FFFFFF;
     --surface-organic: #F9FBF9;
     --surface-dark: #1A2421;
-    
+
     --success: #2D6A4F;
     --warning: #FFB703;
     --danger: #D62828;
-    
+
     --glass-bg: rgba(26, 36, 33, 0.85);
     --glass-border: rgba(255, 255, 255, 0.1);
   }
@@ -33,7 +33,7 @@
   .text-glow-sage {
     text-shadow: 0 0 15px rgba(130, 160, 130, 0.4);
   }
-  
+
   .glass-organic {
     background: var(--glass-bg);
     backdrop-filter: blur(16px);
@@ -47,15 +47,22 @@
   .hover-lift {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
-  
+
   .hover-lift:hover {
     transform: translateY(-4px);
     box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.15);
   }
 
   @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   .animate-fade-in {

@@ -1,66 +1,68 @@
+// frontend/src/components/WatiLogo.tsx
+import React from 'react';
+import '../watilogo.css'; // Asegúrate de importar tus estilos
+
 interface WatiLogoProps {
-  size?: number;
+  /**
+   * Ancho del logo en píxeles. La altura se calculará automáticamente.
+   * @default 160
+   */
+  width?: number;
+  /**
+   * Clase CSS adicional para el contenedor.
+   */
   className?: string;
 }
 
-/**
- * Wati brand icon: A minimalist bowl with a sprout-leaf and a heart,
- * evoking health, organic nutrition, and self-care.
- */
-export function WatiLogo({ size = 24, className = '' }: WatiLogoProps) {
+export const WatiLogo: React.FC<WatiLogoProps> = ({ width = 160, className = '' }) => {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 48 48"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-    >
-      {/* Background Badge - Mint Green now */}
-      <rect
-        width="48"
-        height="48"
-        rx="6"
-        fill="var(--brand-mint, #74C69D)"
-      />
+    <div className={`wati-logo-container ${className}`}>
+      <svg
+        width={width}
+        viewBox="0 0 160 64" // Basado en la composición de image_2.png
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className="wati-logo-svg"
+        aria-labelledby="watiLogoTitle"
+        role="img"
+      >
+        <title id="watiLogoTitle">Wati - Nutrición Inteligente</title>
 
-      {/* Bowl Base - Forest Green for high contrast on Mint badge */}
-      <path
-        d="M10 24C10 24 10 38 24 38C38 38 38 24 38 24H10Z"
-        fill="var(--brand-forest, #1B4332)"
-      />
-      
-      {/* Liquid/Surface Line - Mint for contrast on Forest bowl */}
-      <path
-        d="M10 24H38"
-        stroke="var(--brand-mint, #74C69D)"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
+        {/* --- TEXTO PRINCIPAL: 'Wati' --- */}
+        {/* Usamos var(--brand-text) para la tipografía */}
+        <g className="wati-logo-text">
+          {/* 'W' (La forma de la tipografía) */}
+          <path d="M...Z" />
+          {/* 'a' */}
+          <path d="M...Z" />
+          {/* 't' */}
+          <path d="M...Z" />
+          {/* 'i' (Solo el cuerpo) */}
+          <path d="M...Z" />
+        </g>
 
-      {/* Rotating Sprout/Leaf Group - 30 degrees right */}
-      <g transform="rotate(30, 24, 24)">
-        {/* The Sprout/Leaf - Cream */}
-        <path
-          d="M24 24V14C24 14 24 6 34 6C34 6 28 6 24 12C20 6 14 6 14 6C24 6 24 14 24 14"
-          fill="var(--brand-cream, #FDFCF8)"
-        />
-        
-        {/* Stem of the leaf */}
-        <path
-          d="M24 24V14"
-          stroke="var(--brand-cream, #FDFCF8)"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-      </g>
+        {/* --- SÍMBOLOS INTEGRADOS --- */}
 
-      {/* Heart Detail - Cream (matches the leaf for visibility) */}
-      <path
-        d="M24 31C24 31 22 29 20.5 30C19 31 21 33.5 24 33.5C27 33.5 29 31 27.5 30C26 29 24 31 24 31Z"
-        fill="var(--brand-cream, #FDFCF8)"
-      />
-    </svg>
+        {/* 1. Plato y Hoja sobre la 'W' (Teal) */}
+        <g className="wati-logo-teal">
+          {/* Forma del plato protector */}
+          <path d="M...Z" />
+          {/* Tallo y hoja orgánica */}
+          <path d="M...Z" />
+        </g>
+
+        {/* 2. Cuenco con Vapor sobre la 'a' (Sage) */}
+        <g className="wati-logo-sage">
+          {/* Forma del cuenco de comida */}
+          <path d="M...Z" />
+          {/* Línea de vapor */}
+          <path d="M...Z" />
+        </g>
+
+        {/* 3. Check de Seguridad (Mint) */}
+        <path d="M...Z" className="wati-logo-mint" />
+
+      </svg>
+    </div>
   );
-}
+};
