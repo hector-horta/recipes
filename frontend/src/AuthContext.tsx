@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { SecureVault } from './security/SecureVault';
+import i18n from './i18n';
 
 export interface UserProfile {
   id?: string;
@@ -13,6 +14,7 @@ export interface UserProfile {
   severities: Record<string, 'mild' | 'moderate' | 'severe' | 'anaphylactic'>;
   conditions: string[];
   onboardingComplete: boolean;
+  language?: string;
   savedRecipes?: any[];
   createdAt?: string;
   updatedAt?: string;
@@ -56,6 +58,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(fullUserProfile);
             // Sync to Vault
             SecureVault.saveProfile(SecureVault.fromUserProfile(fullUserProfile));
+            // Sync language from profile if set
+            if (fullUserProfile.language) {
+              i18n.changeLanguage(fullUserProfile.language);
+              localStorage.setItem('wati_language', fullUserProfile.language);
+            }
           } else {
             localStorage.removeItem(TOKEN_KEY);
           }
@@ -84,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const profileRes = await fetch(`${API_URL}/api/auth/me`, {
       headers: { 'Authorization': `Bearer ${data.token}` }
     });
-    if (profileRes.ok) {
+      if (profileRes.ok) {
         const pData = await profileRes.json();
         const fullUser: UserProfile = {
             ...pData,
@@ -94,16 +101,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log('[Auth] Login successful. Onboarding status:', fullUser.onboardingComplete);
         setUser(fullUser);
         SecureVault.saveProfile(SecureVault.fromUserProfile(fullUser));
+        // Sync language from profile
+        if (fullUser.language) {
+          i18n.changeLanguage(fullUser.language);
+          localStorage.setItem('wati_language', fullUser.language);
+        }
         return fullUser;
     }
     return null;
   };
 
   const register = async (email: string, password: string, displayName: string, acceptedTerms: boolean) => {
+    const currentLang = localStorage.getItem('wati_language') || i18n.language?.substring(0, 2) || 'en';
     const res = await fetch(`${API_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, displayName, acceptedTerms })
+        body: JSON.stringify({ email, password, displayName, acceptedTerms, language: currentLang })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al registrarse');

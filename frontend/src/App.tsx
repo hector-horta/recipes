@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from './AuthContext';
 import { RecipePage } from './pages/RecipePage';
 import { RecipeDetailPage } from './pages/RecipeDetailPage';
@@ -14,6 +15,7 @@ import { useWatiSearch } from './hooks/useWatiSearch';
 export type ModalState = 'none' | 'login' | 'onboarding';
 
 function App() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const searchProps = useWatiSearch();
   const [isInitialized, setIsInitialized] = React.useState(false);
@@ -35,7 +37,6 @@ function App() {
   const [activeModal, setActiveModal] = useState<ModalState>('none');
 
   const handleLoginSuccess = (userData?: any) => {
-    // Check if onboarding is needed (use userData if available, otherwise fallback)
     const needsOnboarding = userData ? !userData.onboardingComplete : !user?.onboardingComplete;
     
     if (needsOnboarding) {
@@ -53,14 +54,13 @@ function App() {
     return (
       <div className="min-h-screen bg-brand-forest flex flex-col items-center justify-center gap-4">
         <div className="w-12 h-12 border-4 border-brand-mint/30 border-t-brand-mint rounded-full animate-spin" />
-        <p className="text-white/40 text-xs font-black uppercase tracking-widest">Wati se está preparando...</p>
+        <p className="text-white/40 text-xs font-black uppercase tracking-widest">{t('common.loading')}</p>
       </div>
     );
   }
 
   return (
     <>
-      {/* Main content — always visible */}
       {selectedRecipe ? (
         <RecipeDetailPage
           recipe={selectedRecipe}
@@ -75,7 +75,6 @@ function App() {
         />
       )}
 
-      {/* Modals — overlaid on top */}
       {activeModal === 'login' && (
         <LoginModal
           onClose={() => setActiveModal('none')}

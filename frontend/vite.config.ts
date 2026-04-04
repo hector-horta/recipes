@@ -20,6 +20,10 @@ export default defineConfig(({ mode }) => {
         }
       }
     ],
+    server: {
+      host: '0.0.0.0',
+      allowedHosts: true
+    },
     optimizeDeps: {
       include: ['react', 'react-dom'],
     },

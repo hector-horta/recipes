@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Recipe } from '../types/recipe';
 import { SecureAPI } from '../api/PrivacyProxy';
 import { SecureVault } from '../security/SecureVault';
@@ -14,6 +15,7 @@ const SIBO_FORBIDDEN_INGREDIENTS = [
 ];
 
 export function useWatiSearch() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Recipe[]>([]);
@@ -109,7 +111,7 @@ export function useWatiSearch() {
         }));
         setResults(fallback);
       } else {
-        setError('Error al conectar con el servidor.');
+        setError(t('home.serverError'));
       }
     } finally {
       setIsLoading(false);

@@ -11,7 +11,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_key_for_developme
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, displayName, acceptedTerms } = req.body;
+    const { email, password, displayName, acceptedTerms, language } = req.body;
 
     if (!email || !password || !displayName || !acceptedTerms) {
       return res.status(400).json({ error: 'Faltan campos obligatorios o no se aceptaron los términos.' });
@@ -32,7 +32,7 @@ router.post('/register', async (req, res) => {
       accepted_terms_at: new Date()
     });
 
-    await Profile.create({ user_id: newUser.id });
+    await Profile.create({ user_id: newUser.id, language: language || 'en' });
 
     const token = jwt.sign({ id: newUser.id, email: newUser.email }, JWT_SECRET, { expiresIn: '7d' });
 
@@ -126,6 +126,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
     if (updates.excluded_ingredients !== undefined) profile.excluded_ingredients = updates.excluded_ingredients;
     if (updates.daily_calories !== undefined) profile.daily_calories = updates.daily_calories;
     if (updates.onboarding_completed !== undefined) profile.onboarding_completed = updates.onboarding_completed;
+    if (updates.language !== undefined) profile.language = updates.language;
 
     await profile.save();
     res.json(profile);

@@ -1,0 +1,36 @@
+/* WatiLogo.css */
+.wati-logo-container {
+    display: inline-flex;
+    align-items: center;
+    transition: opacity 0.2s ease;
+}
+
+.wati-logo-container:hover {
+    opacity: 0.85;
+}
+
+.wati-logo-svg {
+    height: auto;
+    /* El ancho se ajusta automáticamente manteniendo la proporción */
+}
+
+/* Clases de color basadas en tu 'Harmony Palette' de image_2.png */
+.wati-logo-text {
+    fill: var(--brand-text);
+    /* #1B2621 */
+}
+
+.wati-logo-teal {
+    fill: var(--brand-teal);
+    /* #40916C */
+}
+
+.wati-logo-sage {
+    fill: var(--brand-sage);
+    /* #82A082 */
+}
+
+.wati-logo-mint {
+    fill: var(--brand-mint);
+    /* #74C69D */
+}
