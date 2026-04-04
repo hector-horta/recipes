@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../AuthContext';
 import { WatiLogo } from './WatiLogo';
+import { Button } from './ui/Button';
 import { X, ChevronRight, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -106,12 +107,14 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
         onClick={e => e.stopPropagation()}
       >
         {/* Close */}
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={onClose}
-          className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/40 hover:text-white transition-colors"
+          className="absolute top-4 right-4 z-20 hover:bg-white/10 text-white/40 hover:text-white bg-white/5"
         >
           <X className="w-4 h-4" />
-        </button>
+        </Button>
 
         {/* Header */}
         <div className="pt-8 pb-4 px-8 text-center shrink-0">
@@ -209,33 +212,29 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
 
         {/* Footer */}
         <div className="px-8 pb-8 pt-4 flex gap-3 shrink-0 border-t border-white/5">
-          {step === 'severity' && (
-            <button
-              type="button"
+          {step === 'select' && (
+            <Button
+              variant="ghost"
+              size="lg"
               onClick={() => setStep('select')}
-              className="flex-1 py-3.5 rounded-xl font-bold text-sm text-white/60 bg-white/5 border border-white/5 hover:bg-white/10 transition-all"
+              className="flex-1 text-white/60 bg-white/5 border border-white/5 hover:bg-white/10"
             >
               {t('common.back')}
-            </button>
+            </Button>
           )}
-          <button
-            type="button"
+          <Button
+            variant="primary"
+            size="lg"
+            className="flex-1"
             onClick={step === 'select' ? handleNext : handleSave}
-            disabled={isSaving || isLoading}
-            className="flex-1 py-3.5 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all duration-300 disabled:opacity-50 hover:shadow-lg hover:shadow-brand-teal/20 active:scale-[0.98]"
-            style={{ background: 'linear-gradient(135deg, var(--brand-sage), var(--brand-teal))' }}
+            isLoading={isSaving}
+            disabled={isLoading}
+            rightIcon={!isSaving && <ChevronRight className="w-4 h-4" />}
           >
-            {isSaving ? (
-              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <>
-                {step === 'select'
-                  ? (selectedIds.length === 0 ? t('common.skip') : t('common.next'))
-                  : t('common.saveAndContinue')}
-                <ChevronRight className="w-4 h-4" />
-              </>
-            )}
-          </button>
+            {step === 'select'
+              ? (selectedIds.length === 0 ? t('common.skip') : t('common.next'))
+              : t('common.saveAndContinue')}
+          </Button>
         </div>
       </div>
     </div>

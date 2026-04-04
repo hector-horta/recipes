@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { ShieldCheck, Mail, Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { Button } from '../components/ui/Button';
 
 export function LoginPage() {
   const { login, register } = useAuth();
@@ -151,13 +152,15 @@ export function LoginPage() {
                 required
                 className="w-full pl-12 pr-12 py-3.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all"
               />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
               >
                 {showPassword ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
-              </button>
+              </Button>
             </div>
 
             {isRegister && (
@@ -175,23 +178,16 @@ export function LoginPage() {
               </div>
             )}
 
-            <button
+            <Button
               type="submit"
-              disabled={isSubmitting}
-              className="w-full py-3.5 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-emerald-500/20 active:scale-[0.98]"
-              style={{
-                background: 'linear-gradient(135deg, #34d399, #059669)'
-              }}
+              variant="primary"
+              size="lg"
+              fullWidth
+              isLoading={isSubmitting}
+              rightIcon={!isSubmitting && <ArrowRight className="w-4 h-4" />}
             >
-              {isSubmitting ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <>
-                  {isRegister ? 'Crear Cuenta' : 'Entrar'}
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
+              {isRegister ? 'Crear Cuenta' : 'Entrar'}
+            </Button>
           </form>
         </div>
 

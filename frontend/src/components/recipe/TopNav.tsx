@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../AuthContext';
 import { WatiLogo } from '../WatiLogo';
 import { LanguageSelector } from '../LanguageSelector';
+import { Button } from '../ui/Button';
 import { FlaskConical, Radio, Settings, UserCircle, LogOut } from 'lucide-react';
 
 interface TopNavProps {
@@ -34,22 +35,25 @@ export function TopNav({ onOpenLogin, onOpenOnboarding }: TopNavProps) {
         <div className="flex items-center gap-2">
           <LanguageSelector />
           {!user ? (
-            <button
+            <Button
               onClick={onOpenLogin}
-              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white transition-all shadow-md shadow-brand-teal/20 hover:shadow-brand-teal/40 active:scale-[0.97]"
-              style={{ background: 'linear-gradient(135deg, var(--brand-sage), var(--brand-teal))' }}
+              variant="primary"
+              size="sm"
+              className="px-5 py-2"
             >
               {t('nav.login')}
-            </button>
+            </Button>
           ) : (
             <>
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={onOpenOnboarding}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-brand-forest bg-brand-sage/10 hover:bg-brand-sage/20 transition-all border border-brand-sage/20"
+                leftIcon={<Settings className="w-3.5 h-3.5" />}
+                className="bg-brand-sage/10 hover:bg-brand-sage/20 border border-brand-sage/20"
               >
-                <Settings className="w-3.5 h-3.5" />
                 {t('nav.allergies')}
-              </button>
+              </Button>
               <div className="flex items-center gap-3 pl-3 border-l border-brand-sage/20">
                 <div className="w-9 h-9 rounded-full bg-brand-mint/20 flex items-center justify-center border border-brand-mint/30">
                   <UserCircle className="w-6 h-6 text-brand-forest" />

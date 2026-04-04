@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { ShieldCheck, ChevronRight, AlertTriangle, Check } from 'lucide-react';
+import { Button } from '../components/ui/Button';
 
 // ── Catálogo de intolerancias (keys del HIDDEN_TRIGGERS_DB) ──
 const INTOLERANCE_CATALOG = [
@@ -225,34 +226,28 @@ export function OnboardingPage() {
       }}>
         <div className="max-w-2xl mx-auto flex gap-3">
           {step === 'severity' && (
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="lg"
               onClick={() => setStep('select')}
-              className="flex-1 py-3.5 rounded-xl font-bold text-sm text-slate-300 bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
+              className="flex-1 text-slate-300 bg-white/5 border border-white/10 hover:bg-white/10"
             >
               Atrás
-            </button>
+            </Button>
           )}
-          <button
-            type="button"
+          <Button
+            variant="primary"
+            size="lg"
+            className="flex-1"
             onClick={step === 'select' ? handleNext : handleSave}
+            isLoading={isSaving}
             disabled={isSaving}
-            className="flex-1 py-3.5 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all duration-300 disabled:opacity-50 hover:shadow-lg hover:shadow-emerald-500/20 active:scale-[0.98]"
-            style={{
-              background: 'linear-gradient(135deg, #34d399, #059669)'
-            }}
+            rightIcon={!isSaving && <ChevronRight className="w-4 h-4" />}
           >
-            {isSaving ? (
-              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <>
-                {step === 'select'
-                  ? (selectedIds.length === 0 ? 'Omitir' : 'Siguiente')
-                  : 'Guardar y Continuar'}
-                <ChevronRight className="w-4 h-4" />
-              </>
-            )}
-          </button>
+            {step === 'select'
+              ? (selectedIds.length === 0 ? 'Omitir' : 'Siguiente')
+              : 'Guardar y Continuar'}
+          </Button>
         </div>
       </div>
     </div>
