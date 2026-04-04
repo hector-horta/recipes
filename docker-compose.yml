@@ -39,8 +39,8 @@ services:
     networks:
       - app-network
 
-  # ── Backend (Node.js + Express 5) ──────────────────────────────────────
-  # 
+  # ── Backend (Node.js + Express 5) ──────────────────────────────────────────
+  #
   # Environment Variables (set in .env):
   # - NODE_ENV: development or production
   # - FRONTEND_URL: URL of the frontend for CORS
@@ -48,7 +48,11 @@ services:
   # - HCP_CLIENT_ID: HCP service principal client ID (optional)
   # - HCP_CLIENT_SECRET: HCP service principal client secret (optional)
   # - HCP_PROJECT_ID: HCP project ID (optional)
-  # 
+  # - NVIDIA_API_KEY: Key for NVIDIA NIM APIs (OCR, Nemotron, SDXL)
+  # - TELEGRAM_BOT_TOKEN: Telegram bot token
+  # - TELEGRAM_USER_ID: Allowed Telegram user ID (whitelist)
+  # - DB_URL: PostgreSQL connection string
+  #
   # HCP Vault Secrets:
   # When HCP credentials are provided, the backend can retrieve secrets
   # from HCP Vault instead of using environment variables directly.
@@ -64,6 +68,8 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
+      - ingest_logs:/app/ingest_logs
+      - public_recipes:/app/public/recipes
     environment:
       - NODE_ENV=development
       - FRONTEND_URL=http://localhost:5173
@@ -71,6 +77,10 @@ services:
       - HCP_CLIENT_ID=${HCP_CLIENT_ID}
       - HCP_CLIENT_SECRET=${HCP_CLIENT_SECRET}
       - HCP_PROJECT_ID=${HCP_PROJECT_ID}
+      - NVIDIA_API_KEY=${NVIDIA_API_KEY}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_USER_ID=${TELEGRAM_USER_ID}
+      - DB_URL=${DB_URL}
     depends_on:
       - postgres
       - redis
@@ -152,3 +162,5 @@ networks:
 
 volumes:
   postgres_data:
+  ingest_logs:
+  public_recipes:

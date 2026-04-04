@@ -19,8 +19,11 @@ const corsOptions = {
 
 import authRoutes from './routes/auth.js';
 import favoritesRoutes from './routes/favorites.js';
+import ingestRoutes from './routes/ingest.js';
 import { connectDB, sequelize } from './config/database.js';
 import { connectRedis } from './config/redis.js';
+import { telegramWhitelist } from './middleware/telegramWhitelist.js';
+import { initializeTelegramBot } from './services/TelegramBot.js';
 
 app.use(helmet());
 
@@ -51,11 +54,13 @@ app.use(express.json());
 
 // Initialize external services
 await connectDB();
-await sequelize.sync(); // Auto-create tables if they don't exist
+await sequelize.sync();
 connectRedis();
+initializeTelegramBot();
 
 app.use('/api/auth', authRoutes);
 app.use('/api/favorites', favoritesRoutes);
+app.use('/api/ingest', telegramWhitelist, ingestRoutes);
 
 // Data previously hardcoded in frontend
 const INTOLERANCE_CATALOG = [
