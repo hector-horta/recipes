@@ -60,10 +60,14 @@ export function TopNav({ onOpenLogin, onOpenOnboarding }: TopNavProps) {
                 </div>
                 <div className="hidden sm:block">
                   <p className="text-xs font-extrabold text-brand-forest leading-tight">{user.displayName}</p>
-                  <button onClick={logout} className="flex items-center gap-1 text-[10px] font-bold text-brand-text-muted hover:text-danger transition-colors">
-                    <LogOut size={10} />
-                    {t('nav.logout')}
-                  </button>
+                  <Button
+                  variant="link"
+                  onClick={logout}
+                  className="flex items-center gap-1 text-[10px] font-bold text-brand-text-muted hover:text-danger transition-colors p-0 h-auto"
+                >
+                  <LogOut size={10} />
+                  {t('nav.logout')}
+                </Button>
                 </div>
               </div>
             </>

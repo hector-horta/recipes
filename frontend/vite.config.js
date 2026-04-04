@@ -18,6 +18,10 @@ export default defineConfig(function (_a) {
                 }
             }
         ],
+        server: {
+            host: '0.0.0.0',
+            allowedHosts: true
+        },
         optimizeDeps: {
             include: ['react', 'react-dom'],
         },

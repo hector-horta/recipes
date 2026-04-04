@@ -1,6 +1,7 @@
 import { AlertCircle, Clock, Heart } from 'lucide-react';
 import { Recipe } from '../types/recipe';
 import { useTranslation } from 'react-i18next';
+import { Button } from './ui/Button';
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -46,19 +47,21 @@ export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite }:
           </span>
         </div>
 
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={(e) => {
             e.stopPropagation();
             onToggleFavorite?.(e);
           }}
-          className={`absolute top-4 right-4 p-2.5 rounded-full backdrop-blur-md transition-all shadow-sm border border-white/20 active:scale-90 ${
+          className={`absolute top-4 right-4 backdrop-blur-md transition-all shadow-sm border border-white/20 active:scale-90 ${
             isFavorited 
-              ? 'bg-red-500 text-white' 
+              ? 'bg-red-500 text-white hover:bg-red-600' 
               : 'bg-white/80 text-slate-500 hover:text-red-500 hover:bg-white'
           }`}
         >
           <Heart className={`w-4 h-4 ${isFavorited ? 'fill-current' : ''}`} />
-        </button>
+        </Button>
 
         <div className="absolute bottom-4 left-4">
           <span className="px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-md bg-white/90 text-slate-700 shadow-sm border border-slate-200/50 tracking-wide flex items-center gap-1.5">

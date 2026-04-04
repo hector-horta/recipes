@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../AuthContext';
 import { WatiLogo } from './WatiLogo';
 import { Button } from './ui/Button';
@@ -29,34 +30,25 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
     { value: 'anaphylactic', label: t('onboarding.anaphylactic'),activeClasses: '!bg-red-600 !text-white border-red-600' },
   ];
 
-  const [catalog, setCatalog] = useState<IntoleranceItem[]>([]);
+  const { data: catalog = [], isLoading } = useQuery({
+    queryKey: ['medical', 'catalog'],
+    queryFn: async () => {
+      const response = await fetch(`${API_URL}/api/medical/catalog`);
+      if (!response.ok) throw new Error('Failed to fetch catalog');
+      const data: IntoleranceItem[] = await response.json();
+      return data.map(item => ({
+        ...item,
+        label: t(`intolerances.${item.id}`, { defaultValue: item.label }),
+        desc: t(`intolerances.${item.id}Desc`, { defaultValue: item.desc })
+      }));
+    },
+    staleTime: 1000 * 60 * 30,
+  });
+
   const [selectedIds, setSelectedIds] = useState<string[]>(user?.intolerances || []);
   const [severities, setSeverities] = useState<Record<string, 'mild' | 'moderate' | 'severe' | 'anaphylactic'>>(user?.severities || {});
   const [step, setStep] = useState<'select' | 'severity'>('select');
   const [isSaving, setIsSaving] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchCatalog() {
-      try {
-        const response = await fetch(`${API_URL}/api/medical/catalog`);
-        if (!response.ok) throw new Error('Failed to fetch catalog');
-        const data: IntoleranceItem[] = await response.json();
-        // Translate labels and descriptions from the catalog
-        const translated = data.map(item => ({
-          ...item,
-          label: t(`intolerances.${item.id}`, { defaultValue: item.label }),
-          desc: t(`intolerances.${item.id}Desc`, { defaultValue: item.desc })
-        }));
-        setCatalog(translated);
-      } catch (err) {
-        console.error('[Onboarding] Error fetching catalog:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    fetchCatalog();
-  }, [t]);
 
   const toggleIntolerance = (id: string) => {
     setSelectedIds(prev =>

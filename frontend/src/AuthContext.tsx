@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { SecureVault } from './security/SecureVault';
 import i18n from './i18n';
 
@@ -33,154 +34,196 @@ const AuthContext = createContext<AuthContextType | null>(null);
 const TOKEN_KEY = 'wati_jwt';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
+const getAuthToken = () => localStorage.getItem(TOKEN_KEY);
+
+const authHeaders = (): Record<string, string> => {
+  const token = getAuthToken();
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+};
+
+function mapProfileData(data: any): UserProfile {
+  return {
+    id: data.id,
+    email: data.email,
+    displayName: data.displayName,
+    avatarUrl: data.avatarUrl,
+    ...data.profile,
+    onboardingComplete: data.profile?.onboarding_completed || false
+  };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    const restoreSession = async () => {
-      try {
-        const token = localStorage.getItem(TOKEN_KEY);
-        if (token) {
-          const res = await fetch(`${API_URL}/api/auth/me`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            const fullUserProfile: UserProfile = {
-              id: data.id,
-              email: data.email,
-              displayName: data.displayName,
-              avatarUrl: data.avatarUrl,
-              ...data.profile,
-              onboardingComplete: data.profile.onboarding_completed
-            };
-            setUser(fullUserProfile);
-            // Sync to Vault
-            SecureVault.saveProfile(SecureVault.fromUserProfile(fullUserProfile));
-            // Sync language from profile if set
-            if (fullUserProfile.language) {
-              i18n.changeLanguage(fullUserProfile.language);
-              localStorage.setItem('wati_language', fullUserProfile.language);
-            }
-          } else {
-            localStorage.removeItem(TOKEN_KEY);
-          }
-        }
-      } catch (err) {
-        console.error('[Auth] Error restoring session:', err);
-      } finally {
-        setIsLoading(false);
+  const { isLoading: isSessionLoading } = useQuery({
+    queryKey: ['auth', 'session'],
+    queryFn: async () => {
+      const token = getAuthToken();
+      if (!token) return null;
+      const res = await fetch(`${API_URL}/api/auth/me`, {
+        headers: authHeaders()
+      });
+      if (!res.ok) {
+        localStorage.removeItem(TOKEN_KEY);
+        return null;
       }
-    };
-    restoreSession();
-  }, []);
+      const data = await res.json();
+      const profile = mapProfileData(data);
+      setUser(profile);
+      SecureVault.saveProfile(SecureVault.fromUserProfile(profile));
+      if (profile.language) {
+        i18n.changeLanguage(profile.language);
+        localStorage.setItem('wati_language', profile.language);
+      }
+      return profile;
+    },
+    staleTime: Infinity,
+    retry: false,
+  });
 
-  const login = async (email: string, password: string) => {
-    const res = await fetch(`${API_URL}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Error al iniciar sesión');
-    
-    localStorage.setItem(TOKEN_KEY, data.token);
-    
-    // Fetch profile to populate full user object
-    const profileRes = await fetch(`${API_URL}/api/auth/me`, {
-      headers: { 'Authorization': `Bearer ${data.token}` }
-    });
+  const loginMutation = useMutation({
+    mutationFn: async ({ email, password }: { email: string; password: string }) => {
+      const res = await fetch(`${API_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al iniciar sesión');
+      return data;
+    },
+    onSuccess: async (data) => {
+      localStorage.setItem(TOKEN_KEY, data.token);
+      const profileRes = await fetch(`${API_URL}/api/auth/me`, {
+        headers: { 'Authorization': `Bearer ${data.token}` }
+      });
       if (profileRes.ok) {
         const pData = await profileRes.json();
-        const fullUser: UserProfile = {
-            ...pData,
-            ...pData.profile,
-            onboardingComplete: pData.profile?.onboarding_completed || false
-        };
-        console.log('[Auth] Login successful. Onboarding status:', fullUser.onboardingComplete);
+        const fullUser = mapProfileData(pData);
         setUser(fullUser);
         SecureVault.saveProfile(SecureVault.fromUserProfile(fullUser));
-        // Sync language from profile
         if (fullUser.language) {
           i18n.changeLanguage(fullUser.language);
           localStorage.setItem('wati_language', fullUser.language);
         }
-        return fullUser;
-    }
-    return null;
-  };
+        queryClient.setQueryData(['auth', 'session'], fullUser);
+      }
+    },
+  });
 
-  const register = async (email: string, password: string, displayName: string, acceptedTerms: boolean) => {
-    const currentLang = localStorage.getItem('wati_language') || i18n.language?.substring(0, 2) || 'en';
-    const res = await fetch(`${API_URL}/api/auth/register`, {
+  const registerMutation = useMutation({
+    mutationFn: async ({ email, password, displayName, acceptedTerms }: { email: string; password: string; displayName: string; acceptedTerms: boolean }) => {
+      const currentLang = localStorage.getItem('wati_language') || i18n.language?.substring(0, 2) || 'en';
+      const res = await fetch(`${API_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, displayName, acceptedTerms, language: currentLang })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al registrarse');
-      
+      return data;
+    },
+    onSuccess: async (data) => {
       localStorage.setItem(TOKEN_KEY, data.token);
-      
       const profileRes = await fetch(`${API_URL}/api/auth/me`, {
         headers: { 'Authorization': `Bearer ${data.token}` }
       });
       if (profileRes.ok) {
-          const pData = await profileRes.json();
-          const fullUser: UserProfile = {
-              ...pData,
-              ...pData.profile,
-              onboardingComplete: pData.profile?.onboarding_completed || false
-          };
-          console.log('[Auth] Registration successful. Onboarding status:', fullUser.onboardingComplete);
-          setUser(fullUser);
-          SecureVault.saveProfile(SecureVault.fromUserProfile(fullUser));
-          return fullUser;
+        const pData = await profileRes.json();
+        const fullUser = mapProfileData(pData);
+        setUser(fullUser);
+        SecureVault.saveProfile(SecureVault.fromUserProfile(fullUser));
+        queryClient.setQueryData(['auth', 'session'], fullUser);
       }
-      return null;
-  };
+    },
+  });
 
-  const logout = () => {
-    localStorage.removeItem(TOKEN_KEY);
-    setUser(null);
-  };
-
-  const updateUserProfile = async (updates: Partial<UserProfile>) => {
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (!token) return;
-
-    const backendUpdates: any = { ...updates };
-    if (updates.onboardingComplete !== undefined) {
-      backendUpdates.onboarding_completed = updates.onboardingComplete;
-      delete backendUpdates.onboardingComplete;
-    }
-
-    const res = await fetch(`${API_URL}/api/auth/profile`, {
+  const updateProfileMutation = useMutation({
+    mutationFn: async (updates: Partial<UserProfile>) => {
+      const token = getAuthToken();
+      if (!token) throw new Error('No token');
+      const backendUpdates: any = { ...updates };
+      if (updates.onboardingComplete !== undefined) {
+        backendUpdates.onboarding_completed = updates.onboardingComplete;
+        delete backendUpdates.onboardingComplete;
+      }
+      const res = await fetch(`${API_URL}/api/auth/profile`, {
         method: 'PUT',
         headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(backendUpdates)
-    });
-
-    if (!res.ok) {
-        console.error('[Auth] Error al actualizar el perfil');
-        return;
-    }
-
-    // Actualizar el estado local con la respuesta (o simplemente parchear)
-    setUser(prev => {
+      });
+      if (!res.ok) throw new Error('Error al actualizar el perfil');
+      return res.json();
+    },
+    onMutate: async (updates) => {
+      await queryClient.cancelQueries({ queryKey: ['auth', 'session'] });
+      const previous = queryClient.getQueryData<UserProfile>(['auth', 'session']) ?? null;
+      setUser(prev => {
         if (!prev) return null;
         const updated = { ...prev, ...updates };
         SecureVault.saveProfile(SecureVault.fromUserProfile(updated));
         return updated;
-    });
+      });
+      return { previous };
+    },
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: ['auth', 'session'] });
+    },
+  });
+
+  const logout = () => {
+    localStorage.removeItem(TOKEN_KEY);
+    setUser(null);
+    queryClient.setQueryData(['auth', 'session'], null);
+    queryClient.clear();
+  };
+
+  const login = async (email: string, password: string) => {
+    try {
+      const data = await loginMutation.mutateAsync({ email, password });
+      const profileRes = await fetch(`${API_URL}/api/auth/me`, {
+        headers: { 'Authorization': `Bearer ${data.token}` }
+      });
+      if (profileRes.ok) {
+        const pData = await profileRes.json();
+        return mapProfileData(pData);
+      }
+      return null;
+    } catch (err: any) {
+      throw err;
+    }
+  };
+
+  const register = async (email: string, password: string, displayName: string, acceptedTerms: boolean) => {
+    try {
+      const data = await registerMutation.mutateAsync({ email, password, displayName, acceptedTerms });
+      const profileRes = await fetch(`${API_URL}/api/auth/me`, {
+        headers: { 'Authorization': `Bearer ${data.token}` }
+      });
+      if (profileRes.ok) {
+        const pData = await profileRes.json();
+        return mapProfileData(pData);
+      }
+      return null;
+    } catch (err: any) {
+      throw err;
+    }
+  };
+
+  const updateUserProfile = async (updates: Partial<UserProfile>) => {
+    try {
+      await updateProfileMutation.mutateAsync(updates);
+    } catch {
+      console.error('[Auth] Error al actualizar el perfil');
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout, updateUserProfile }}>
+    <AuthContext.Provider value={{ user, isLoading: isSessionLoading, login, register, logout, updateUserProfile }}>
       {children}
     </AuthContext.Provider>
   );

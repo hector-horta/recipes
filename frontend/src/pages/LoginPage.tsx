@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { ShieldCheck, Mail, Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
 
 export function LoginPage() {
   const { login, register } = useAuth();
@@ -109,59 +110,55 @@ export function LoginPage() {
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             {isRegister && (
-              <div className="relative group">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-500 group-focus-within:text-emerald-400 transition-colors" />
-                <input
-                  id="reg-name"
-                  name="name"
-                  type="text"
-                  autoComplete="name"
-                  placeholder="Tu nombre"
-                  value={displayName}
-                  onChange={e => setDisplayName(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all"
-                />
-              </div>
+              <Input
+                variant="glass"
+                id="reg-name"
+                name="name"
+                type="text"
+                autoComplete="name"
+                placeholder="Tu nombre"
+                value={displayName}
+                onChange={e => setDisplayName(e.target.value)}
+                leftIcon={<User className="w-4.5 h-4.5" />}
+              />
             )}
 
-            <div className="relative group">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-500 group-focus-within:text-emerald-400 transition-colors" />
-              <input
-                id="login-email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                placeholder="correo@ejemplo.com"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-                className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all"
-              />
-            </div>
+            <Input
+              variant="glass"
+              id="login-email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              placeholder="correo@ejemplo.com"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+              leftIcon={<Mail className="w-4.5 h-4.5" />}
+            />
 
-            <div className="relative group">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-500 group-focus-within:text-emerald-400 transition-colors" />
-              <input
-                id="login-password"
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                autoComplete={isRegister ? 'new-password' : 'current-password'}
-                placeholder="Contraseña"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-                className="w-full pl-12 pr-12 py-3.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
-              >
-                {showPassword ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
-              </Button>
-            </div>
+            <Input
+              variant="glass"
+              id="login-password"
+              name="password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete={isRegister ? 'new-password' : 'current-password'}
+              placeholder="Contraseña"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+              leftIcon={<Lock className="w-4.5 h-4.5" />}
+              rightElement={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="text-slate-500 hover:text-slate-300"
+                >
+                  {showPassword ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
+                </Button>
+              }
+            />
 
             {isRegister && (
               <div className="flex items-start gap-3 mt-4">

@@ -2,6 +2,8 @@
 import { useTranslation } from 'react-i18next';
 import { Search, AlertCircle, Globe, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../AuthContext';
+import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
 
 interface PageHeaderProps {
   searchQuery: string;
@@ -43,13 +45,13 @@ export function PageHeader({
         
         {/* Search Bar */}
         <div className="relative max-w-md w-full mt-6 group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-text-muted group-focus-within:text-brand-teal transition-colors" />
-          <input 
+          <Input 
+            variant="light"
             type="text"
             placeholder={t('home.searchPlaceholder')}
-            className="w-full pl-11 pr-4 py-3.5 bg-white border border-brand-sage/20 rounded-2xl text-sm text-brand-forest placeholder:text-brand-text-muted/60 focus:outline-none focus:ring-2 focus:ring-brand-teal/20 focus:border-brand-teal transition-all shadow-sm"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            leftIcon={<Search className="w-4 h-4" />}
           />
         </div>
 
@@ -69,14 +71,16 @@ export function PageHeader({
         )}
       </div>
       
-      <button 
+      <Button 
+        variant="secondary"
         onClick={onRefresh}
         disabled={isRefreshing}
-        className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-white border border-brand-sage/20 text-brand-forest font-bold text-sm hover:bg-brand-sage/5 transition-all shadow-sm active:scale-95 disabled:opacity-50"
+        isLoading={isRefreshing}
+        leftIcon={!isRefreshing && <RefreshCw className="w-4 h-4" />}
+        className="shadow-sm"
       >
-        <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
         {t('common.update')}
-      </button>
+      </Button>
     </div>
   );
 }

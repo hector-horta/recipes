@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../AuthContext';
 
 export interface FavoriteItem {
@@ -11,44 +11,37 @@ export interface FavoriteItem {
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
+const getAuthToken = () => localStorage.getItem('wati_jwt');
+
+const authHeaders = () => ({
+  'Authorization': `Bearer ${getAuthToken()}`
+});
+
 export function useFavorites() {
   const { user } = useAuth();
-  const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const queryClient = useQueryClient();
 
-  const fetchFavorites = useCallback(async () => {
-    if (!user) return;
-    setIsLoading(true);
-    try {
-      const token = localStorage.getItem('wati_jwt');
+  const { data: favorites = [], isLoading } = useQuery({
+    queryKey: ['favorites', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
       const res = await fetch(`${API_URL}/api/favorites`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: authHeaders()
       });
-      if (res.ok) {
-        const data = await res.json();
-        setFavorites(data);
-      }
-    } catch (error) {
-      console.error('[useFavorites] Error fetching:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user]);
+      if (!res.ok) return [];
+      return res.json() as Promise<FavoriteItem[]>;
+    },
+    enabled: !!user,
+  });
 
-  const toggleFavorite = async (recipe: { id: string | number; title: string, imageUrl: string }) => {
-    if (!user) return false;
-
-    const spoonacularId = Number(recipe.id);
-    const token = localStorage.getItem('wati_jwt');
-    
-    try {
+  const toggleMutation = useMutation({
+    mutationFn: async (recipe: { id: string | number; title: string; imageUrl: string }) => {
+      const spoonacularId = Number(recipe.id);
       const res = await fetch(`${API_URL}/api/favorites`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          ...authHeaders()
         },
         body: JSON.stringify({
           spoonacularId,
@@ -56,42 +49,50 @@ export function useFavorites() {
           image: recipe.imageUrl
         })
       });
+      if (!res.ok) throw new Error('Failed to toggle favorite');
+      return res.json();
+    },
+    onMutate: async (recipe) => {
+      await queryClient.cancelQueries({ queryKey: ['favorites', user?.id] });
+      const previous = queryClient.getQueryData<FavoriteItem[]>(['favorites', user?.id]) ?? [];
+      const spoonacularId = Number(recipe.id);
+      const exists = previous.some(f => f.spoonacular_id === spoonacularId);
 
-      if (res.ok) {
-        const data = await res.json();
-        // Optimistic / Local update
-        if (data.favorited) {
-            setFavorites(prev => [{
-                spoonacular_id: spoonacularId,
-                title: recipe.title,
-                image: recipe.imageUrl,
-                id: data.data.id,
-                user_id: user.id
-            } as FavoriteItem, ...prev]);
-        } else {
-            setFavorites(prev => prev.filter(f => f.spoonacular_id !== spoonacularId));
+      queryClient.setQueryData<FavoriteItem[]>(['favorites', user?.id], prev => {
+        if (!prev) return [];
+        if (exists) {
+          return prev.filter(f => f.spoonacular_id !== spoonacularId);
         }
-        return data.favorited;
+        return [{
+          spoonacular_id: spoonacularId,
+          title: recipe.title,
+          image: recipe.imageUrl,
+          id: Date.now().toString(),
+          user_id: user!.id
+        } as FavoriteItem, ...prev];
+      });
+
+      return { previous };
+    },
+    onError: (_err, _recipe, context) => {
+      if (context?.previous !== undefined) {
+        queryClient.setQueryData(['favorites', user?.id], context.previous);
       }
-    } catch (error) {
-      console.error('[useFavorites] Error toggling:', error);
-    }
-    return false;
-  };
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['favorites', user?.id] });
+    },
+  });
 
   const isFavorited = (spoonacularId: string | number) => {
     return favorites.some(f => f.spoonacular_id === Number(spoonacularId));
   };
 
-  useEffect(() => {
-    fetchFavorites();
-  }, [fetchFavorites]);
-
   return {
     favorites,
     isLoading,
-    toggleFavorite,
+    toggleFavorite: toggleMutation.mutateAsync,
     isFavorited,
-    refresh: fetchFavorites
+    refresh: () => queryClient.invalidateQueries({ queryKey: ['favorites', user?.id] })
   };
 }

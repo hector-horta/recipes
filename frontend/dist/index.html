@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wati</title>
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+    <meta name="theme-color" content="#1B4332" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <!-- 
+      Content Security Policy (CSP):
+      - Impide llamadas a cualquier API externa de terceros directamente.
+      - Bloquea iFrames, Plugins u Objectos incrustados.
+      - Fuerz siempre la actualización a HTTPS.
+      
+      Note: For local Vite dev, inline scripts and styles are needed, 
+      so the CSP might cause console errors if strictly enforced during dev.
+      We added 'unsafe-inline' and 'unsafe-eval' to allow Vite HMR.
+    -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self'; 
+      connect-src 'self' ws: wss: http://localhost:5001; 
+      script-src 'self' 'unsafe-inline' 'unsafe-eval'; 
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+      font-src 'self' data: https://fonts.gstatic.com;
+      img-src 'self' data: blob: https:;
+      object-src 'none';
+    ">
+    <script type="module" crossorigin src="/assets/index-DlvCLQ0d.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-XakbwjbS.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
