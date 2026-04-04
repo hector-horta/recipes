@@ -9,16 +9,21 @@ interface WatiLogoProps {
    */
   width?: number;
   /**
+   * Tamaño del logo (alias para width).
+   */
+  size?: number;
+  /**
    * Clase CSS adicional para el contenedor.
    */
   className?: string;
 }
 
-export const WatiLogo: React.FC<WatiLogoProps> = ({ width = 160, className = '' }) => {
+export const WatiLogo: React.FC<WatiLogoProps> = ({ width, size, className = '' }) => {
+  const finalWidth = size || width || 160;
   return (
     <div className={`wati-logo-container ${className}`}>
       <svg
-        width={width}
+        width={finalWidth}
         viewBox="0 0 160 64" // Basado en la composición de image_2.png
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
