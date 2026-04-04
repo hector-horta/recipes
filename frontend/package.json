@@ -12,6 +12,7 @@
     "coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.96.2",
     "crypto-js": "~4.2.0",
     "dexie": "~4.3.0",
     "dompurify": "^3.3.3",

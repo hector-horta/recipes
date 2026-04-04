@@ -1,6 +1,6 @@
-import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { AuthProvider } from './AuthContext';
+import { Providers } from './components/Providers';
 import App from './App';
 import './index.css';
 import './i18n';
@@ -9,12 +9,13 @@ const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Failed to find the root element');
 
 createRoot(rootElement).render(
-  <AuthProvider>
-    <App />
-  </AuthProvider>
+  <Providers>
+    <AuthProvider>
+      <App />
+    </AuthProvider>
+  </Providers>
 );
 
-// Registrar Service Worker para soporte Offline (solo en producción)
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').then(registration => {

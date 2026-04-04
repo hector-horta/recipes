@@ -3,6 +3,8 @@ import { useAuth } from '../AuthContext';
 import { X, Mail, Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { WatiLogo } from './WatiLogo';
 import { useTranslation } from 'react-i18next';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
 
 interface LoginModalProps {
   onClose: () => void;
@@ -59,12 +61,14 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
         onClick={e => e.stopPropagation()}
       >
         {/* Close */}
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={onClose}
           className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/40 hover:text-white transition-colors"
         >
           <X className="w-4 h-4" />
-        </button>
+        </Button>
 
         {/* Header */}
         <div className="text-center mb-6">
@@ -87,9 +91,8 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           {isRegister && (
-            <div className="relative group">
-              <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within:text-brand-mint transition-colors" />
-              <input
+              <Input
+                variant="glass"
                 type="text"
                 name="name"
                 id="reg-name"
@@ -97,47 +100,46 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
                 placeholder={t('auth.yourName')}
                 value={displayName}
                 onChange={e => setDisplayName(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 rounded-xl bg-white/5 border border-white/20 text-white placeholder-white/40 text-sm focus:outline-none focus:ring-2 focus:ring-brand-mint/50 focus:border-brand-mint/50 transition-all"
+                leftIcon={<User className="w-4 h-4" />}
               />
-            </div>
           )}
 
-          <div className="relative group">
-            <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within:text-brand-mint transition-colors" />
-            <input
-              type="email"
-              name="email"
-              id="login-email"
-              autoComplete="email"
-              placeholder={t('auth.emailPlaceholder')}
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-              className="w-full pl-11 pr-4 py-3 rounded-xl bg-white/5 border border-white/20 text-white placeholder-white/40 text-sm focus:outline-none focus:ring-2 focus:ring-brand-mint/50 focus:border-brand-mint/50 transition-all"
-            />
-          </div>
+          <Input
+            variant="glass"
+            type="email"
+            name="email"
+            id="login-email"
+            autoComplete="email"
+            placeholder={t('auth.emailPlaceholder')}
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            required
+            leftIcon={<Mail className="w-4 h-4" />}
+          />
 
-          <div className="relative group">
-            <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within:text-brand-mint transition-colors" />
-            <input
-              type={showPassword ? 'text' : 'password'}
-              name="password"
-              id="login-password"
-              autoComplete={isRegister ? 'new-password' : 'current-password'}
-              placeholder={t('auth.passwordPlaceholder')}
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
-              className="w-full pl-11 pr-11 py-3 rounded-xl bg-white/5 border border-white/20 text-white placeholder-white/40 text-sm focus:outline-none focus:ring-2 focus:ring-brand-mint/50 focus:border-brand-mint/50 transition-all"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors"
-            >
-              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
-          </div>
+          <Input
+            variant="glass"
+            type={showPassword ? 'text' : 'password'}
+            name="password"
+            id="login-password"
+            autoComplete={isRegister ? 'new-password' : 'current-password'}
+            placeholder={t('auth.passwordPlaceholder')}
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            required
+            leftIcon={<Lock className="w-4 h-4" />}
+            rightElement={
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowPassword(!showPassword)}
+                className="text-white/40 hover:text-white transition-colors"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </Button>
+            }
+          />
 
           {isRegister && (
             <div className="flex items-start gap-3">
@@ -154,33 +156,28 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
             </div>
           )}
 
-          <button
+          <Button
             type="submit"
-            disabled={isSubmitting}
-            className="w-full py-3.5 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all duration-300 disabled:opacity-50 hover:shadow-lg hover:shadow-brand-teal/20 active:scale-[0.98]"
-            style={{ background: 'linear-gradient(135deg, var(--brand-sage), var(--brand-teal))' }}
+            variant="primary"
+            size="lg"
+            fullWidth
+            isLoading={isSubmitting}
+            rightIcon={!isSubmitting && <ArrowRight className="w-4 h-4" />}
           >
-            {isSubmitting ? (
-              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <>
-                {isRegister ? t('auth.startJourney') : t('auth.enter')}
-                <ArrowRight className="w-4 h-4" />
-              </>
-            )}
-          </button>
+            {isRegister ? t('auth.startJourney') : t('auth.enter')}
+          </Button>
         </form>
 
         {/* Toggle */}
         <p className="text-center text-white/70 text-xs mt-5 font-medium">
           {isRegister ? t('auth.haveAccount') : t('auth.noAccount')}{' '}
-          <button
-            type="button"
+          <Button
+            variant="link"
             onClick={() => { setIsRegister(!isRegister); setError(''); }}
             className="text-brand-mint font-extrabold underline hover:text-white transition-colors"
           >
             {isRegister ? t('auth.signInLink') : t('auth.createAccountLink')}
-          </button>
+          </Button>
         </p>
       </div>
     </div>
