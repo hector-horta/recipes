@@ -68,6 +68,7 @@ async function processImage(msg) {
 
   group.timer = setTimeout(async () => {
     const currentGroup = pendingImageGroups.get(chatId);
+    if (!currentGroup) return;
     pendingImageGroups.delete(chatId);
 
     if (currentGroup.images.length === 1) {
