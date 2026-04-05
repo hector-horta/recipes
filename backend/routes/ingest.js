@@ -7,6 +7,7 @@ import { extractTextFromImage, extractTextFromTwoImages, analyzeAndStructureReci
 import { transcribeAudio } from '../services/GroqWhisper.js';
 import { saveIngestLog } from '../middleware/recoveryLogger.js';
 import { RecipeProvider } from '../services/RecipeProvider.js';
+import { normalizeTags } from '../utils/tagTranslations.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -66,7 +67,7 @@ router.post('/image', async (req, res, next) => {
       difficulty: structured.difficulty || 'medium',
       ingredients: structured.ingredients || [],
       steps: structured.steps || [],
-      tags: structured.tags || [],
+      tags: normalizeTags(structured.tags || []),
       image_url: imageResult?.url || null,
       image_filename: imageResult?.filename || null,
       sibo_risk_level: structured.siboRiskLevel || 'safe',
@@ -134,7 +135,7 @@ router.post('/images', async (req, res, next) => {
       difficulty: structured.difficulty || 'medium',
       ingredients: structured.ingredients || [],
       steps: structured.steps || [],
-      tags: structured.tags || [],
+      tags: normalizeTags(structured.tags || []),
       image_url: imageResult?.url || null,
       image_filename: imageResult?.filename || null,
       sibo_risk_level: structured.siboRiskLevel || 'safe',
@@ -194,7 +195,7 @@ router.post('/text', async (req, res, next) => {
       difficulty: structured.difficulty || 'medium',
       ingredients: structured.ingredients || [],
       steps: structured.steps || [],
-      tags: structured.tags || [],
+      tags: normalizeTags(structured.tags || []),
       image_url: imageResult?.url || null,
       image_filename: imageResult?.filename || null,
       sibo_risk_level: structured.siboRiskLevel || 'safe',
@@ -293,7 +294,7 @@ router.post('/voice', async (req, res, next) => {
       difficulty: structured.difficulty || 'medium',
       ingredients: structured.ingredients || [],
       steps: structured.steps || [],
-      tags: structured.tags || [],
+      tags: normalizeTags(structured.tags || []),
       image_url: imageResult?.url || null,
       image_filename: imageResult?.filename || null,
       sibo_risk_level: structured.siboRiskLevel || 'safe',
@@ -375,6 +376,10 @@ router.post('/save', async (req, res, next) => {
 
     if (!recipeData.title_es || !recipeData.title_en) {
       return res.status(400).json({ error: 'title_es and title_en are required.' });
+    }
+
+    if (recipeData.tags) {
+      recipeData.tags = normalizeTags(recipeData.tags);
     }
 
     const slug = recipeData.slug || generateSlug(recipeData.title_es);

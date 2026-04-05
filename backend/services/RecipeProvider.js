@@ -1,6 +1,9 @@
 import { Op } from 'sequelize';
 import { Recipe } from '../models/Recipe.js';
 import { redisClient } from '../config/redis.js';
+import crypto from 'crypto';
+
+const CACHE_TTL_SECONDS = 3600; // 1 hour
 
 export class RecipeProvider {
   static async getRecipes(params, userProfile) {
@@ -17,14 +20,18 @@ export class RecipeProvider {
       ];
     }
 
-    if (userProfile && userProfile.intolerances && userProfile.intolerances.length > 0) {
-      const intolerances = userProfile.intolerances.map(i => i.toLowerCase());
-      if (intolerances.includes('sibo')) {
-        where.sibo_risk_level = { [Op.ne]: 'avoid' };
-      }
+    const hasSiboFilter = userProfile && userProfile.intolerances && userProfile.intolerances.some(i => i.toLowerCase() === 'sibo');
+    if (hasSiboFilter) {
+      where.sibo_risk_level = { [Op.ne]: 'avoid' };
     }
 
-    const cacheKey = `recipes:${query || ''}:${JSON.stringify(where)}`;
+    const cachePayload = {
+      q: query || '',
+      n: number,
+      sibo: hasSiboFilter ? 1 : 0
+    };
+    const cacheHash = crypto.createHash('md5').update(JSON.stringify(cachePayload)).digest('hex');
+    const cacheKey = `recipes:${cacheHash}`;
 
     try {
       if (redisClient.isReady) {
@@ -45,6 +52,15 @@ export class RecipeProvider {
     });
 
     const results = recipes.map(r => this.normalizeRecipe(r.toJSON()));
+
+    try {
+      if (redisClient.isReady) {
+        await redisClient.setEx(cacheKey, 3600, JSON.stringify(results));
+        console.log(`[Cache] Cached query results for key: ${cacheKey} (TTL: 1h)`);
+      }
+    } catch (err) {
+      console.warn('[Cache] Error writing to Redis:', err.message);
+    }
 
     return results;
   }
@@ -70,6 +86,10 @@ export class RecipeProvider {
 
     const imageUrl = recipe.image_url || '';
 
+    const siboAllergiesTags = (recipe.tags || [])
+      .map(t => typeof t === 'object' && t.es ? t : { es: t, en: t })
+      .filter(t => t.es && t.es.trim() !== '');
+
     return {
       id: recipe.id,
       title: recipe.title_es,
@@ -84,7 +104,7 @@ export class RecipeProvider {
         .map(s => s.instruction?.en || ''),
       summary: '',
       safetyLevel: recipe.sibo_risk_level === 'safe' ? 'safe' : (recipe.sibo_risk_level === 'caution' ? 'review' : 'unsafe'),
-      siboAllergiesTags: recipe.tags || [],
+      siboAllergiesTags,
       siboAlerts: recipe.sibo_alerts || []
     };
   }

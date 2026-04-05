@@ -3,6 +3,7 @@ import DOMPurify from 'dompurify';
 import { Recipe } from '../types/recipe';
 import { useFavorites } from '../hooks/useFavorites';
 import { useTranslation } from 'react-i18next';
+import { useCachedImage } from '../hooks/useCachedImage';
 
 interface RecipeDetailPageProps {
   recipe: Recipe;
@@ -16,6 +17,7 @@ export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
   const displayInstructions = lang === 'en' && recipe.instructionsEn?.length ? recipe.instructionsEn : recipe.instructions;
   const { toggleFavorite, isFavorited } = useFavorites();
   const favorited = isFavorited(recipe.id);
+  const { imageSrc, loading } = useCachedImage(recipe.imageUrl);
 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -26,11 +28,15 @@ export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
     <div className="min-h-screen bg-brand-cream font-sans">
       {/* Hero Section with Image */}
       <div className="relative h-[40vh] sm:h-[50vh] w-full bg-brand-forest/10">
-        <img 
-          src={recipe.imageUrl} 
-          alt={recipe.title} 
-          className="w-full h-full object-cover"
-        />
+        {loading ? (
+          <div className="w-full h-full animate-pulse bg-brand-sage/10" />
+        ) : imageSrc ? (
+          <img 
+            src={imageSrc} 
+            alt={recipe.title} 
+            className="w-full h-full object-cover"
+          />
+        ) : null}
         <div className="absolute inset-0 bg-gradient-to-t from-brand-forest/90 via-brand-forest/40 to-transparent"></div>
         <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/50 to-transparent"></div>
         
@@ -61,11 +67,20 @@ export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
         <div className="absolute bottom-0 inset-x-0 p-8 sm:p-12 text-white">
           <div className="max-w-4xl mx-auto">
             <div className="flex flex-wrap gap-2 mb-4">
-              {recipe.siboAllergiesTags.map(tag => (
-                <span key={tag} className="px-3 py-1 rounded-lg bg-black/30 backdrop-blur-md text-xs font-bold tracking-wider uppercase border border-white/20 text-white">
-                  {tag}
-                </span>
-              ))}
+              {recipe.siboAllergiesTags
+                .filter(tag => {
+                  if (!tag) return false;
+                  const text = typeof tag === 'object' ? (tag.es || tag.en || '') : tag;
+                  return text && text.trim() !== '';
+                })
+                .map((tag, idx) => {
+                  const displayTag = typeof tag === 'object' ? (lang === 'en' ? tag.en || tag.es : tag.es || tag.en) : tag;
+                  return (
+                    <span key={idx} className="px-3 py-1 rounded-lg bg-black/30 backdrop-blur-md text-xs font-bold tracking-wider uppercase border border-white/20 text-white">
+                      {displayTag}
+                    </span>
+                  );
+                })}
             </div>
             <h1 className="text-3xl sm:text-5xl font-black tracking-tight mb-4 drop-shadow-md">
               {displayTitle}

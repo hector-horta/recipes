@@ -1,3 +1,8 @@
+export interface Tag {
+  es: string;
+  en: string;
+}
+
 export interface Ingredient {
   id: string;
   name: string;
@@ -19,5 +24,5 @@ export interface Recipe {
   instructionsEn?: string[];
   summary?: string;
   safetyLevel: 'safe' | 'review' | 'unsafe';
-  siboAllergiesTags: string[];
+  siboAllergiesTags: (Tag | string)[];
 }

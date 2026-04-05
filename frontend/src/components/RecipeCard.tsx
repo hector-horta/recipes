@@ -2,6 +2,7 @@ import { AlertCircle, Clock, Heart } from 'lucide-react';
 import { Recipe } from '../types/recipe';
 import { useTranslation } from 'react-i18next';
 import { Button } from './ui/Button';
+import { useCachedImage } from '../hooks/useCachedImage';
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -15,6 +16,7 @@ export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite }:
   const lang = i18n.language.startsWith('en') ? 'en' : 'es';
   const displayTitle = lang === 'en' && recipe.titleEn ? recipe.titleEn : recipe.title;
   const hasBorderlineIngredients = recipe.ingredients.some(ing => ing.isBorderlineSafe);
+  const { imageSrc, loading } = useCachedImage(recipe.imageUrl);
 
   const safetyColor = recipe.safetyLevel === 'safe' 
     ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
@@ -35,12 +37,16 @@ export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite }:
     >
       {/* Image Container */}
       <div className="relative h-56 w-full overflow-hidden shrink-0 bg-brand-cream">
-        <img 
-          src={recipe.imageUrl} 
-          alt={recipe.title} 
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-          loading="lazy"
-        />
+        {loading ? (
+          <div className="w-full h-full animate-pulse bg-brand-sage/10" />
+        ) : imageSrc ? (
+          <img 
+            src={imageSrc} 
+            alt={recipe.title} 
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+            loading="lazy"
+          />
+        ) : null}
         <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-slate-900/60 to-transparent pointer-events-none"></div>
         
         <div className="absolute top-4 left-4 flex gap-2">
@@ -94,11 +100,20 @@ export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite }:
         </div>
 
         <div className="flex flex-wrap gap-2 mb-2">
-          {recipe.siboAllergiesTags.map(tag => (
-            <span key={tag} className="px-2.5 py-1 rounded-md bg-brand-forest/5 text-brand-forest text-[10px] font-bold tracking-wider uppercase border border-brand-forest/10">
-              {tag}
-            </span>
-          ))}
+          {recipe.siboAllergiesTags
+            .filter(tag => {
+              if (!tag) return false;
+              const text = typeof tag === 'object' ? (tag.es || tag.en || '') : tag;
+              return text && text.trim() !== '';
+            })
+            .map((tag, idx) => {
+              const displayTag = typeof tag === 'object' ? (lang === 'en' ? tag.en || tag.es : tag.es || tag.en) : tag;
+              return (
+                <span key={idx} className="px-2.5 py-1 rounded-md bg-brand-forest/5 text-brand-forest text-[10px] font-bold tracking-wider uppercase border border-brand-forest/10">
+                  {displayTag}
+                </span>
+              );
+            })}
         </div>
       </div>
     </article>

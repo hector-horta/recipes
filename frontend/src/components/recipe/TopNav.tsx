@@ -4,7 +4,7 @@ import { useAuth } from '../../AuthContext';
 import { WatiLogo } from '../WatiLogo';
 import { LanguageSelector } from '../LanguageSelector';
 import { Button } from '../ui/Button';
-import { FlaskConical, Radio, Settings, UserCircle, LogOut } from 'lucide-react';
+import { Settings, UserCircle, LogOut } from 'lucide-react';
 
 interface TopNavProps {
   onOpenLogin: () => void;
@@ -14,7 +14,6 @@ interface TopNavProps {
 export function TopNav({ onOpenLogin, onOpenOnboarding }: TopNavProps) {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
-  const API_MODE = import.meta.env.VITE_API_MODE || 'MOCK';
 
   return (
     <nav className="sticky top-0 z-40 bg-white/70 backdrop-blur-xl border-b border-brand-sage/10 shadow-sm/5">
@@ -22,13 +21,7 @@ export function TopNav({ onOpenLogin, onOpenOnboarding }: TopNavProps) {
         {/* Logo */}
         <div className="flex items-center gap-2.5">
           <WatiLogo size={32} />
-          <div className="flex flex-col">
-            <span className="text-xl font-extrabold text-brand-forest tracking-tight">Wati</span>
-            <div className={`flex items-center gap-1 text-[8px] font-bold px-1.5 py-0.5 rounded-full border border-current uppercase tracking-widest ${API_MODE === 'MOCK' ? 'text-brand-sage border-brand-sage/30 bg-brand-sage/5' : 'text-brand-celeste border-brand-celeste/30 bg-brand-celeste/5'}`}>
-              {API_MODE === 'MOCK' ? <FlaskConical size={8} /> : <Radio size={8} />}
-              {API_MODE === 'MOCK' ? t('nav.dev') : t('nav.live')}
-            </div>
-          </div>
+          <span className="text-xl font-extrabold text-brand-forest tracking-tight">Wati</span>
         </div>
 
         {/* Language Selector + Auth Actions */}
