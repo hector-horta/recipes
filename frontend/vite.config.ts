@@ -22,7 +22,13 @@ export default defineConfig(({ mode }) => {
     ],
     server: {
       host: '0.0.0.0',
-      allowedHosts: true
+      allowedHosts: true,
+      proxy: {
+        '/public/recipes/': {
+          target: apiHost,
+          changeOrigin: true
+        }
+      }
     },
     optimizeDeps: {
       include: ['react', 'react-dom'],

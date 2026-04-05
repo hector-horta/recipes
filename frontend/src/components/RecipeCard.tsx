@@ -2,6 +2,7 @@ import { AlertCircle, Clock, Heart } from 'lucide-react';
 import { Recipe } from '../types/recipe';
 import { useTranslation } from 'react-i18next';
 import { Button } from './ui/Button';
+import { useCachedImage } from '../hooks/useCachedImage';
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -15,6 +16,7 @@ export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite }:
   const lang = i18n.language.startsWith('en') ? 'en' : 'es';
   const displayTitle = lang === 'en' && recipe.titleEn ? recipe.titleEn : recipe.title;
   const hasBorderlineIngredients = recipe.ingredients.some(ing => ing.isBorderlineSafe);
+  const { imageSrc, loading } = useCachedImage(recipe.imageUrl);
 
   const safetyColor = recipe.safetyLevel === 'safe' 
     ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
@@ -35,12 +37,16 @@ export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite }:
     >
       {/* Image Container */}
       <div className="relative h-56 w-full overflow-hidden shrink-0 bg-brand-cream">
-        <img 
-          src={recipe.imageUrl} 
-          alt={recipe.title} 
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-          loading="lazy"
-        />
+        {loading ? (
+          <div className="w-full h-full animate-pulse bg-brand-sage/10" />
+        ) : imageSrc ? (
+          <img 
+            src={imageSrc} 
+            alt={recipe.title} 
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+            loading="lazy"
+          />
+        ) : null}
         <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-slate-900/60 to-transparent pointer-events-none"></div>
         
         <div className="absolute top-4 left-4 flex gap-2">

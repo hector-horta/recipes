@@ -1,10 +1,10 @@
 import Dexie, { type Table } from 'dexie';
 
-// ── Base de datos IndexedDB vía Dexie ──────────────────
 class WatiDB extends Dexie {
   cachedRecipes!: Table<any>;
   searchCache!: Table<any>;
   medicalMetadata!: Table<any>;
+  cachedImages!: Table<any>;
 
   constructor() {
     super('WatiDB');
@@ -19,7 +19,13 @@ class WatiDB extends Dexie {
 
     this.version(3).stores({
       searchCache: 'query',
-      cachedRecipes: 'id' // Keep id as primary key
+      cachedRecipes: 'id'
+    });
+
+    this.version(4).stores({
+      searchCache: 'query',
+      cachedRecipes: 'id',
+      cachedImages: 'url'
     });
   }
 }

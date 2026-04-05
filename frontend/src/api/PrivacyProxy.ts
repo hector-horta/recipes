@@ -2,6 +2,7 @@ import DOMPurify from 'dompurify';
 import { SecureVault, type MedicalProfile } from '../security/SecureVault';
 import { SecurityScrubber } from './SecurityScrubber';
 import { db } from '../db/db';
+import { cacheRecipeImages } from '../utils/imageCache';
 
 const API_DOMAIN = '';
 
@@ -83,6 +84,8 @@ export const SecureAPI = {
                     timestamp: Date.now()
                 }));
                 await db.cachedRecipes.bulkPut(recipeEntries);
+
+                await cacheRecipeImages(analyzedRecipes);
 
                 await db.searchCache.put({
                     query: safeQuery.toLowerCase(),
