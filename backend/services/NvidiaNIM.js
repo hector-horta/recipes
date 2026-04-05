@@ -124,7 +124,7 @@ export async function analyzeAndStructureRecipe(rawText, apiKey) {
     {
       "name": { "es": "...", "en": "..." },
       "quantity": string,
-      "unit": { "es": "...", "en": "..." } (translate units: "taza"→"cup", "cucharada"→"tablespoon", "trozo"→"piece", "pizca"→"pinch", "al gusto"→"to taste"),
+      "unit": { "es": "...", "en": "..." } (translate units: "taza"/"tazas"→"cup"/"cups", "cucharada"→"tablespoon", "cucharadita"→"teaspoon", "trozo"→"piece", "pizca"→"pinch", "al gusto"→"to taste", "diente"→"clove", "ramita"→"sprig", "rodaja"→"slice", "pocillo"→"small cup", "vaso"→"glass", "litro"→"liter", "ml"→"ml", "gr"/"g"→"g", "kg"→"kg", "lb"→"lb", "onza"→"ounce", "unidad"→"" (omit for "unidad"), "unidades"→"" (omit for "unidades")),
       "siboAlert": boolean (true if ingredient is a known high-FODMAP food)
     }
   ],
