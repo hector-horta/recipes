@@ -80,7 +80,7 @@ router.post('/login', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('[Auth] Error de DB o servidor durante el login.');
+    console.error('[Auth] Error de DB o servidor durante el login:', error.message);
     res.status(500).json({ error: 'Error interno del servidor.' });
   }
 });
