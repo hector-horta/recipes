@@ -3,7 +3,6 @@ import { Recipe } from '../types/recipe';
 import { useTranslation } from 'react-i18next';
 import { Button } from './ui/Button';
 import { useCachedImage } from '../hooks/useCachedImage';
-import { translateTag } from '../utils/tagTranslations';
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -101,10 +100,10 @@ export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite }:
         </div>
 
         <div className="flex flex-wrap gap-2 mb-2">
-          {recipe.siboAllergiesTags.map(tag => {
-            const displayTag = translateTag(tag, lang);
+          {recipe.siboAllergiesTags.map((tag, idx) => {
+            const displayTag = lang === 'en' ? tag.en : tag.es;
             return (
-              <span key={tag} className="px-2.5 py-1 rounded-md bg-brand-forest/5 text-brand-forest text-[10px] font-bold tracking-wider uppercase border border-brand-forest/10">
+              <span key={idx} className="px-2.5 py-1 rounded-md bg-brand-forest/5 text-brand-forest text-[10px] font-bold tracking-wider uppercase border border-brand-forest/10">
                 {displayTag}
               </span>
             );

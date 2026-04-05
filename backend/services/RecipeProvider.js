@@ -86,6 +86,10 @@ export class RecipeProvider {
 
     const imageUrl = recipe.image_url || '';
 
+    const siboAllergiesTags = (recipe.tags || []).map(t =>
+      typeof t === 'object' && t.es ? t : { es: t, en: t }
+    );
+
     return {
       id: recipe.id,
       title: recipe.title_es,
@@ -100,7 +104,7 @@ export class RecipeProvider {
         .map(s => s.instruction?.en || ''),
       summary: '',
       safetyLevel: recipe.sibo_risk_level === 'safe' ? 'safe' : (recipe.sibo_risk_level === 'caution' ? 'review' : 'unsafe'),
-      siboAllergiesTags: recipe.tags || [],
+      siboAllergiesTags,
       siboAlerts: recipe.sibo_alerts || []
     };
   }

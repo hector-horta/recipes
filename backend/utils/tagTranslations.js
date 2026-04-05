@@ -1,4 +1,4 @@
-export const TAG_TRANSLATIONS: Record<string, Record<string, string>> = {
+export const TAG_TRANSLATIONS = {
   avena: { es: 'Avena', en: 'Oat' },
   bebida: { es: 'Bebida', en: 'Drink' },
   crema: { es: 'Crema', en: 'Cream' },
@@ -35,9 +35,22 @@ export const TAG_TRANSLATIONS: Record<string, Record<string, string>> = {
   sibo: { es: 'SIBO', en: 'SIBO' },
 };
 
-export function translateTag(tag: string, lang: string): string {
-  const normalized = tag.toLowerCase().replace(/\s+/g, '_');
-  const entry = TAG_TRANSLATIONS[normalized];
-  if (!entry) return tag;
-  return entry[lang] || entry['es'] || tag;
+export function normalizeTag(tag) {
+  const key = tag.toLowerCase().replace(/\s+/g, '_');
+  return TAG_TRANSLATIONS[key] || { es: tag, en: tag };
+}
+
+export function normalizeTags(tags) {
+  if (!Array.isArray(tags)) return [];
+  const seen = new Set();
+  const result = [];
+  for (const tag of tags) {
+    const normalized = normalizeTag(tag);
+    const id = normalized.es.toLowerCase();
+    if (!seen.has(id)) {
+      seen.add(id);
+      result.push(normalized);
+    }
+  }
+  return result;
 }

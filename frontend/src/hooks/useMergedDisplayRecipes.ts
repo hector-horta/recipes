@@ -35,7 +35,7 @@ export function useMergedDisplayRecipes({
       instructions: [],
       summary: '',
       safetyLevel: 'safe',
-      siboAllergiesTags: [t('recipe.favorite')]
+      siboAllergiesTags: [{ es: t('recipe.favorite'), en: t('recipe.favorite') }]
     }));
 
     if (favoriteRecipes.length >= itemsPerPage) {
