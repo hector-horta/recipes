@@ -101,6 +101,10 @@ services:
     security_opt:
       - no-new-privileges:true
     read_only: false
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   # ── Redis ───────────────────────────────────────────────────────────────
   redis:
