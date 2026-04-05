@@ -4,6 +4,7 @@ import { Recipe } from '../types/recipe';
 import { useFavorites } from '../hooks/useFavorites';
 import { useTranslation } from 'react-i18next';
 import { useCachedImage } from '../hooks/useCachedImage';
+import { translateTag } from '../utils/tagTranslations';
 
 interface RecipeDetailPageProps {
   recipe: Recipe;
@@ -67,11 +68,14 @@ export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
         <div className="absolute bottom-0 inset-x-0 p-8 sm:p-12 text-white">
           <div className="max-w-4xl mx-auto">
             <div className="flex flex-wrap gap-2 mb-4">
-              {recipe.siboAllergiesTags.map(tag => (
-                <span key={tag} className="px-3 py-1 rounded-lg bg-black/30 backdrop-blur-md text-xs font-bold tracking-wider uppercase border border-white/20 text-white">
-                  {tag}
-                </span>
-              ))}
+              {recipe.siboAllergiesTags.map(tag => {
+                const displayTag = translateTag(tag, lang);
+                return (
+                  <span key={tag} className="px-3 py-1 rounded-lg bg-black/30 backdrop-blur-md text-xs font-bold tracking-wider uppercase border border-white/20 text-white">
+                    {displayTag}
+                  </span>
+                );
+              })}
             </div>
             <h1 className="text-3xl sm:text-5xl font-black tracking-tight mb-4 drop-shadow-md">
               {displayTitle}
