@@ -1,4 +1,5 @@
 const NVIDIA_API_BASE = 'https://integrate.api.nvidia.com/v1';
+const NVIDIA_GENAI_BASE = 'https://ai.api.nvidia.com/v1/genai';
 
 async function nvidiaChatRequest(body, apiKey) {
   const res = await fetch(`${NVIDIA_API_BASE}/chat/completions`, {
@@ -20,7 +21,7 @@ async function nvidiaChatRequest(body, apiKey) {
 }
 
 async function nvidiaImageRequest(body, apiKey) {
-  const res = await fetch(`${NVIDIA_API_BASE}/images/generations`, {
+  const res = await fetch(`${NVIDIA_GENAI_BASE}/stabilityai/stable-diffusion-xl`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -31,7 +32,7 @@ async function nvidiaImageRequest(body, apiKey) {
 
   if (!res.ok) {
     const errText = await res.text().catch(() => '');
-    throw new Error(`NVIDIA NIM Image error (${res.status}): ${errText}`);
+    throw new Error(`NVIDIA SDXL error (${res.status}): ${errText}`);
   }
 
   return res.json();
@@ -140,18 +141,17 @@ CRITICAL RULES:
 }
 
 export async function generateRecipeImage(prompt, apiKey) {
-  const decoratedPrompt = `Professional editorial food photography of ${prompt}, 8k, macro lens, soft natural lighting, high-end restaurant plating, vibrant colors, shallow depth of field --ar 16:9`;
+  const decoratedPrompt = `Professional editorial food photography of ${prompt}, 8k, macro lens, soft natural lighting, high-end restaurant plating, vibrant colors, shallow depth of field`;
 
   const response = await nvidiaImageRequest({
-    model: 'stabilityai/stable-diffusion-xl',
-    prompt: decoratedPrompt,
-    height: 768,
-    width: 1344,
+    text_prompts: [{ text: decoratedPrompt }],
+    height: 1024,
+    width: 1024,
     cfg_scale: 7,
     steps: 30
   }, apiKey);
 
-  const imageData = response.data?.[0]?.b64_json;
+  const imageData = response.artifacts?.[0]?.base64;
   if (!imageData) {
     throw new Error('No image data returned from SDXL');
   }
