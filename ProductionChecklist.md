@@ -41,7 +41,6 @@ Antes de desplegar en un servidor real, completar cada ítem en orden.
 - [ ] Registrar el dominio en [HSTS Preload List](https://hstspreload.org) (el header `Strict-Transport-Security` ya está configurado)
 - [ ] Revisar y ajustar los límites de rate limiting (`globalLimiter` / `recipeLimiter` en `backend/server.js`) según el tráfico esperado
 - [ ] Configurar backups automáticos del volumen `postgres_data`
-- [ ] Rotar la `SPOONACULAR_KEY` si estuvo expuesta en logs o variables de entorno no cifradas
 
 ---
 
@@ -59,7 +58,7 @@ Antes de desplegar en un servidor real, completar cada ítem en orden.
 ## 6. Monitoreo
 
 - [ ] Configurar logs centralizados (ej. Datadog, Grafana Loki, AWS CloudWatch)
-- [ ] Configurar alertas para errores HTTP 5xx y límites de cuota de Spoonacular (`402`)
+- [ ] Configurar alertas para errores HTTP 5xx
 - [ ] Verificar que el endpoint de healthcheck responde correctamente:
   ```bash
   curl https://tu-dominio.com/api/status

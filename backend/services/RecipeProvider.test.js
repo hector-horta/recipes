@@ -1,8 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { RecipeProvider } from './RecipeProvider.js';
 
-global.fetch = vi.fn();
-// Mock Redis to avoid connection issues during tests
 vi.mock('../config/redis.js', () => ({
   redisClient: {
     isReady: false,
@@ -11,65 +9,71 @@ vi.mock('../config/redis.js', () => ({
   }
 }));
 
+vi.mock('../models/Recipe.js', () => ({
+  Recipe: {
+    findAll: vi.fn()
+  }
+}));
+
+import { Recipe } from '../models/Recipe.js';
+
 describe('RecipeProvider', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.SPOONACULAR_KEY = 'test-key';
   });
 
-  it('should include maxReadyTime=30 in the API call', async () => {
-    fetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({ results: [] })
-    });
+  it('should filter by published status by default', async () => {
+    Recipe.findAll.mockResolvedValue([]);
 
     await RecipeProvider.getRecipes({ query: 'pasta' });
-    expect(fetch).toHaveBeenCalledWith(expect.stringContaining('maxReadyTime=30'), expect.any(Object));
+
+    expect(Recipe.findAll).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ status: 'published' })
+      })
+    );
   });
 
-  it('should map SIBO intolerance to Low FODMAP diet', async () => {
-    fetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({ results: [] })
-    });
+  it('should filter by title search when query is provided', async () => {
+    Recipe.findAll.mockResolvedValue([]);
 
-    const userProfile = { intolerances: ['SIBO'], diet: 'None' };
+    await RecipeProvider.getRecipes({ query: 'pasta' });
+
+    const callArgs = Recipe.findAll.mock.calls[0][0];
+    expect(callArgs.where).toHaveProperty('Op.or');
+  });
+
+  it('should exclude avoid-level recipes when user has SIBO intolerance', async () => {
+    Recipe.findAll.mockResolvedValue([]);
+
+    const userProfile = { intolerances: ['SIBO'] };
     await RecipeProvider.getRecipes({ query: 'pasta' }, userProfile);
-    
-    expect(fetch).toHaveBeenCalledWith(expect.stringContaining('diet=Low+FODMAP'), expect.any(Object));
+
+    const callArgs = Recipe.findAll.mock.calls[0][0];
+    expect(callArgs.where.sibo_risk_level).toEqual({ [Symbol(ne)]: 'avoid' });
   });
 
-  it('should include profile excluded ingredients and intolerances in the query', async () => {
-    fetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({ results: [] })
-    });
-
-    const userProfile = { 
-        intolerances: ['dairy', 'peanut'], 
-        excluded_ingredients: 'onion,garlic',
-        diet: 'Vegan'
-    };
-    await RecipeProvider.getRecipes({ query: 'salad', excludeIngredients: 'shellfish' }, userProfile);
-    
-    const callUrl = fetch.mock.calls[0][0];
-    expect(callUrl).toContain('excludeIngredients=shellfish%2Cdairy%2Cpeanut%2Conion%2Cgarlic');
-    expect(callUrl).toContain('diet=Vegan');
-  });
-
-  it('should normalize ingredients from both extendedIngredients and analyzedInstructions', () => {
-    const raw = [{
+  it('should normalize ingredients from recipe data', () => {
+    const raw = {
       id: 1,
-      title: 'Test',
-      extendedIngredients: [{ id: 101, name: 'Ingredient A' }],
-      analyzedInstructions: [{
-        steps: [{ ingredients: [{ name: 'Ingredient B' }] }]
-      }]
-    }];
+      title_es: 'Test Recipe',
+      title_en: 'Test Recipe EN',
+      ingredients: [
+        { name: { es: 'Ingrediente A', en: 'Ingredient A' }, quantity: '1', unit: 'cup', siboAlert: false }
+      ],
+      steps: [
+        { order: 1, instruction: { es: 'Paso 1', en: 'Step 1' } }
+      ],
+      image_url: '/test.jpg',
+      sibo_risk_level: 'safe',
+      sibo_alerts: [],
+      tags: ['test']
+    };
 
-    const normalized = RecipeProvider.normalizeRecipes(raw);
-    expect(normalized[0].ingredients).toHaveLength(2);
-    expect(normalized[0].ingredients.map(i => i.name)).toContain('Ingredient A');
-    expect(normalized[0].ingredients.map(i => i.name)).toContain('Ingredient B');
+    const normalized = RecipeProvider.normalizeRecipe(raw);
+    expect(normalized.ingredients).toHaveLength(1);
+    expect(normalized.ingredients[0].name).toBe('Ingrediente A');
+    expect(normalized.instructions).toContain('Paso 1');
+    expect(normalized.safetyLevel).toBe('safe');
   });
 });

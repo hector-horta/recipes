@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { Recipe } from '../models/Recipe.js';
 import { extractTextFromImage, analyzeAndStructureRecipe, generateRecipeImage } from '../services/NvidiaNIM.js';
+import { transcribeAudio } from '../services/GroqWhisper.js';
 import { saveIngestLog } from '../middleware/recoveryLogger.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -139,6 +140,104 @@ router.post('/text', async (req, res, next) => {
     res.status(200).json({
       status: 'processed',
       recipe: recipe.toJSON(),
+      tripleCheck: buildTripleCheckMenu(recipeData)
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+function getGroqKey() {
+  const key = process.env.GROQ_API_KEY;
+  if (!key) throw new Error('GROQ_API_KEY not configured');
+  return key;
+}
+
+router.post('/transcribe', async (req, res, next) => {
+  try {
+    const groqKey = getGroqKey();
+    const { audioUrl, language = 'es' } = req.body;
+
+    if (!audioUrl) {
+      return res.status(400).json({ error: 'audioUrl is required.' });
+    }
+
+    const audioRes = await fetch(audioUrl);
+    if (!audioRes.ok) throw new Error(`Failed to download audio: ${audioRes.status}`);
+    const audioBuffer = Buffer.from(await audioRes.arrayBuffer());
+
+    const transcribedText = await transcribeAudio(audioBuffer, groqKey, language);
+
+    if (!transcribedText.trim()) {
+      return res.status(400).json({ error: 'No text could be transcribed from audio.' });
+    }
+
+    res.status(200).json({ transcribedText });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/voice', async (req, res, next) => {
+  try {
+    const groqKey = getGroqKey();
+    const { audioUrl, language = 'es' } = req.body;
+
+    if (!audioUrl) {
+      return res.status(400).json({ error: 'audioUrl is required.' });
+    }
+
+    const audioRes = await fetch(audioUrl);
+    if (!audioRes.ok) throw new Error(`Failed to download audio: ${audioRes.status}`);
+    const audioBuffer = Buffer.from(await audioRes.arrayBuffer());
+
+    const transcribedText = await transcribeAudio(audioBuffer, groqKey, language);
+
+    if (!transcribedText.trim()) {
+      return res.status(400).json({ error: 'No text could be transcribed from audio.' });
+    }
+
+    const nvidiaKey = getApiKey();
+    const structured = await analyzeAndStructureRecipe(transcribedText, nvidiaKey);
+
+    const titleEs = structured.title?.es || 'Receta sin título';
+    const slug = generateSlug(titleEs);
+
+    let imageResult = null;
+    try {
+      imageResult = await generateRecipeImage(titleEs, nvidiaKey);
+    } catch (imgErr) {
+      console.warn('[Ingest] Failed to generate image:', imgErr.message);
+    }
+
+    const recipeData = {
+      title_es: titleEs,
+      title_en: structured.title?.en || titleEs,
+      slug,
+      prep_time_minutes: structured.prepTimeMinutes || 0,
+      cook_time_minutes: structured.cookTimeMinutes || 0,
+      servings: structured.servings || 1,
+      difficulty: structured.difficulty || 'medium',
+      ingredients: structured.ingredients || [],
+      steps: structured.steps || [],
+      tags: structured.tags || [],
+      image_url: imageResult?.url || null,
+      image_filename: imageResult?.filename || null,
+      sibo_risk_level: structured.siboRiskLevel || 'safe',
+      sibo_alerts: structured.siboAlerts || [],
+      source_type: 'audio',
+      source_reference: audioUrl,
+      status: 'draft'
+    };
+
+    saveIngestLog(recipeData);
+
+    const recipe = await Recipe.create(recipeData);
+
+    res.status(200).json({
+      status: 'processed',
+      recipe: recipe.toJSON(),
+      transcribedText,
       tripleCheck: buildTripleCheckMenu(recipeData)
     });
   } catch (error) {

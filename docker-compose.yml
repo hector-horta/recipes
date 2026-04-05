@@ -60,6 +60,7 @@ services:
       - HCP_CLIENT_SECRET=${HCP_CLIENT_SECRET}
       - HCP_PROJECT_ID=${HCP_PROJECT_ID}
       - NVIDIA_API_KEY=${NVIDIA_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
       - DB_URL=${DB_URL}
     depends_on:
       - postgres
