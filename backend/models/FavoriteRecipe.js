@@ -19,7 +19,7 @@ export const FavoriteRecipe = sequelize.define('FavoriteRecipe', {
     onDelete: 'CASCADE'
   },
   recipe_id: {
-    type: DataTypes.STRING,
+    type: DataTypes.UUID,
     allowNull: false
   },
   title: {
