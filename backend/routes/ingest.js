@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { Recipe } from '../models/Recipe.js';
-import { extractTextFromImage, analyzeAndStructureRecipe, generateRecipeImage } from '../services/NvidiaNIM.js';
+import { extractTextFromImage, extractTextFromTwoImages, analyzeAndStructureRecipe, generateRecipeImage } from '../services/NvidiaNIM.js';
 import { transcribeAudio } from '../services/GroqWhisper.js';
 import { saveIngestLog } from '../middleware/recoveryLogger.js';
 import { RecipeProvider } from '../services/RecipeProvider.js';
@@ -73,6 +73,75 @@ router.post('/image', async (req, res, next) => {
       sibo_alerts: structured.siboAlerts || [],
       source_type: 'ocr_image',
       source_reference: imageUrl,
+      status: 'draft'
+    };
+
+    saveIngestLog(recipeData);
+
+    const recipe = await Recipe.create(recipeData);
+
+    await RecipeProvider.clearCache();
+
+    res.status(200).json({
+      status: 'processed',
+      recipe: recipe.toJSON(),
+      rawText,
+      tripleCheck: buildTripleCheckMenu(recipeData)
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/images', async (req, res, next) => {
+  try {
+    const apiKey = getApiKey();
+    const { ingredientImageUrl, preparationImageUrl, generateImage = true } = req.body;
+
+    if (!ingredientImageUrl || !preparationImageUrl) {
+      return res.status(400).json({ error: 'Both ingredientImageUrl and preparationImageUrl are required.' });
+    }
+
+    const processingMsg = '🔍 Extrayendo texto de ambas imágenes...';
+    console.log(`[Ingest] Processing 2 images: ingredients + preparation`);
+
+    const rawText = await extractTextFromTwoImages(ingredientImageUrl, preparationImageUrl, apiKey);
+
+    if (!rawText.trim()) {
+      return res.status(400).json({ error: 'No text could be extracted from the images.' });
+    }
+
+    const structured = await analyzeAndStructureRecipe(rawText, apiKey);
+
+    const titleEs = structured.title?.es || 'Receta sin título';
+    const slug = generateSlug(titleEs);
+
+    let imageResult = null;
+    if (generateImage) {
+      try {
+        imageResult = await generateRecipeImage(titleEs, apiKey);
+      } catch (imgErr) {
+        console.warn('[Ingest] Failed to generate image:', imgErr.message);
+      }
+    }
+
+    const recipeData = {
+      title_es: titleEs,
+      title_en: structured.title?.en || titleEs,
+      slug,
+      prep_time_minutes: structured.prepTimeMinutes || 0,
+      cook_time_minutes: structured.cookTimeMinutes || 0,
+      servings: structured.servings || 1,
+      difficulty: structured.difficulty || 'medium',
+      ingredients: structured.ingredients || [],
+      steps: structured.steps || [],
+      tags: structured.tags || [],
+      image_url: imageResult?.url || null,
+      image_filename: imageResult?.filename || null,
+      sibo_risk_level: structured.siboRiskLevel || 'safe',
+      sibo_alerts: structured.siboAlerts || [],
+      source_type: 'ocr_image',
+      source_reference: `multi_image:${ingredientImageUrl},${preparationImageUrl}`,
       status: 'draft'
     };
 

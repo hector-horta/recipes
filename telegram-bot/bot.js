@@ -12,6 +12,8 @@ const BACKEND_URL = process.env.BACKEND_URL || 'http://backend:5001';
 
 let bot = null;
 const pendingVoiceEdits = new Map();
+const pendingImageGroups = new Map();
+const IMAGE_GROUP_TIMEOUT = 2000;
 
 function isAuthorized(userId) {
   return userId.toString() === ALLOWED_USER_ID;
@@ -49,12 +51,49 @@ function formatRecipeSummary(recipe) {
 async function processImage(msg) {
   const chatId = msg.chat.id;
 
-  try {
-    const processingMsg = await bot.sendMessage(chatId, '🔍 Extrayendo texto de la imagen con OCDRNet...');
+  if (!pendingImageGroups.has(chatId)) {
+    pendingImageGroups.set(chatId, { images: [], timer: null });
+  }
 
-    const fileId = msg.photo[msg.photo.length - 1].file_id;
+  const group = pendingImageGroups.get(chatId);
+  const fileId = msg.photo[msg.photo.length - 1].file_id;
+  group.images.push(fileId);
+
+  if (group.timer) clearTimeout(group.timer);
+
+  if (group.images.length === 1) {
+    const statusMsg = await bot.sendMessage(chatId, '📸 Recibida imagen 1. Esperando 2s por una segunda imagen...');
+    group.statusMsg = statusMsg;
+  }
+
+  group.timer = setTimeout(async () => {
+    const currentGroup = pendingImageGroups.get(chatId);
+    pendingImageGroups.delete(chatId);
+
+    if (currentGroup.images.length === 1) {
+      processSingleImage(chatId, currentGroup.images[0], currentGroup.statusMsg?.message_id);
+    } else if (currentGroup.images.length === 2) {
+      processImageGroup(chatId, currentGroup.images, currentGroup.statusMsg?.message_id);
+    } else if (currentGroup.images.length > 2) {
+      const lastTwo = currentGroup.images.slice(-2);
+      processImageGroup(chatId, lastTwo, currentGroup.statusMsg?.message_id);
+    }
+  }, IMAGE_GROUP_TIMEOUT);
+}
+
+async function processSingleImage(chatId, fileId, statusMsgId) {
+  try {
     const fileLink = await bot.getFileLink(fileId);
     const imageUrl = typeof fileLink === 'string' ? fileLink : fileLink?.href || fileLink?.toString();
+
+    if (!statusMsgId) {
+      statusMsgId = (await bot.sendMessage(chatId, '🔍 Extrayendo texto de la imagen con OCDRNet...')).message_id;
+    } else {
+      await bot.editMessageText('🔍 Extrayendo texto de la imagen con OCDRNet...', {
+        chat_id: chatId,
+        message_id: statusMsgId
+      });
+    }
 
     const res = await fetch(`${BACKEND_URL}/api/ingest/image`, {
       method: 'POST',
@@ -67,7 +106,7 @@ async function processImage(msg) {
     if (!res.ok) {
       await bot.editMessageText(`❌ Error: ${data.error}`, {
         chat_id: chatId,
-        message_id: processingMsg.message_id
+        message_id: statusMsgId
       });
       return;
     }
@@ -75,14 +114,59 @@ async function processImage(msg) {
     const recipe = data.recipe;
     await bot.editMessageText(formatRecipeSummary(recipe), {
       chat_id: chatId,
-      message_id: processingMsg.message_id,
+      message_id: statusMsgId,
       parse_mode: 'Markdown',
       reply_markup: buildInlineKeyboard(recipe.slug)
     });
 
   } catch (error) {
-    console.error('[TelegramBot] Error processing image:', error);
+    console.error('[TelegramBot] Error processing single image:', error);
     bot.sendMessage(chatId, `❌ Error procesando la imagen: ${error.message}`);
+  }
+}
+
+async function processImageGroup(chatId, fileIds, statusMsgId) {
+  try {
+    if (!statusMsgId) {
+      statusMsgId = (await bot.sendMessage(chatId, '🔍 Extrayendo texto de ambas imágenes...')).message_id;
+    } else {
+      await bot.editMessageText('🔍 Extrayendo texto de ambas imágenes...', {
+        chat_id: chatId,
+        message_id: statusMsgId
+      });
+    }
+
+    const fileLinks = await Promise.all(fileIds.map(fid => bot.getFileLink(fid)));
+    const ingredientImageUrl = typeof fileLinks[0] === 'string' ? fileLinks[0] : fileLinks[0]?.href || fileLinks[0]?.toString();
+    const preparationImageUrl = typeof fileLinks[1] === 'string' ? fileLinks[1] : fileLinks[1]?.href || fileLinks[1]?.toString();
+
+    const res = await fetch(`${BACKEND_URL}/api/ingest/images`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ingredientImageUrl, preparationImageUrl, generateImage: true })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      await bot.editMessageText(`❌ Error: ${data.error}`, {
+        chat_id: chatId,
+        message_id: statusMsgId
+      });
+      return;
+    }
+
+    const recipe = data.recipe;
+    await bot.editMessageText(formatRecipeSummary(recipe), {
+      chat_id: chatId,
+      message_id: statusMsgId,
+      parse_mode: 'Markdown',
+      reply_markup: buildInlineKeyboard(recipe.slug)
+    });
+
+  } catch (error) {
+    console.error('[TelegramBot] Error processing image group:', error);
+    bot.sendMessage(chatId, `❌ Error procesando las imágenes: ${error.message}`);
   }
 }
 
@@ -488,7 +572,8 @@ export function initializeTelegramBot() {
       bot.sendMessage(msg.chat.id,
         '🍳 *Wati Recipe Ingest Bot*\n\n' +
         'Envíame:\n' +
-        '📸 *Fotos* de libros de recetas (OCR con OCDRNet)\n' +
+        '📸 *1 foto* de receta completa (OCR con OCDRNet)\n' +
+        '📸 *2 fotos seguidas* → 1ra: ingredientes, 2da: preparación\n' +
         '📝 *Texto* de recetas para analizar\n' +
         '🎤 *Notas de voz* con recetas dictadas (transcripción con Groq Whisper)\n\n' +
         'Procesado con NVIDIA NIM (OCDRNet + Llama 4 Maverick + SDXL)\n\n' +
