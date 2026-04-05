@@ -76,9 +76,9 @@ export async function extractTextFromImage(imageUrl, apiKey) {
   return text;
 }
 
-export async function extractTextFromTwoImages(ingredientsUrl, preparationUrl, apiKey) {
-  const ingredients = await downloadImageAsBase64(ingredientsUrl);
-  const preparation = await downloadImageAsBase64(preparationUrl);
+export async function extractTextFromTwoImages(imageUrl1, imageUrl2, apiKey) {
+  const img1 = await downloadImageAsBase64(imageUrl1);
+  const img2 = await downloadImageAsBase64(imageUrl2);
 
   const text = await nvidiaChatRequest({
     model: 'meta/llama-4-maverick-17b-128e-instruct',
@@ -88,18 +88,18 @@ export async function extractTextFromTwoImages(ingredientsUrl, preparationUrl, a
         content: [
           {
             type: 'text',
-            text: 'These are two images of a recipe. Image 1 contains the INGREDIENTS list. Image 2 contains the PREPARATION/COOKING STEPS.\n\nExtract ALL text from BOTH images. Combine them into a single recipe text with the ingredients first, then the preparation steps. Return ONLY the raw text. Do not add commentary. Maintain the original structure.'
+            text: 'These are two pages/parts of the same recipe. Each image contains a portion of the recipe — somewhere between the two images the text transitions from ingredients to preparation steps.\n\nExtract ALL text from BOTH images and combine them into a single continuous recipe text. Identify where the ingredients section ends and the preparation/cooking steps begin. Return ONLY the raw extracted text. Do not add commentary. Maintain the original structure.'
           },
           {
             type: 'image_url',
             image_url: {
-              url: `data:${ingredients.mimeType};base64,${ingredients.base64}`
+              url: `data:${img1.mimeType};base64,${img1.base64}`
             }
           },
           {
             type: 'image_url',
             image_url: {
-              url: `data:${preparation.mimeType};base64,${preparation.base64}`
+              url: `data:${img2.mimeType};base64,${img2.base64}`
             }
           }
         ]

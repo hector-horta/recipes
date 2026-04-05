@@ -96,16 +96,15 @@ router.post('/image', async (req, res, next) => {
 router.post('/images', async (req, res, next) => {
   try {
     const apiKey = getApiKey();
-    const { ingredientImageUrl, preparationImageUrl, generateImage = true } = req.body;
+    const { imageUrl1, imageUrl2, generateImage = true } = req.body;
 
-    if (!ingredientImageUrl || !preparationImageUrl) {
-      return res.status(400).json({ error: 'Both ingredientImageUrl and preparationImageUrl are required.' });
+    if (!imageUrl1 || !imageUrl2) {
+      return res.status(400).json({ error: 'Both imageUrl1 and imageUrl2 are required.' });
     }
 
-    const processingMsg = '🔍 Extrayendo texto de ambas imágenes...';
-    console.log(`[Ingest] Processing 2 images: ingredients + preparation`);
+    console.log(`[Ingest] Processing 2 images as recipe parts`);
 
-    const rawText = await extractTextFromTwoImages(ingredientImageUrl, preparationImageUrl, apiKey);
+    const rawText = await extractTextFromTwoImages(imageUrl1, imageUrl2, apiKey);
 
     if (!rawText.trim()) {
       return res.status(400).json({ error: 'No text could be extracted from the images.' });
@@ -141,7 +140,7 @@ router.post('/images', async (req, res, next) => {
       sibo_risk_level: structured.siboRiskLevel || 'safe',
       sibo_alerts: structured.siboAlerts || [],
       source_type: 'ocr_image',
-      source_reference: `multi_image:${ingredientImageUrl},${preparationImageUrl}`,
+      source_reference: `multi_image:${imageUrl1},${imageUrl2}`,
       status: 'draft'
     };
 

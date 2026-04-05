@@ -137,13 +137,13 @@ async function processImageGroup(chatId, fileIds, statusMsgId) {
     }
 
     const fileLinks = await Promise.all(fileIds.map(fid => bot.getFileLink(fid)));
-    const ingredientImageUrl = typeof fileLinks[0] === 'string' ? fileLinks[0] : fileLinks[0]?.href || fileLinks[0]?.toString();
-    const preparationImageUrl = typeof fileLinks[1] === 'string' ? fileLinks[1] : fileLinks[1]?.href || fileLinks[1]?.toString();
+    const imageUrl1 = typeof fileLinks[0] === 'string' ? fileLinks[0] : fileLinks[0]?.href || fileLinks[0]?.toString();
+    const imageUrl2 = typeof fileLinks[1] === 'string' ? fileLinks[1] : fileLinks[1]?.href || fileLinks[1]?.toString();
 
     const res = await fetch(`${BACKEND_URL}/api/ingest/images`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ingredientImageUrl, preparationImageUrl, generateImage: true })
+      body: JSON.stringify({ imageUrl1, imageUrl2, generateImage: true })
     });
 
     const data = await res.json();
