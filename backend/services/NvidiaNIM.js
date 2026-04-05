@@ -168,7 +168,7 @@ export async function generateRecipeImage(prompt, apiKey) {
     fs.mkdirSync(recipesDir, { recursive: true });
   }
 
-  const filename = `${Date.now()}.png`;
+  const filename = `${Date.now()}.jpg`;
   const filepath = path.join(recipesDir, filename);
 
   const buffer = Buffer.from(imageData, 'base64');

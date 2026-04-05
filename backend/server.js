@@ -23,6 +23,12 @@ import ingestRoutes from './routes/ingest.js';
 import { connectDB, sequelize } from './config/database.js';
 import { connectRedis } from './config/redis.js';
 
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 app.use(helmet());
 
 // Nginx actúa como reverse proxy: Express debe confiar en X-Forwarded-For
@@ -49,6 +55,8 @@ app.use('/api/', globalLimiter);
 
 app.use(cors(corsOptions));
 app.use(express.json());
+
+app.use('/public/recipes', express.static(path.join(__dirname, 'public', 'recipes')));
 
 // Initialize external services
 await connectDB();
@@ -111,20 +119,18 @@ app.get('/api/medical/triggers', (req, res) => {
 import { RecipeProvider } from './services/RecipeProvider.js';
 import { optionalAuthenticateToken } from './middleware/auth.js';
 import { Profile } from './models/Profile.js';
-import { validateQuery } from './middleware/validate.js';
-import { recipeQuerySchema } from './models/validators.js';
 
-app.get('/api/recipes', optionalAuthenticateToken, recipeLimiter, validateQuery(recipeQuerySchema), async (req, res, next) => {
+app.get('/api/recipes', optionalAuthenticateToken, recipeLimiter, async (req, res, next) => {
   try {
     let userProfile = null;
     if (req.user) {
       userProfile = await Profile.findOne({ where: { user_id: req.user.id } });
     }
 
-    const data = await RecipeProvider.getRecipes(req.validatedQuery, userProfile);
+    const data = await RecipeProvider.getRecipes(req.query, userProfile);
     res.json(data);
   } catch (error) {
-    next(error); // Pass to global error handler
+    next(error);
   }
 });
 

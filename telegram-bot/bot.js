@@ -20,7 +20,7 @@ function buildInlineKeyboard(recipeSlug) {
   return {
     inline_keyboard: [
       [
-        { text: '🚀 POST (PostgreSQL)', callback_data: `action:post:${recipeSlug}` },
+        { text: '💾 Guardar en la base de datos', callback_data: `action:post:${recipeSlug}` },
         { text: '📄 CSV', callback_data: `action:csv:${recipeSlug}` }
       ],
       [

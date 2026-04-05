@@ -23,10 +23,10 @@ export function useMergedDisplayRecipes({
   const displayRecipes: Recipe[] = useMemo(() => {
     if (isSearchActive) return recipes;
 
-    const favoriteIds = new Set(favorites.map((f) => f.spoonacular_id.toString()));
+    const favoriteIds = new Set(favorites.map((f) => f.recipe_id));
 
     const favoriteRecipes: Recipe[] = favorites.map((f) => ({
-      id: f.spoonacular_id.toString(),
+      id: f.recipe_id,
       title: f.title,
       imageUrl: f.image,
       prepTimeMinutes: 20,

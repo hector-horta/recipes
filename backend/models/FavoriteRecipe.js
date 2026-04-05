@@ -18,8 +18,8 @@ export const FavoriteRecipe = sequelize.define('FavoriteRecipe', {
     },
     onDelete: 'CASCADE'
   },
-  spoonacular_id: {
-    type: DataTypes.INTEGER,
+  recipe_id: {
+    type: DataTypes.STRING,
     allowNull: false
   },
   title: {

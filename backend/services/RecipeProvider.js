@@ -1,50 +1,30 @@
+import { Op } from 'sequelize';
+import { Recipe } from '../models/Recipe.js';
 import { redisClient } from '../config/redis.js';
 
 export class RecipeProvider {
   static async getRecipes(params, userProfile) {
-    let { query, excludeIngredients, diet, number } = params;
+    const { query, number = 10 } = params;
 
-    // Smart Injection: Automate GDPR/Health limits server-side
-    if (userProfile) {
-      if (userProfile.diet && userProfile.diet !== 'None') {
-        diet = userProfile.diet === 'SIBO' ? 'Low FODMAP' : userProfile.diet; 
-        // Map SIBO to Spoonacular's equivalent Low FODMAP
-      }
-      if (userProfile.intolerances && userProfile.intolerances.length > 0) {
-        const finalIntolerances = userProfile.intolerances.filter(item => {
-          if (item.toLowerCase() === 'sibo') {
-            diet = 'Low FODMAP'; // Elevate SIBO intolerance to Diet parameter
-            return false;
-          }
-          return true;
-        });
+    const where = { status: 'published' };
 
-        if (finalIntolerances.length > 0) {
-          const intolerancesStr = finalIntolerances.join(',');
-          excludeIngredients = excludeIngredients ? `${excludeIngredients},${intolerancesStr}` : intolerancesStr;
-        }
-      }
-      if (userProfile.excluded_ingredients) {
-        excludeIngredients = excludeIngredients ? `${excludeIngredients},${userProfile.excluded_ingredients}` : userProfile.excluded_ingredients;
+    if (query && query.trim()) {
+      const q = query.trim();
+      where[Op.or] = [
+        { title_es: { [Op.iLike]: `%${q}%` } },
+        { title_en: { [Op.iLike]: `%${q}%` } },
+        { tags: { [Op.overlap]: [q] } }
+      ];
+    }
+
+    if (userProfile && userProfile.intolerances && userProfile.intolerances.length > 0) {
+      const intolerances = userProfile.intolerances.map(i => i.toLowerCase());
+      if (intolerances.includes('sibo')) {
+        where.sibo_risk_level = { [Op.ne]: 'avoid' };
       }
     }
 
-    const queryParams = new URLSearchParams({
-      query: query || '',
-      excludeIngredients: excludeIngredients || '',
-      diet: diet || '',
-      apiKey: process.env.SPOONACULAR_KEY || '',
-      addRecipeInformation: 'true',
-      fillIngredients: 'true',
-      maxReadyTime: '30',
-      sort: params.sort || '',
-      number: number || '10'
-    });
-
-    // Create a cache key excluding the API key for security/consistency if key changes
-    const cacheKeyParams = new URLSearchParams(queryParams);
-    cacheKeyParams.delete('apiKey');
-    const cacheKey = `recipes:${cacheKeyParams.toString()}`;
+    const cacheKey = `recipes:${query || ''}:${JSON.stringify(where)}`;
 
     try {
       if (redisClient.isReady) {
@@ -58,93 +38,46 @@ export class RecipeProvider {
       console.warn('[Cache] Error leyendo de Redis:', err.message);
     }
 
-    const SPOONACULAR_API_URL = 'https://api.spoonacular.com/recipes';
-    const url = `${SPOONACULAR_API_URL}/complexSearch?${queryParams.toString()}`;
-    
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 seconds timeout
+    const recipes = await Recipe.findAll({
+      where,
+      order: [['created_at', 'DESC']],
+      limit: parseInt(number, 10) || 10
+    });
 
-    try {
-      const res = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json'
-        },
-        signal: controller.signal
-      });
+    const results = recipes.map(r => this.normalizeRecipe(r.toJSON()));
 
-      clearTimeout(timeoutId);
-
-      if (!res.ok) {
-        // Spoonacular returns 402 or 5xx when daily quota is depleted
-        if (res.status === 402 || res.status >= 500) {
-            const quotaError = new Error('Quota Exhausted');
-            quotaError.status = 402;
-            throw quotaError;
-        }
-        throw new Error(`Spoonacular API error: ${res.statusText}`);
-      }
-
-      const data = await res.json();
-      const normalized = this.normalizeRecipes(data.results || []);
-
-      try {
-        if (redisClient.isReady) {
-          await redisClient.setEx(cacheKey, 900, JSON.stringify(normalized)); // 900s = 15 min
-          console.log(`[Cache] Guardado en Redis: ${cacheKey}`);
-        }
-      } catch (err) {
-        console.warn('[Cache] Error guardando en Redis:', err.message);
-      }
-
-      return normalized;
-    } catch (error) {
-      if (error.name === 'AbortError') {
-        console.error('[RecipeProvider] Timeout fetching Spoonacular API.');
-        const timeoutError = new Error('Gateway Timeout');
-        timeoutError.status = 504;
-        throw timeoutError;
-      }
-      console.error('[RecipeProvider] Error fetching recipes:', error.message);
-      // We do not leak full Spoonacular error specifics up the chain.
-      throw Object.assign(new Error('Downstream API Error'), { status: 500 });
-    }
+    return results;
   }
 
-  static normalizeRecipes(results) {
-    return results.map(r => {
-      // Gather all distinct ingredients (from extendedIngredients and from instructions if possible)
-      const ingredientMap = new Map();
-      
-      if (r.extendedIngredients) {
-        r.extendedIngredients.forEach(i => {
-           if (i.name) ingredientMap.set(i.name.toLowerCase(), { id: (i.id || Math.random()).toString(), name: i.name });
-        });
-      }
-      
-      if (r.analyzedInstructions) {
-         r.analyzedInstructions.forEach(inst => {
-            inst.steps?.forEach(step => {
-               step.ingredients?.forEach(i => {
-                  if (i.name && !ingredientMap.has(i.name.toLowerCase())) {
-                     ingredientMap.set(i.name.toLowerCase(), { id: (i.id || Math.random()).toString(), name: i.name });
-                  }
-               });
-            });
-         });
-      }
+  static normalizeRecipe(recipe) {
+    const ingredients = (recipe.ingredients || []).map(i => ({
+      id: i.name?.es || i.name || 'unknown',
+      name: i.name?.es || i.name || 'Desconocido',
+      siboAlert: i.siboAlert || false
+    }));
 
-      return {
-        id: r.id.toString(),
-        title: r.title || 'Untitled Recipe',
-        imageUrl: r.image || '',
-        prepTimeMinutes: r.readyInMinutes || 0,
-        estimatedCost: Math.min(3, Math.max(1, Math.ceil((r.pricePerServing || 0) / 100))),
-        ingredients: Array.from(ingredientMap.values()),
-        instructions: r.analyzedInstructions?.[0]?.steps?.map(s => s.step) || [r.instructions || 'Sin instrucciones disponibles.'],
-        summary: r.summary || '',
-        siboAllergiesTags: r.diets?.slice(0, 3) || []
-      };
-    });
+    const instructions = (recipe.steps || [])
+      .sort((a, b) => (a.order || 0) - (b.order || 0))
+      .map(s => s.instruction?.es || s.instruction || '');
+
+    if (instructions.length === 0) {
+      instructions.push('Sin instrucciones disponibles.');
+    }
+
+    const imageUrl = recipe.image_url || '';
+
+    return {
+      id: recipe.id,
+      title: recipe.title_es || recipe.title_en || 'Untitled Recipe',
+      imageUrl,
+      prepTimeMinutes: recipe.prep_time_minutes || 0,
+      estimatedCost: 2,
+      ingredients,
+      instructions,
+      summary: '',
+      safetyLevel: recipe.sibo_risk_level === 'safe' ? 'safe' : (recipe.sibo_risk_level === 'caution' ? 'review' : 'unsafe'),
+      siboAllergiesTags: recipe.tags || [],
+      siboAlerts: recipe.sibo_alerts || []
+    };
   }
 }

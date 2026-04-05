@@ -76,9 +76,11 @@ router.post('/image', async (req, res, next) => {
 
     saveIngestLog(recipeData);
 
+    const recipe = await Recipe.create(recipeData);
+
     res.status(200).json({
       status: 'processed',
-      recipe: recipeData,
+      recipe: recipe.toJSON(),
       rawText,
       tripleCheck: buildTripleCheckMenu(recipeData)
     });
@@ -132,9 +134,11 @@ router.post('/text', async (req, res, next) => {
 
     saveIngestLog(recipeData);
 
+    const recipe = await Recipe.create(recipeData);
+
     res.status(200).json({
       status: 'processed',
-      recipe: recipeData,
+      recipe: recipe.toJSON(),
       tripleCheck: buildTripleCheckMenu(recipeData)
     });
   } catch (error) {
@@ -142,11 +146,11 @@ router.post('/text', async (req, res, next) => {
   }
 });
 
-router.post('/:id/:action', async (req, res, next) => {
+router.post('/:slug/:action', async (req, res, next) => {
   try {
-    const { id, action } = req.params;
+    const { slug, action } = req.params;
 
-    const recipe = await Recipe.findByPk(id);
+    const recipe = await Recipe.findOne({ where: { slug } });
     if (!recipe) {
       return res.status(404).json({ error: 'Recipe not found.' });
     }
