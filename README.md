@@ -4,101 +4,89 @@ Wati es una plataforma de recetas diseñada para usuarios con necesidades dieté
 
 ## 🏗️ Estructura del Proyecto
 
-El proyecto se divide en diferentes servicios orquestados:
+El proyecto se divide en diferentes servicios orquestados por Docker Compose:
 
 - **`/frontend`**: Aplicación Single Page Application (SPA) construida con **Vite + React + TypeScript**. Gestiona la interfaz de usuario, perfiles de salud y consumo seguro por JWT.
-- **`/backend`**: Microservicio central en **Node.js + Express**. Actúa como motor de reglas de negocio, proxy inteligente (con inyección de dietas), gestión de usuarios y caché.
+- **`/backend`**: Microservicio central en **Node.js + Express**. Motor de reglas de negocio, proxy inteligente (con inyección de dietas), gestión de usuarios y caché.
+- **`/telegram-bot`**: Bot de ingesta de recetas (**Wati Ingest Bot**). Permite procesar recetas desde fotos (OCR), texto o notas de voz (Whisper) y guardarlas directamente en el sistema.
+- **`/nginx`**: Gateway de seguridad actuando como Proxy Inverso con soporte para TLS y configuraciones de seguridad avanzadas.
+- **`/terraform`**: Infraestructura como Código (IaC) para la gestión segura de secretos mediante **HCP Vault Secrets**.
 - **Almacenamiento (PostgreSQL & Redis)**: Persistencia relacional segura e In-Memory Database para performance y protección de cotas de APIs externas.
 
 ## 🌟 Características Principales
 
-- **Privacidad y Cumplimiento GDPR**: Perfiles de salud encriptados en base de datos. Completo flujo legal de aceptación de términos y endpoint `DELETE /api/auth/me` con borrado en Cascada garantizando el Derecho al Olvido.
-- **Autenticación Segura (JWT & Bcrypt)**: Cuentas individuales únicas identificadas mediante **UUID v4** en PostgreSQL. Contraseñas protegidas mediante algoritmos de encriptado salt.
-- **Proxy Inteligente con IA**: El backend protege las llaves de NVIDIA y Groq, y procesa recetas mediante OCR (OCDRNet), análisis de lenguaje natural (Llama 4 Maverick) y transcripción de voz (Groq Whisper). El filtro SIBO/FODMAP **se aplica automáticamente** según el análisis de ingredientes — nunca se impone por defecto.
-- **Sistema de Caché Optimizada (Redis & IndexedDB)**: Un TTL inteligente protege las APIs externas. En el frontend, un motor de búsqueda indexado mediante **Dexie (IndexedDB)** persistente (`searchCache`) garantiza resultados instantáneos y consistentes, incluso con términos de búsqueda que se solapan.
-- **Persistencia de Navegación**: El estado de búsqueda y los resultados se mantienen vivos al navegar entre el listado y el detalle de las recetas, mejorando drásticamente la experiencia de usuario (UX).
-- **Deduplicación de Contenido**: Motor inteligente que asegura que las recetas favoritas no aparezcan repetidas en las recomendaciones del día.
+- **Privacidad y Cumplimiento GDPR**: Perfiles de salud encriptados. Flujo legal de aceptación de términos y borrado en cascada de datos (`DELETE /api/auth/me`).
+- **Autenticación Segura (JWT & Bcrypt)**: Cuentas individuales identificadas por **UUID v4**.
+- **Ingesta Inteligente (IA & OCR)**: El **Telegram Bot** utiliza **NVIDIA NIM (OCDRNet)** para extraer ingredientes de fotos y **Groq Whisper** para transcribir recetas dictadas por voz.
+- **Proxy Inteligente con IA**: El backend protege las API Keys y procesa recetas mediante análisis de lenguaje natural (**Llama 4 Maverick**) para aplicar filtros SIBO/FODMAP automáticos.
+- **Sistema de Caché Optimizada (Redis & IndexedDB)**: TTL inteligente para APIs externas y motor de búsqueda instantáneo en el frontend mediante **Dexie**.
+- **Gestión de Secretos Cloud**: Integración nativa con **HCP Vault** para proteger credenciales críticas fuera del código base.
 
 ## 🛠️ Stack Tecnológico
 
 ### Frontend
 - **React 18** + **TypeScript** + **Vite**
-- **Tailwind CSS** (Glassmorphism & Componentes Nativos)
+- **Tailwind CSS** (Glassmorphism & Componentes Premium)
 - **Vitest** (Test Unitarios)
-- Autenticación asíncrona mediante Context API & LocalStorage JWT.
 
 ### Backend e Infraestructura
-- **Node.js** + **Express 5** (compatible con `req.validatedQuery` — `req.query` es inmutable en Express 5)
-- **Zod** (validación de parámetros de entrada en middleware)
-- **PostgreSQL 15** + **Sequelize CLI** (Gestión de Modelos & Migraciones)
+- **Node.js** + **Express 5** (Compatible con `req.validatedQuery`)
+- **Zod** (Validación de esquemas)
+- **PostgreSQL 15** + **Sequelize CLI**
 - **Redis 7** (In-Memory Data Store)
-- **JSON Web Tokens (JWT)** & **Bcryptjs** (Seguridad)
-- **Cors** & **Dotenv**
-- Despliegue empaquetado 100% sobre **Docker Desktop** / **Docker Compose**.
+- **Nginx** (Reverse Proxy con TLS modular)
+- **Terraform** (Gestión de HCP Vault)
+
+### IA y Servicios Externos
+- **NVIDIA NIM**: OCDRNet (OCR), Llama 4 Maverick (NLP), SDXL (Generación de Imágenes).
+- **Groq API**: Whisper (Transcripción de audio de alta velocidad).
 
 ## 🚀 Instalación y Uso (Docker Compose)
-
-La plataforma corre sobre múltiples contenedores aislados. Sólo necesitas Docker.
 
 ### 1. Requisitos
 - [Docker](https://www.docker.com/) y Docker Compose instalados.
 
 ### 2. Variables de Entorno
-Asegúrate de tener configurado tu archivo `.env` en la raíz (o que los valores del `.env.example` estén definidos). 
+Asegúrate de configurar tu archivo `.env` basado en `.env.example`. 
 
 ```env
-# Puertos y Comunicación
-PORT=5001
-VITE_API_URL=http://localhost:5001
-
-# Claves Secretas
-JWT_SECRET=tu_secreto_impenetrable_aqui
-NVIDIA_API_KEY=tu_nvidia_api_key
-GROQ_API_KEY=tu_groq_api_key
-
-# Conexiones de Base de Datos
-DATABASE_URL=postgres://wati_user:wati_password@postgres:5432/wati_db
-REDIS_URL=redis://redis:6379
+# Ejemplo de configuración necesaria
+TELEGRAM_BOT_TOKEN=tu_token_aqui
+TELEGRAM_USER_ID=tu_id_usuario
+HCP_CLIENT_ID=tu_hcp_id
+HCP_CLIENT_SECRET=tu_hcp_secret
 ```
 
 ### 3. Levantar la Plataforma
-En la carpeta raíz del proyecto, construye las imágenes y lanza la flota de contenedores en "detached mode":
 ```bash
 docker compose up -d --build
 ```
 
-### 4. Inicializar la Base de Datos (Migraciones)
-Una vez que el backend esté corriendo, **es obligatorio crear las tablas de PostgreSQL**. Ejecuta el Sequelize CLI directo en el contenedor para propagar las 3 migraciones (`users`, `profiles`, `favorite_recipes`):
+### 4. Inicializar la Base de Datos
 ```bash
 docker compose exec backend npx sequelize-cli db:migrate
 ```
 
-*Nota: Ante cualquier error extraño en `node_modules` tras actualizar pull requests, puedes usar el comando destructivo temporal `docker compose rm -f -s -v backend` y volver a levantar.*
-
 ## 🧪 Desarrollo y Pruebas
-
-### Pruebas Automatizadas (Frontend & Backend)
-El frontend cuenta con suites exhaustivas de inyección Médica (SecurityScrubber) testeados bajo Vitest, y el Backend igualmente configurado:
 
 ```bash
 # Frontend
-cd frontend
-npm install
-npm test           # Ejecutar tests unitarios
-npm run coverage   # Generar informe de cobertura (Capa Médica & PrivacyProxy)
+cd frontend && npm install && npm test
 
-# Backend (Requiere tener servicios corriendo si hay tests de integración)
-cd backend
-npm install
-npm run coverage
+# Backend (Requiere servicios activos)
+cd backend && npm install && npm run coverage
 ```
 
 ## 📚 Documentación Adicional
 
 | Documento | Descripción |
 |---|---|
-| [ArchitectureNotes.md](./ArchitectureNotes.md) | Notas de arquitectura: filtrado de recetas, Express 5, modos MOCK/LIVE, configuración TLS post-cuántica (ML-KEM-768 / FIPS 203) |
-| [ProductionChecklist.md](./ProductionChecklist.md) | Checklist paso a paso para poner la aplicación en producción |
+| [ArchitectureNotes.md](./docs/ArchitectureNotes.md) | Notas de arquitectura: filtrado de recetas, Express 5, modos MOCK/LIVE, TLS post-cuántico. |
+| [ProductionChecklist.md](./docs/ProductionChecklist.md) | Checklist paso a paso para poner la aplicación en producción. |
+| [HCP_VAULT_SETUP.md](./docs/HCP_VAULT_SETUP.md) | Guía de configuración para HCP Vault Secrets y Terraform. |
+
+---
+**Wati** — *Seguridad alimentaria impulsada por IA, ahora multicapa.*
 
 
 ---
