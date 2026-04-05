@@ -1,5 +1,4 @@
 const NVIDIA_API_BASE = 'https://integrate.api.nvidia.com/v1';
-const NVIDIA_CV_BASE = 'https://ai.api.nvidia.com/v1/cv';
 
 async function nvidiaChatRequest(body, apiKey) {
   const res = await fetch(`${NVIDIA_API_BASE}/chat/completions`, {
@@ -18,24 +17,6 @@ async function nvidiaChatRequest(body, apiKey) {
 
   const data = await res.json();
   return data.choices?.[0]?.message?.content || '';
-}
-
-async function nvidiaCVRequest(endpoint, body, apiKey) {
-  const res = await fetch(`${NVIDIA_CV_BASE}${endpoint}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
-    body: JSON.stringify(body)
-  });
-
-  if (!res.ok) {
-    const errText = await res.text().catch(() => '');
-    throw new Error(`NVIDIA NIM CV error (${res.status}): ${errText}`);
-  }
-
-  return res.json();
 }
 
 async function nvidiaImageRequest(body, apiKey) {
@@ -66,14 +47,32 @@ async function downloadImageAsBase64(imageUrl) {
 }
 
 export async function extractTextFromImage(imageUrl, apiKey) {
-  const { base64 } = await downloadImageAsBase64(imageUrl);
+  const { base64, mimeType } = await downloadImageAsBase64(imageUrl);
 
-  const response = await nvidiaCVRequest('/nvidia/ocdrnet', {
-    image: base64
+  const text = await nvidiaChatRequest({
+    model: 'meta/llama-4-maverick-17b-128e-instruct',
+    messages: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: 'Extract ALL text from this recipe image. Return ONLY the raw text with ingredient lists, measurements, cooking steps, and any other recipe information. Do not add commentary. Maintain the original structure.'
+          },
+          {
+            type: 'image_url',
+            image_url: {
+              url: `data:${mimeType};base64,${base64}`
+            }
+          }
+        ]
+      }
+    ],
+    max_tokens: 4096,
+    temperature: 0.1
   }, apiKey);
 
-  const textLines = response?.metadata?.text || [];
-  return textLines.join('\n').trim();
+  return text;
 }
 
 export async function analyzeAndStructureRecipe(rawText, apiKey) {
@@ -120,14 +119,22 @@ CRITICAL RULES:
       { role: 'user', content: `Analyze and structure this recipe text into JSON:\n\n${rawText}` }
     ],
     max_tokens: 4096,
-    temperature: 0.2
+    temperature: 0.2,
+    response_format: { type: 'json_object' }
   }, apiKey);
 
-  let cleaned = content.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+  let cleaned = content.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
+
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    console.error('[NvidiaNIM] Raw Llama 4 response:', content);
+    throw new Error('Failed to parse Llama 4 response as JSON. Raw response: ' + content.slice(0, 200));
+  }
 
   try {
-    return JSON.parse(cleaned);
+    return JSON.parse(jsonMatch[0]);
   } catch {
+    console.error('[NvidiaNIM] JSON parse failed for:', jsonMatch[0].slice(0, 500));
     throw new Error('Failed to parse Llama 4 response as JSON');
   }
 }

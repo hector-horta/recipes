@@ -22,8 +22,6 @@ import favoritesRoutes from './routes/favorites.js';
 import ingestRoutes from './routes/ingest.js';
 import { connectDB, sequelize } from './config/database.js';
 import { connectRedis } from './config/redis.js';
-import { telegramWhitelist } from './middleware/telegramWhitelist.js';
-import { initializeTelegramBot } from './services/TelegramBot.js';
 
 app.use(helmet());
 
@@ -56,11 +54,10 @@ app.use(express.json());
 await connectDB();
 await sequelize.sync();
 connectRedis();
-initializeTelegramBot();
 
 app.use('/api/auth', authRoutes);
 app.use('/api/favorites', favoritesRoutes);
-app.use('/api/ingest', telegramWhitelist, ingestRoutes);
+app.use('/api/ingest', ingestRoutes);
 
 // Data previously hardcoded in frontend
 const INTOLERANCE_CATALOG = [

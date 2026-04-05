@@ -25,7 +25,7 @@ function generateSlug(title) {
     .slice(0, 80);
 }
 
-router.post('/ingest/image', async (req, res, next) => {
+router.post('/image', async (req, res, next) => {
   try {
     const apiKey = getApiKey();
     const { imageUrl, generateImage = true } = req.body;
@@ -87,7 +87,7 @@ router.post('/ingest/image', async (req, res, next) => {
   }
 });
 
-router.post('/ingest/text', async (req, res, next) => {
+router.post('/text', async (req, res, next) => {
   try {
     const apiKey = getApiKey();
     const { text, generateImage = true } = req.body;
@@ -142,7 +142,7 @@ router.post('/ingest/text', async (req, res, next) => {
   }
 });
 
-router.post('/ingest/:id/:action', async (req, res, next) => {
+router.post('/:id/:action', async (req, res, next) => {
   try {
     const { id, action } = req.params;
 

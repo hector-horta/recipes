@@ -9,7 +9,7 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/certs:/etc/nginx/certs:ro # Certificados (solo lectura)
+      - ./nginx/certs:/etc/nginx/certs:ro
     depends_on:
       - frontend
       - backend
@@ -22,7 +22,7 @@ services:
       context: ./frontend
       target: base
     ports:
-      - "5173:5173"   # Expuesto solo para desarrollo directo (sin Nginx)
+      - "5173:5173"
     volumes:
       - ./frontend:/app
       - /app/node_modules
@@ -39,32 +39,14 @@ services:
     networks:
       - app-network
 
-  # ── Backend (Node.js + Express 5) ──────────────────────────────────────────
-  #
-  # Environment Variables (set in .env):
-  # - NODE_ENV: development or production
-  # - FRONTEND_URL: URL of the frontend for CORS
-  # - POSTGRES_HOST: Database hostname (postgres in Docker network)
-  # - HCP_CLIENT_ID: HCP service principal client ID (optional)
-  # - HCP_CLIENT_SECRET: HCP service principal client secret (optional)
-  # - HCP_PROJECT_ID: HCP project ID (optional)
-  # - NVIDIA_API_KEY: Key for NVIDIA NIM APIs (OCR, Nemotron, SDXL)
-  # - TELEGRAM_BOT_TOKEN: Telegram bot token
-  # - TELEGRAM_USER_ID: Allowed Telegram user ID (whitelist)
-  # - DB_URL: PostgreSQL connection string
-  #
-  # HCP Vault Secrets:
-  # When HCP credentials are provided, the backend can retrieve secrets
-  # from HCP Vault instead of using environment variables directly.
-  # See: backend/config/vault.js
-  #
+  # ── Backend (Node.js + Express 5) ──────────────────────────────────────
   backend:
     build:
       context: ./backend
     env_file:
       - .env
     ports:
-      - "${PORT:-5001}:${PORT:-5001}"   # Expuesto solo para desarrollo directo
+      - "${PORT:-5001}:${PORT:-5001}"
     volumes:
       - ./backend:/app
       - /app/node_modules
@@ -78,8 +60,6 @@ services:
       - HCP_CLIENT_SECRET=${HCP_CLIENT_SECRET}
       - HCP_PROJECT_ID=${HCP_PROJECT_ID}
       - NVIDIA_API_KEY=${NVIDIA_API_KEY}
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - TELEGRAM_USER_ID=${TELEGRAM_USER_ID}
       - DB_URL=${DB_URL}
     depends_on:
       - postgres
@@ -87,20 +67,23 @@ services:
     networks:
       - app-network
 
+  # ── Telegram Bot (Wati Ingest Bot) ─────────────────────────────────────
+  telegram-bot:
+    build:
+      context: ./telegram-bot
+    env_file:
+      - .env
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_USER_ID=${TELEGRAM_USER_ID}
+      - BACKEND_URL=http://backend:5001
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - app-network
+
   # ── PostgreSQL ──────────────────────────────────────────────────────────
-  # 
-  # Database Configuration:
-  # - POSTGRES_USER: Database user (default: wati_user)
-  # - POSTGRES_PASSWORD: Database password - REQUIRED, set in .env
-  # - POSTGRES_DB: Database name (default: wati_db)
-  #
-  # Security:
-  # - Running as postgres user (non-root)
-  # - Read-only root filesystem for additional protection
-  # - Dropped capabilities for reduced attack surface
-  # IMPORTANT: Never commit actual passwords to version control!
-  # Use .env file (already in .gitignore) or HCP Vault Secrets.
-  #
   postgres:
     image: postgres:15-alpine
     environment:
@@ -119,14 +102,6 @@ services:
     read_only: false
 
   # ── Redis ───────────────────────────────────────────────────────────────
-  # 
-  # Security:
-  # - Running as redis user (non-root)
-  # - Disabled protected mode for container networking
-  # - Read-only configuration to prevent unauthorized writes
-  # - Disabled dangerous commands (FLUSHDB, FLUSHALL, CONFIG, etc.)
-  # - Dropped capabilities for reduced attack surface
-  #
   redis:
     image: redis:7-alpine
     command: >
