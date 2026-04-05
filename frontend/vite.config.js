@@ -20,7 +20,17 @@ export default defineConfig(function (_a) {
         ],
         server: {
             host: '0.0.0.0',
-            allowedHosts: true
+            allowedHosts: true,
+            proxy: {
+                '/api/': {
+                    target: 'http://backend:5001',
+                    changeOrigin: true
+                },
+                '/public/recipes/': {
+                    target: 'http://backend:5001',
+                    changeOrigin: true
+                }
+            }
         },
         optimizeDeps: {
             include: ['react', 'react-dom'],

@@ -4,12 +4,10 @@ import { useAuth } from '../AuthContext';
 export interface FavoriteItem {
   id: string;
   user_id: string;
-  spoonacular_id: number;
+  recipe_id: string;
   title: string;
   image: string;
 }
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 const getAuthToken = () => localStorage.getItem('wati_jwt');
 
@@ -25,7 +23,7 @@ export function useFavorites() {
     queryKey: ['favorites', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const res = await fetch(`${API_URL}/api/favorites`, {
+      const res = await fetch(`/api/favorites`, {
         headers: authHeaders()
       });
       if (!res.ok) return [];
@@ -35,16 +33,15 @@ export function useFavorites() {
   });
 
   const toggleMutation = useMutation({
-    mutationFn: async (recipe: { id: string | number; title: string; imageUrl: string }) => {
-      const spoonacularId = Number(recipe.id);
-      const res = await fetch(`${API_URL}/api/favorites`, {
+    mutationFn: async (recipe: { id: string; title: string; imageUrl: string }) => {
+      const res = await fetch(`/api/favorites`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...authHeaders()
         },
         body: JSON.stringify({
-          spoonacularId,
+          recipeId: recipe.id,
           title: recipe.title,
           image: recipe.imageUrl
         })
@@ -55,16 +52,15 @@ export function useFavorites() {
     onMutate: async (recipe) => {
       await queryClient.cancelQueries({ queryKey: ['favorites', user?.id] });
       const previous = queryClient.getQueryData<FavoriteItem[]>(['favorites', user?.id]) ?? [];
-      const spoonacularId = Number(recipe.id);
-      const exists = previous.some(f => f.spoonacular_id === spoonacularId);
+      const exists = previous.some(f => f.recipe_id === recipe.id);
 
       queryClient.setQueryData<FavoriteItem[]>(['favorites', user?.id], prev => {
         if (!prev) return [];
         if (exists) {
-          return prev.filter(f => f.spoonacular_id !== spoonacularId);
+          return prev.filter(f => f.recipe_id !== recipe.id);
         }
         return [{
-          spoonacular_id: spoonacularId,
+          recipe_id: recipe.id,
           title: recipe.title,
           image: recipe.imageUrl,
           id: Date.now().toString(),
@@ -84,8 +80,8 @@ export function useFavorites() {
     },
   });
 
-  const isFavorited = (spoonacularId: string | number) => {
-    return favorites.some(f => f.spoonacular_id === Number(spoonacularId));
+  const isFavorited = (recipeId: string) => {
+    return favorites.some(f => f.recipe_id === recipeId);
   };
 
   return {

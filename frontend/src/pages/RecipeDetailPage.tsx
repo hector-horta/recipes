@@ -10,13 +10,16 @@ interface RecipeDetailPageProps {
 }
 
 export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language.startsWith('en') ? 'en' : 'es';
+  const displayTitle = lang === 'en' && recipe.titleEn ? recipe.titleEn : recipe.title;
+  const displayInstructions = lang === 'en' && recipe.instructionsEn?.length ? recipe.instructionsEn : recipe.instructions;
   const { toggleFavorite, isFavorited } = useFavorites();
   const favorited = isFavorited(recipe.id);
 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
-    toggleFavorite({ id: recipe.id, title: recipe.title, imageUrl: recipe.imageUrl });
+    toggleFavorite({ id: recipe.id, title: displayTitle, imageUrl: recipe.imageUrl });
   };
 
   return (
@@ -65,7 +68,7 @@ export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
               ))}
             </div>
             <h1 className="text-3xl sm:text-5xl font-black tracking-tight mb-4 drop-shadow-md">
-              {recipe.title}
+              {displayTitle}
             </h1>
             <div className="flex items-center gap-6 text-sm font-medium">
               <span className="flex items-center gap-3 bg-white/10 px-4 py-2.5 rounded-2xl backdrop-blur-md border border-white/10">
@@ -106,7 +109,11 @@ export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
                       <div className="w-8 h-8 rounded-full bg-brand-cream border border-brand-sage/20 flex items-center justify-center text-xs font-black text-brand-teal group-hover:bg-brand-mint group-hover:text-brand-forest transition-colors">
                         {idx + 1}
                       </div>
-                      <span className="text-brand-text font-bold capitalize">{ing.name}</span>
+                      <span className="text-brand-text font-bold capitalize">
+                        {ing.quantity && <span className="text-brand-teal font-black">{ing.quantity} </span>}
+                        {ing.unit && <span className="text-brand-text-muted text-sm">{ing.unit} </span>}
+                        {lang === 'en' && ing.nameEn ? ing.nameEn : ing.name}
+                      </span>
                       {ing.isBorderlineSafe && (
                         <span className="ml-auto px-2 py-1 text-[9px] font-black bg-brand-peach/20 text-brand-forest border border-brand-peach/40 rounded-lg uppercase tracking-tight">
                           {t('recipe.personalLimit')}
@@ -126,8 +133,8 @@ export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
                   <h2 className="text-2xl font-black text-brand-forest">{t('recipe.preparation')}</h2>
                 </div>
                 <div className="space-y-10">
-                  {recipe.instructions.length > 0 ? (
-                    recipe.instructions.map((step, idx) => (
+                  {displayInstructions.length > 0 ? (
+                    displayInstructions.map((step, idx) => (
                       <div key={idx} className="relative pl-12">
                         <div className="absolute left-0 top-0 w-8 h-8 rounded-xl bg-brand-forest text-brand-cream flex items-center justify-center text-sm font-black shadow-md">
                           {idx + 1}

@@ -1,18 +1,23 @@
 export interface Ingredient {
   id: string;
   name: string;
-  isBorderlineSafe?: boolean; // Para el warning tooltip de ingredientes al límite
+  nameEn?: string;
+  quantity?: string;
+  unit?: string;
+  isBorderlineSafe?: boolean;
 }
 
 export interface Recipe {
   id: string;
   title: string;
+  titleEn?: string;
   imageUrl: string;
   prepTimeMinutes: number;
-  estimatedCost: number; // 1 (barato), 2 (medio), 3 (caro)
+  estimatedCost: number;
   ingredients: Ingredient[];
   instructions: string[];
+  instructionsEn?: string[];
   summary?: string;
   safetyLevel: 'safe' | 'review' | 'unsafe';
-  siboAllergiesTags: string[]; // e.g., "Bajo en FODMAP", "Sin Gluten"
+  siboAllergiesTags: string[];
 }

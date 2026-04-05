@@ -11,16 +11,35 @@ dotenv.config(); // Fallback to local .env if exists
 const app = express();
 const port = process.env.PORT || 5001;
 
-// Enable CORS for frontend origin
+// Enable CORS for frontend origins
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
+  origin: function (origin, callback) {
+    const allowed = [
+      process.env.FRONTEND_URL || 'http://localhost:5173',
+      'http://localhost:5173',
+      'http://192.168.0.187:5173',
+      'http://172.18.0.5:5173'
+    ];
+    if (!origin || allowed.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  optionsSuccessStatus: 200
 };
 
 import authRoutes from './routes/auth.js';
 import favoritesRoutes from './routes/favorites.js';
+import ingestRoutes from './routes/ingest.js';
 import { connectDB, sequelize } from './config/database.js';
 import { connectRedis } from './config/redis.js';
+
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 app.use(helmet());
 
@@ -49,13 +68,16 @@ app.use('/api/', globalLimiter);
 app.use(cors(corsOptions));
 app.use(express.json());
 
+app.use('/public/recipes', express.static(path.join(__dirname, 'public', 'recipes')));
+
 // Initialize external services
 await connectDB();
-await sequelize.sync(); // Auto-create tables if they don't exist
+await sequelize.sync();
 connectRedis();
 
 app.use('/api/auth', authRoutes);
 app.use('/api/favorites', favoritesRoutes);
+app.use('/api/ingest', ingestRoutes);
 
 // Data previously hardcoded in frontend
 const INTOLERANCE_CATALOG = [
@@ -109,20 +131,18 @@ app.get('/api/medical/triggers', (req, res) => {
 import { RecipeProvider } from './services/RecipeProvider.js';
 import { optionalAuthenticateToken } from './middleware/auth.js';
 import { Profile } from './models/Profile.js';
-import { validateQuery } from './middleware/validate.js';
-import { recipeQuerySchema } from './models/validators.js';
 
-app.get('/api/recipes', optionalAuthenticateToken, recipeLimiter, validateQuery(recipeQuerySchema), async (req, res, next) => {
+app.get('/api/recipes', optionalAuthenticateToken, recipeLimiter, async (req, res, next) => {
   try {
     let userProfile = null;
     if (req.user) {
       userProfile = await Profile.findOne({ where: { user_id: req.user.id } });
     }
 
-    const data = await RecipeProvider.getRecipes(req.validatedQuery, userProfile);
+    const data = await RecipeProvider.getRecipes(req.query, userProfile);
     res.json(data);
   } catch (error) {
-    next(error); // Pass to global error handler
+    next(error);
   }
 });
 

@@ -18,8 +18,8 @@ module.exports = {
         },
         onDelete: 'CASCADE'
       },
-      spoonacular_id: {
-        type: Sequelize.INTEGER,
+      recipe_id: {
+        type: Sequelize.UUID,
         allowNull: false
       },
       title: {

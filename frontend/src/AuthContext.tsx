@@ -32,7 +32,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 const TOKEN_KEY = 'wati_jwt';
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+const API_URL = '';
 
 const getAuthToken = () => localStorage.getItem(TOKEN_KEY);
 

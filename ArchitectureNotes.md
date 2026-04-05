@@ -3,7 +3,7 @@
 ## Búsqueda y Filtrado de Recetas
 
 - **Filtro de recetas**: En modo LIVE, el frontend solicita **15 recetas** cuando el usuario está autenticado (10 para anónimos) y aplica filtros de seguridad local, garantizando exactamente 10 resultados visibles.
-- **Filtro SIBO/Low FODMAP**: El parámetro `diet=Low FODMAP` solo se envía a Spoonacular si el perfil del usuario incluye `SIBO` en `conditions`. Nunca se aplica por defecto.
+- **Filtro SIBO/FODMAP**: El análisis de riesgo SIBO se realiza automáticamente al procesar la receta con Llama 4 Maverick, identificando ingredientes high-FODMAP. Nunca se aplica por defecto sin análisis.
 - **Stale Closure**: `useCallback` en `useWatiSearch` incluye `user` en sus dependencias para evitar que el perfil médico y el conteo de recetas queden desactualizados tras el login.
 
 ## Express 5 y Middleware

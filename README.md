@@ -14,8 +14,8 @@ El proyecto se divide en diferentes servicios orquestados:
 
 - **Privacidad y Cumplimiento GDPR**: Perfiles de salud encriptados en base de datos. Completo flujo legal de aceptación de términos y endpoint `DELETE /api/auth/me` con borrado en Cascada garantizando el Derecho al Olvido.
 - **Autenticación Segura (JWT & Bcrypt)**: Cuentas individuales únicas identificadas mediante **UUID v4** en PostgreSQL. Contraseñas protegidas mediante algoritmos de encriptado salt.
-- **Proxy Inteligente con Spoonacular**: El backend protege las llaves de terceros e inyecta dinámicamente las restricciones médicas del usuario antes de lanzar la búsqueda. El filtro `Low FODMAP` **solo se aplica si el usuario tiene SIBO activo en su perfil** — nunca se impone por defecto.
-- **Sistema de Caché Optimizada (Redis & IndexedDB)**: Un TTL inteligente de 15 minutos en el backend protege Spoonacular. En el frontend, un motor de búsqueda indexado mediante **Dexie (IndexedDB)** persistente (`searchCache`) garantiza resultados instantáneos y consistentes, incluso con términos de búsqueda que se solapan.
+- **Proxy Inteligente con IA**: El backend protege las llaves de NVIDIA y Groq, y procesa recetas mediante OCR (OCDRNet), análisis de lenguaje natural (Llama 4 Maverick) y transcripción de voz (Groq Whisper). El filtro SIBO/FODMAP **se aplica automáticamente** según el análisis de ingredientes — nunca se impone por defecto.
+- **Sistema de Caché Optimizada (Redis & IndexedDB)**: Un TTL inteligente protege las APIs externas. En el frontend, un motor de búsqueda indexado mediante **Dexie (IndexedDB)** persistente (`searchCache`) garantiza resultados instantáneos y consistentes, incluso con términos de búsqueda que se solapan.
 - **Persistencia de Navegación**: El estado de búsqueda y los resultados se mantienen vivos al navegar entre el listado y el detalle de las recetas, mejorando drásticamente la experiencia de usuario (UX).
 - **Deduplicación de Contenido**: Motor inteligente que asegura que las recetas favoritas no aparezcan repetidas en las recomendaciones del día.
 
@@ -51,20 +51,15 @@ Asegúrate de tener configurado tu archivo `.env` en la raíz (o que los valores
 PORT=5001
 VITE_API_URL=http://localhost:5001
 
-# Modo de Operación del Frontend
-# MOCK = datos locales (sin clave Spoonacular), LIVE = API real
-VITE_API_MODE=LIVE
-
 # Claves Secretas
-SPOONACULAR_KEY=tu_api_key_aqui
 JWT_SECRET=tu_secreto_impenetrable_aqui
+NVIDIA_API_KEY=tu_nvidia_api_key
+GROQ_API_KEY=tu_groq_api_key
 
 # Conexiones de Base de Datos
 DATABASE_URL=postgres://wati_user:wati_password@postgres:5432/wati_db
 REDIS_URL=redis://redis:6379
 ```
-
-> **Importante:** Tras cambiar `VITE_API_MODE` en `.env`, debes recrear los contenedores con `docker compose up -d` (no solo reiniciarlos) para que la variable se propague correctamente.
 
 ### 3. Levantar la Plataforma
 En la carpeta raíz del proyecto, construye las imágenes y lanza la flota de contenedores en "detached mode":
