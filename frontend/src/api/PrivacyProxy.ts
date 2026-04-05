@@ -3,7 +3,7 @@ import { SecureVault, type MedicalProfile } from '../security/SecureVault';
 import { SecurityScrubber } from './SecurityScrubber';
 import { db } from '../db/db';
 
-const API_DOMAIN = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+const API_DOMAIN = '';
 
 console.log(`[PrivacyProxy] Initialized: Domain=${API_DOMAIN}`);
 

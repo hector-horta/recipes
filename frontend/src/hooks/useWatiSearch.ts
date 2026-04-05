@@ -2,14 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Recipe } from '../types/recipe';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-
 async function fetchRecipes(query: string): Promise<Recipe[]> {
   const params = new URLSearchParams();
   if (query?.trim()) params.set('query', query.trim());
   params.set('number', '20');
 
-  const res = await fetch(`${API_URL}/api/recipes?${params.toString()}`);
+  const res = await fetch(`/api/recipes?${params.toString()}`);
   if (!res.ok) throw new Error(`Failed to fetch recipes: ${res.status}`);
   return res.json();
 }

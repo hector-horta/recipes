@@ -11,10 +11,22 @@ dotenv.config(); // Fallback to local .env if exists
 const app = express();
 const port = process.env.PORT || 5001;
 
-// Enable CORS for frontend origin
+// Enable CORS for frontend origins
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
+  origin: function (origin, callback) {
+    const allowed = [
+      process.env.FRONTEND_URL || 'http://localhost:5173',
+      'http://localhost:5173',
+      'http://192.168.0.187:5173',
+      'http://172.18.0.5:5173'
+    ];
+    if (!origin || allowed.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  optionsSuccessStatus: 200
 };
 
 import authRoutes from './routes/auth.js';

@@ -22,6 +22,10 @@ export default defineConfig(function (_a) {
             host: '0.0.0.0',
             allowedHosts: true,
             proxy: {
+                '/api/': {
+                    target: 'http://backend:5001',
+                    changeOrigin: true
+                },
                 '/public/recipes/': {
                     target: 'http://backend:5001',
                     changeOrigin: true

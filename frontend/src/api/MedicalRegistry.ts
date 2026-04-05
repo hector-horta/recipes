@@ -1,6 +1,6 @@
 import { db } from '../db/db';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+const API_URL = '';
 
 export const MedicalRegistry = {
     async syncTriggers(): Promise<Record<string, string[]>> {

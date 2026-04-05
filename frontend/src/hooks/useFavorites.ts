@@ -9,8 +9,6 @@ export interface FavoriteItem {
   image: string;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-
 const getAuthToken = () => localStorage.getItem('wati_jwt');
 
 const authHeaders = () => ({
@@ -25,7 +23,7 @@ export function useFavorites() {
     queryKey: ['favorites', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const res = await fetch(`${API_URL}/api/favorites`, {
+      const res = await fetch(`/api/favorites`, {
         headers: authHeaders()
       });
       if (!res.ok) return [];
@@ -36,7 +34,7 @@ export function useFavorites() {
 
   const toggleMutation = useMutation({
     mutationFn: async (recipe: { id: string; title: string; imageUrl: string }) => {
-      const res = await fetch(`${API_URL}/api/favorites`, {
+      const res = await fetch(`/api/favorites`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
