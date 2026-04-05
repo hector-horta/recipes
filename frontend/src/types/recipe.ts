@@ -1,6 +1,9 @@
 export interface Ingredient {
   id: string;
   name: string;
+  nameEn?: string;
+  quantity?: string;
+  unit?: string;
   isBorderlineSafe?: boolean;
 }
 

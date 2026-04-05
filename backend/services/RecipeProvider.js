@@ -53,6 +53,9 @@ export class RecipeProvider {
     const ingredients = (recipe.ingredients || []).map(i => ({
       id: i.name?.es || i.name || 'unknown',
       name: i.name?.es || i.name || 'Desconocido',
+      nameEn: i.name?.en || '',
+      quantity: i.quantity || '',
+      unit: i.unit || '',
       siboAlert: i.siboAlert || false
     }));
 

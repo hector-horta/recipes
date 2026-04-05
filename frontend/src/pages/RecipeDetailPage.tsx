@@ -109,7 +109,11 @@ export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
                       <div className="w-8 h-8 rounded-full bg-brand-cream border border-brand-sage/20 flex items-center justify-center text-xs font-black text-brand-teal group-hover:bg-brand-mint group-hover:text-brand-forest transition-colors">
                         {idx + 1}
                       </div>
-                      <span className="text-brand-text font-bold capitalize">{ing.name}</span>
+                      <span className="text-brand-text font-bold capitalize">
+                        {ing.quantity && <span className="text-brand-teal font-black">{ing.quantity} </span>}
+                        {ing.unit && <span className="text-brand-text-muted text-sm">{ing.unit} </span>}
+                        {lang === 'en' && ing.nameEn ? ing.nameEn : ing.name}
+                      </span>
                       {ing.isBorderlineSafe && (
                         <span className="ml-auto px-2 py-1 text-[9px] font-black bg-brand-peach/20 text-brand-forest border border-brand-peach/40 rounded-lg uppercase tracking-tight">
                           {t('recipe.personalLimit')}
