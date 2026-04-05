@@ -9,7 +9,7 @@ WORKDIR /app
 
 # Install dependencies (using cache)
 COPY package.json package-lock.json* ./
-RUN npm install
+RUN npm install --include=optional
 
 # Copy source code
 COPY . .
