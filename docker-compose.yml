@@ -30,7 +30,7 @@ services:
     env_file:
       - .env
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=production
     depends_on:
       - postgres
       - redis
@@ -53,7 +53,7 @@ services:
       - ingest_logs:/app/ingest_logs
       - public_recipes:/app/public/recipes
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=production
       - FRONTEND_URL=http://localhost:5173
       - POSTGRES_HOST=postgres
       - HCP_CLIENT_ID=${HCP_CLIENT_ID}
