@@ -68,12 +68,16 @@ export class RecipeProvider {
 
     return {
       id: recipe.id,
-      title: recipe.title_es || recipe.title_en || 'Untitled Recipe',
+      title: recipe.title_es,
+      titleEn: recipe.title_en,
       imageUrl,
       prepTimeMinutes: recipe.prep_time_minutes || 0,
       estimatedCost: 2,
       ingredients,
       instructions,
+      instructionsEn: (recipe.steps || [])
+        .sort((a, b) => (a.order || 0) - (b.order || 0))
+        .map(s => s.instruction?.en || ''),
       summary: '',
       safetyLevel: recipe.sibo_risk_level === 'safe' ? 'safe' : (recipe.sibo_risk_level === 'caution' ? 'review' : 'unsafe'),
       siboAllergiesTags: recipe.tags || [],

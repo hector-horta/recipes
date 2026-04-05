@@ -11,7 +11,9 @@ interface RecipeCardProps {
 }
 
 export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite }: RecipeCardProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language.startsWith('en') ? 'en' : 'es';
+  const displayTitle = lang === 'en' && recipe.titleEn ? recipe.titleEn : recipe.title;
   const hasBorderlineIngredients = recipe.ingredients.some(ing => ing.isBorderlineSafe);
 
   const safetyColor = recipe.safetyLevel === 'safe' 
@@ -75,7 +77,7 @@ export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite }:
       <div className="flex flex-col flex-1 p-5">
         <div className="flex justify-between items-start mb-3 gap-3">
           <h3 className="text-xl font-bold text-brand-forest leading-tight line-clamp-2">
-            {recipe.title}
+            {displayTitle}
           </h3>
           
           {hasBorderlineIngredients && (

@@ -10,13 +10,16 @@ interface RecipeDetailPageProps {
 }
 
 export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language.startsWith('en') ? 'en' : 'es';
+  const displayTitle = lang === 'en' && recipe.titleEn ? recipe.titleEn : recipe.title;
+  const displayInstructions = lang === 'en' && recipe.instructionsEn?.length ? recipe.instructionsEn : recipe.instructions;
   const { toggleFavorite, isFavorited } = useFavorites();
   const favorited = isFavorited(recipe.id);
 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
-    toggleFavorite({ id: recipe.id, title: recipe.title, imageUrl: recipe.imageUrl });
+    toggleFavorite({ id: recipe.id, title: displayTitle, imageUrl: recipe.imageUrl });
   };
 
   return (
@@ -65,7 +68,7 @@ export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
               ))}
             </div>
             <h1 className="text-3xl sm:text-5xl font-black tracking-tight mb-4 drop-shadow-md">
-              {recipe.title}
+              {displayTitle}
             </h1>
             <div className="flex items-center gap-6 text-sm font-medium">
               <span className="flex items-center gap-3 bg-white/10 px-4 py-2.5 rounded-2xl backdrop-blur-md border border-white/10">
@@ -126,8 +129,8 @@ export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
                   <h2 className="text-2xl font-black text-brand-forest">{t('recipe.preparation')}</h2>
                 </div>
                 <div className="space-y-10">
-                  {recipe.instructions.length > 0 ? (
-                    recipe.instructions.map((step, idx) => (
+                  {displayInstructions.length > 0 ? (
+                    displayInstructions.map((step, idx) => (
                       <div key={idx} className="relative pl-12">
                         <div className="absolute left-0 top-0 w-8 h-8 rounded-xl bg-brand-forest text-brand-cream flex items-center justify-center text-sm font-black shadow-md">
                           {idx + 1}

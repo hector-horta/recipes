@@ -22,7 +22,8 @@ export function useWatiSearch() {
   const { data: results = [], isLoading, isFetching } = useQuery({
     queryKey: ['recipes', debouncedQuery],
     queryFn: () => fetchRecipes(debouncedQuery),
-    staleTime: 1000 * 60 * 2,
+    staleTime: 1000 * 30,
+    refetchOnWindowFocus: true,
     retry: 1,
   });
 
