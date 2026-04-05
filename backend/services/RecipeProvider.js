@@ -55,7 +55,8 @@ export class RecipeProvider {
       name: i.name?.es || i.name || 'Desconocido',
       nameEn: i.name?.en || '',
       quantity: i.quantity || '',
-      unit: i.unit || '',
+      unit: typeof i.unit === 'object' ? (i.unit?.es || '') : (i.unit || ''),
+      unitEn: typeof i.unit === 'object' ? (i.unit?.en || '') : '',
       siboAlert: i.siboAlert || false
     }));
 

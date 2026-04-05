@@ -88,7 +88,7 @@ export async function analyzeAndStructureRecipe(rawText, apiKey) {
     {
       "name": { "es": "...", "en": "..." },
       "quantity": string,
-      "unit": string,
+      "unit": { "es": "...", "en": "..." } (translate units: "taza"→"cup", "cucharada"→"tablespoon", "trozo"→"piece", "pizca"→"pinch", "al gusto"→"to taste"),
       "siboAlert": boolean (true if ingredient is a known high-FODMAP food)
     }
   ],
