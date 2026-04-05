@@ -67,14 +67,20 @@ export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
         <div className="absolute bottom-0 inset-x-0 p-8 sm:p-12 text-white">
           <div className="max-w-4xl mx-auto">
             <div className="flex flex-wrap gap-2 mb-4">
-              {recipe.siboAllergiesTags.map((tag, idx) => {
-                const displayTag = lang === 'en' ? tag.en : tag.es;
-                return (
-                  <span key={idx} className="px-3 py-1 rounded-lg bg-black/30 backdrop-blur-md text-xs font-bold tracking-wider uppercase border border-white/20 text-white">
-                    {displayTag}
-                  </span>
-                );
-              })}
+              {recipe.siboAllergiesTags
+                .filter(tag => {
+                  if (!tag) return false;
+                  const text = typeof tag === 'object' ? (tag.es || tag.en || '') : tag;
+                  return text && text.trim() !== '';
+                })
+                .map((tag, idx) => {
+                  const displayTag = typeof tag === 'object' ? (lang === 'en' ? tag.en || tag.es : tag.es || tag.en) : tag;
+                  return (
+                    <span key={idx} className="px-3 py-1 rounded-lg bg-black/30 backdrop-blur-md text-xs font-bold tracking-wider uppercase border border-white/20 text-white">
+                      {displayTag}
+                    </span>
+                  );
+                })}
             </div>
             <h1 className="text-3xl sm:text-5xl font-black tracking-tight mb-4 drop-shadow-md">
               {displayTitle}

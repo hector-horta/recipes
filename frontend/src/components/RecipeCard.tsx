@@ -100,14 +100,20 @@ export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite }:
         </div>
 
         <div className="flex flex-wrap gap-2 mb-2">
-          {recipe.siboAllergiesTags.map((tag, idx) => {
-            const displayTag = lang === 'en' ? tag.en : tag.es;
-            return (
-              <span key={idx} className="px-2.5 py-1 rounded-md bg-brand-forest/5 text-brand-forest text-[10px] font-bold tracking-wider uppercase border border-brand-forest/10">
-                {displayTag}
-              </span>
-            );
-          })}
+          {recipe.siboAllergiesTags
+            .filter(tag => {
+              if (!tag) return false;
+              const text = typeof tag === 'object' ? (tag.es || tag.en || '') : tag;
+              return text && text.trim() !== '';
+            })
+            .map((tag, idx) => {
+              const displayTag = typeof tag === 'object' ? (lang === 'en' ? tag.en || tag.es : tag.es || tag.en) : tag;
+              return (
+                <span key={idx} className="px-2.5 py-1 rounded-md bg-brand-forest/5 text-brand-forest text-[10px] font-bold tracking-wider uppercase border border-brand-forest/10">
+                  {displayTag}
+                </span>
+              );
+            })}
         </div>
       </div>
     </article>

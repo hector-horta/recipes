@@ -86,9 +86,9 @@ export class RecipeProvider {
 
     const imageUrl = recipe.image_url || '';
 
-    const siboAllergiesTags = (recipe.tags || []).map(t =>
-      typeof t === 'object' && t.es ? t : { es: t, en: t }
-    );
+    const siboAllergiesTags = (recipe.tags || [])
+      .map(t => typeof t === 'object' && t.es ? t : { es: t, en: t })
+      .filter(t => t.es && t.es.trim() !== '');
 
     return {
       id: recipe.id,

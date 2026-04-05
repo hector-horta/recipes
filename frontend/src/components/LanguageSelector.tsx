@@ -3,9 +3,11 @@ import { useAuth } from '../AuthContext';
 import { Globe } from 'lucide-react';
 
 const LANGUAGES = [
-  { code: 'en', flag: '🇺🇸' },
-  { code: 'es', flag: '🇲🇽' }
+  { code: 'en', flag: '🇺🇸', label: 'EN' },
+  { code: 'es', flag: '🇲🇽', label: 'ES' }
 ];
+
+const isWindows = /Windows/i.test(navigator.userAgent);
 
 export function LanguageSelector() {
   const { i18n } = useTranslation();
@@ -40,7 +42,7 @@ export function LanguageSelector() {
               : 'text-brand-forest/50 hover:text-brand-forest border border-transparent'}
           `}
         >
-          {lang.flag}
+          {isWindows ? lang.label : lang.flag}
         </button>
       ))}
     </div>

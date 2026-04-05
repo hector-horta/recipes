@@ -45,7 +45,9 @@ export function normalizeTags(tags) {
   const seen = new Set();
   const result = [];
   for (const tag of tags) {
+    if (!tag || (typeof tag === 'string' && tag.trim() === '')) continue;
     const normalized = normalizeTag(tag);
+    if (!normalized.es || normalized.es.trim() === '') continue;
     const id = normalized.es.toLowerCase();
     if (!seen.has(id)) {
       seen.add(id);

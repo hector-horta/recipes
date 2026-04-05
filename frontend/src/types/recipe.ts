@@ -24,5 +24,5 @@ export interface Recipe {
   instructionsEn?: string[];
   summary?: string;
   safetyLevel: 'safe' | 'review' | 'unsafe';
-  siboAllergiesTags: Tag[];
+  siboAllergiesTags: (Tag | string)[];
 }
