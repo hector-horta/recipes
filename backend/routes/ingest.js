@@ -6,6 +6,7 @@ import { Recipe } from '../models/Recipe.js';
 import { extractTextFromImage, analyzeAndStructureRecipe, generateRecipeImage } from '../services/NvidiaNIM.js';
 import { transcribeAudio } from '../services/GroqWhisper.js';
 import { saveIngestLog } from '../middleware/recoveryLogger.js';
+import { RecipeProvider } from '../services/RecipeProvider.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -79,6 +80,8 @@ router.post('/image', async (req, res, next) => {
 
     const recipe = await Recipe.create(recipeData);
 
+    await RecipeProvider.clearCache();
+
     res.status(200).json({
       status: 'processed',
       recipe: recipe.toJSON(),
@@ -136,6 +139,8 @@ router.post('/text', async (req, res, next) => {
     saveIngestLog(recipeData);
 
     const recipe = await Recipe.create(recipeData);
+
+    await RecipeProvider.clearCache();
 
     res.status(200).json({
       status: 'processed',
@@ -234,6 +239,8 @@ router.post('/voice', async (req, res, next) => {
 
     const recipe = await Recipe.create(recipeData);
 
+    await RecipeProvider.clearCache();
+
     res.status(200).json({
       status: 'processed',
       recipe: recipe.toJSON(),
@@ -258,6 +265,7 @@ router.post('/:slug/:action', async (req, res, next) => {
       case 'publish': {
         recipe.status = 'published';
         await recipe.save();
+        await RecipeProvider.clearCache();
         return res.json({ status: 'published', recipe });
       }
 
@@ -269,6 +277,7 @@ router.post('/:slug/:action', async (req, res, next) => {
         if (req.body.steps) recipe.steps = req.body.steps;
         if (req.body.sibo_risk_level) recipe.sibo_risk_level = req.body.sibo_risk_level;
         await recipe.save();
+        await RecipeProvider.clearCache();
         return res.json({ status: 'saved', recipe });
       }
 
@@ -306,10 +315,12 @@ router.post('/save', async (req, res, next) => {
     if (existing) {
       Object.assign(existing, recipeData);
       await existing.save();
+      await RecipeProvider.clearCache();
       return res.json({ status: 'updated', recipe: existing });
     }
 
     const recipe = await Recipe.create({ ...recipeData, slug });
+    await RecipeProvider.clearCache();
     return res.status(201).json({ status: 'created', recipe });
   } catch (error) {
     next(error);

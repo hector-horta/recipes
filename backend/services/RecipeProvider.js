@@ -87,4 +87,18 @@ export class RecipeProvider {
       siboAlerts: recipe.sibo_alerts || []
     };
   }
+
+  static async clearCache() {
+    try {
+      if (redisClient.isReady) {
+        const keys = await redisClient.keys('recipes:*');
+        if (keys.length > 0) {
+          await redisClient.del(keys);
+          console.log(`[Cache] Invalidadas ${keys.length} claves de recetas`);
+        }
+      }
+    } catch (err) {
+      console.warn('[Cache] Error invalidando cache:', err.message);
+    }
+  }
 }
