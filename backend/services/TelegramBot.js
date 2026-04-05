@@ -2,16 +2,18 @@ import TelegramBot from 'node-telegram-bot-api';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { extractTextFromImage, analyzeAndStructureRecipe, generateRecipeImage } from './NvidiaNIM.js';
+import { saveIngestLog } from '../middleware/recoveryLogger.js';
+import { Recipe } from '../models/Recipe.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const ALLOWED_USER_ID = process.env.TELEGRAM_USER_ID;
-const API_BASE = process.env.API_BASE || `http://localhost:${process.env.PORT || 5001}`;
+const NVIDIA_KEY = process.env.NVIDIA_API_KEY;
 
 let bot = null;
-const pendingActions = new Map();
 
 function isAuthorized(userId) {
   return userId.toString() === ALLOWED_USER_ID;
@@ -31,59 +33,104 @@ function buildInlineKeyboard(recipeSlug) {
   };
 }
 
+function generateSlug(title) {
+  return (title || 'untitled')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 80);
+}
+
+function formatRecipeSummary(recipe) {
+  const alerts = recipe.sibo_alerts?.length > 0
+    ? `\n\n⚠️ *Alertas SIBO:*\n${recipe.sibo_alerts.map(a => `• ${a}`).join('\n')}`
+    : '';
+
+  return `✅ *Receta procesada*\n\n` +
+    `📝 *${recipe.title_es}*\n` +
+    `🇬🇧 ${recipe.title_en}\n\n` +
+    `⏱️ Prep: ${recipe.prep_time_minutes}min | Cocción: ${recipe.cook_time_minutes}min\n` +
+    `👥 Porciones: ${recipe.servings} | Dificultad: ${recipe.difficulty}\n` +
+    `🦠 Riesgo SIBO: *${recipe.sibo_risk_level.toUpperCase()}*${alerts}\n` +
+    `🏷️ Tags: ${(recipe.tags || []).join(', ') || 'Ninguno'}\n\n` +
+    `Elige una acción:`;
+}
+
 async function processImage(msg) {
   const chatId = msg.chat.id;
 
   try {
-    const processingMsg = await bot.sendMessage(chatId, '🔍 Extrayendo texto de la imagen con NVIDIA VLM...');
+    const processingMsg = await bot.sendMessage(chatId, '🔍 Extrayendo texto de la imagen con Llama 4 Maverick...');
 
     const fileId = msg.photo[msg.photo.length - 1].file_id;
     const fileLink = await bot.getFileLink(fileId);
+    const imageUrl = typeof fileLink === 'string' ? fileLink : fileLink?.href || fileLink?.toString();
 
-    const res = await fetch(`${API_BASE}/api/ingest/image`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Telegram-User-Id': msg.from.id.toString()
-      },
-      body: JSON.stringify({
-        imageUrl: fileLink.href,
-        generateImage: true
-      })
-    });
+    if (!NVIDIA_KEY) {
+      throw new Error('OPENROUTER_API_KEY not configured');
+    }
 
-    const data = await res.json();
+    const rawText = await extractTextFromImage(imageUrl, NVIDIA_KEY);
 
-    if (!res.ok) {
-      await bot.editMessageText(`❌ Error: ${data.error}`, {
+    if (!rawText.trim()) {
+      await bot.editMessageText('❌ No se pudo extraer texto de la imagen.', {
         chat_id: chatId,
         message_id: processingMsg.message_id
       });
       return;
     }
 
-    const recipe = data.recipe;
-    const alerts = recipe.sibo_alerts?.length > 0
-      ? `\n\n⚠️ *Alertas SIBO:*\n${recipe.sibo_alerts.map(a => `• ${a}`).join('\n')}`
-      : '';
+    await bot.editMessageText('🧠 Analizando y estructurando receta...', {
+      chat_id: chatId,
+      message_id: processingMsg.message_id
+    });
 
-    const summary = `✅ *Receta procesada*\n\n` +
-      `📝 *${recipe.title_es}*\n` +
-      `🇬🇧 ${recipe.title_en}\n\n` +
-      `⏱️ Prep: ${recipe.prep_time_minutes}min | Cocción: ${recipe.cook_time_minutes}min\n` +
-      `👥 Porciones: ${recipe.servings} | Dificultad: ${recipe.difficulty}\n` +
-      `🦠 Riesgo SIBO: *${recipe.sibo_risk_level.toUpperCase()}*${alerts}\n` +
-      `🏷️ Tags: ${(recipe.tags || []).join(', ') || 'Ninguno'}\n\n` +
-      `Elige una acción:`;
+    const structured = await analyzeAndStructureRecipe(rawText, NVIDIA_KEY);
 
-    await bot.editMessageText(summary, {
+    const titleEs = structured.title?.es || 'Receta sin título';
+    const slug = generateSlug(titleEs);
+
+    let imageResult = null;
+    if (NVIDIA_KEY) {
+      await bot.editMessageText('🎨 Generando imagen con SDXL...', {
+        chat_id: chatId,
+        message_id: processingMsg.message_id
+      });
+      try {
+        imageResult = await generateRecipeImage(titleEs, NVIDIA_KEY);
+      } catch (imgErr) {
+        console.warn('[TelegramBot] Failed to generate image:', imgErr.message);
+      }
+    }
+
+    const recipeData = {
+      title_es: titleEs,
+      title_en: structured.title?.en || titleEs,
+      slug,
+      prep_time_minutes: structured.prepTimeMinutes || 0,
+      cook_time_minutes: structured.cookTimeMinutes || 0,
+      servings: structured.servings || 1,
+      difficulty: structured.difficulty || 'medium',
+      ingredients: structured.ingredients || [],
+      steps: structured.steps || [],
+      tags: structured.tags || [],
+      image_url: imageResult?.url || null,
+      image_filename: imageResult?.filename || null,
+      sibo_risk_level: structured.siboRiskLevel || 'safe',
+      sibo_alerts: structured.siboAlerts || [],
+      source_type: 'ocr_image',
+      source_reference: imageUrl,
+      status: 'draft'
+    };
+
+    saveIngestLog(recipeData);
+
+    await bot.editMessageText(formatRecipeSummary(recipeData), {
       chat_id: chatId,
       message_id: processingMsg.message_id,
       parse_mode: 'Markdown',
-      reply_markup: buildInlineKeyboard(recipe.slug)
+      reply_markup: buildInlineKeyboard(slug)
     });
-
-    pendingActions.set(recipe.slug, recipe);
 
   } catch (error) {
     console.error('[TelegramBot] Error processing image:', error);
@@ -98,59 +145,98 @@ async function processText(msg) {
   if (text.startsWith('/')) return;
 
   try {
-    const processingMsg = await bot.sendMessage(chatId, '🧠 Analizando receta con Nemotron-4 340B...');
+    const processingMsg = await bot.sendMessage(chatId, '🧠 Analizando receta con Llama 4 Maverick...');
 
-    const res = await fetch(`${API_BASE}/api/ingest/text`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Telegram-User-Id': msg.from.id.toString()
-      },
-      body: JSON.stringify({
-        text,
-        generateImage: true,
-        sourceType: 'telegram',
-        sourceReference: `telegram:${msg.message_id}`
-      })
-    });
+    if (!NVIDIA_KEY) {
+      throw new Error('OPENROUTER_API_KEY not configured');
+    }
 
-    const data = await res.json();
+    const structured = await analyzeAndStructureRecipe(text, NVIDIA_KEY);
 
-    if (!res.ok) {
-      await bot.editMessageText(`❌ Error: ${data.error}`, {
+    const titleEs = structured.title?.es || 'Receta sin título';
+    const slug = generateSlug(titleEs);
+
+    let imageResult = null;
+    if (NVIDIA_KEY) {
+      await bot.editMessageText('🎨 Generando imagen con SDXL...', {
         chat_id: chatId,
         message_id: processingMsg.message_id
       });
-      return;
+      try {
+        imageResult = await generateRecipeImage(titleEs, NVIDIA_KEY);
+      } catch (imgErr) {
+        console.warn('[TelegramBot] Failed to generate image:', imgErr.message);
+      }
     }
 
-    const recipe = data.recipe;
-    const alerts = recipe.sibo_alerts?.length > 0
-      ? `\n\n⚠️ *Alertas SIBO:*\n${recipe.sibo_alerts.map(a => `• ${a}`).join('\n')}`
-      : '';
+    const recipeData = {
+      title_es: titleEs,
+      title_en: structured.title?.en || titleEs,
+      slug,
+      prep_time_minutes: structured.prepTimeMinutes || 0,
+      cook_time_minutes: structured.cookTimeMinutes || 0,
+      servings: structured.servings || 1,
+      difficulty: structured.difficulty || 'medium',
+      ingredients: structured.ingredients || [],
+      steps: structured.steps || [],
+      tags: structured.tags || [],
+      image_url: imageResult?.url || null,
+      image_filename: imageResult?.filename || null,
+      sibo_risk_level: structured.siboRiskLevel || 'safe',
+      sibo_alerts: structured.siboAlerts || [],
+      source_type: 'telegram',
+      source_reference: `telegram:${msg.message_id}`,
+      status: 'draft'
+    };
 
-    const summary = `✅ *Receta procesada*\n\n` +
-      `📝 *${recipe.title_es}*\n` +
-      `🇬🇧 ${recipe.title_en}\n\n` +
-      `⏱️ Prep: ${recipe.prep_time_minutes}min | Cocción: ${recipe.cook_time_minutes}min\n` +
-      `👥 Porciones: ${recipe.servings} | Dificultad: ${recipe.difficulty}\n` +
-      `🦠 Riesgo SIBO: *${recipe.sibo_risk_level.toUpperCase()}*${alerts}\n` +
-      `🏷️ Tags: ${(recipe.tags || []).join(', ') || 'Ninguno'}\n\n` +
-      `Elige una acción:`;
+    saveIngestLog(recipeData);
 
-    await bot.editMessageText(summary, {
+    await bot.editMessageText(formatRecipeSummary(recipeData), {
       chat_id: chatId,
       message_id: processingMsg.message_id,
       parse_mode: 'Markdown',
-      reply_markup: buildInlineKeyboard(recipe.slug)
+      reply_markup: buildInlineKeyboard(slug)
     });
-
-    pendingActions.set(recipe.slug, recipe);
 
   } catch (error) {
     console.error('[TelegramBot] Error processing text:', error);
     bot.sendMessage(chatId, `❌ Error procesando el texto: ${error.message}`);
   }
+}
+
+function buildCSVRow(recipe) {
+  const headers = [
+    'slug', 'title_es', 'title_en', 'prep_time_minutes', 'cook_time_minutes',
+    'servings', 'difficulty', 'sibo_risk_level', 'sibo_alerts', 'ingredients_count', 'steps_count'
+  ];
+
+  const escapeCsv = (val) => {
+    const str = String(val ?? '');
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  const row = [
+    recipe.slug,
+    recipe.title_es,
+    recipe.title_en,
+    recipe.prep_time_minutes,
+    recipe.cook_time_minutes,
+    recipe.servings,
+    recipe.difficulty,
+    recipe.sibo_risk_level,
+    JSON.stringify(recipe.sibo_alerts || []),
+    (recipe.ingredients || []).length,
+    (recipe.steps || []).length
+  ];
+
+  return headers.join(',') + '\n' + row.map(escapeCsv).join(',') + '\n';
+}
+
+function buildCurlCommand(recipe) {
+  return `curl -X POST http://localhost:5001/api/ingest/save \\\n  -H "Content-Type: application/json" \\\n  -d '${JSON.stringify(recipe, null, 2)}'`;
 }
 
 async function handleAction(callbackQuery) {
@@ -165,92 +251,76 @@ async function handleAction(callbackQuery) {
 
     switch (action) {
       case 'post': {
-        const res = await fetch(`${API_BASE}/api/ingest/${slug}/post`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Telegram-User-Id': callbackQuery.from.id.toString()
-          },
-          body: JSON.stringify({ status: 'published' })
-        });
-
-        const result = await res.json();
-
-        if (res.ok) {
-          await bot.editMessageText(`🚀 *Receta guardada en PostgreSQL*\n\n` +
-            `📝 ${result.recipe.title_es}\n` +
-            `Estado: *${result.recipe.status}*\n` +
-            `ID: \`${result.recipe.id}\``, {
-            chat_id: chatId,
-            message_id: messageId,
-            parse_mode: 'Markdown'
-          });
-        } else {
-          await bot.editMessageText(`❌ Error al guardar: ${result.error}`, {
+        const recipe = await Recipe.findOne({ where: { slug } });
+        if (!recipe) {
+          await bot.editMessageText(`❌ Receta "${slug}" no encontrada en la base de datos.`, {
             chat_id: chatId,
             message_id: messageId
           });
+          return;
         }
+
+        recipe.status = 'published';
+        await recipe.save();
+
+        await bot.editMessageText(`🚀 *Receta guardada en PostgreSQL*\n\n` +
+          `📝 ${recipe.title_es}\n` +
+          `Estado: *${recipe.status}*\n` +
+          `ID: \`${recipe.id}\``, {
+          chat_id: chatId,
+          message_id: messageId,
+          parse_mode: 'Markdown'
+        });
         break;
       }
 
       case 'csv': {
-        const res = await fetch(`${API_BASE}/api/ingest/${slug}/csv`, {
-          method: 'POST',
-          headers: {
-            'X-Telegram-User-Id': callbackQuery.from.id.toString()
-          }
-        });
-
-        if (res.ok) {
-          const csvContent = await res.text();
-          const tempPath = path.join(__dirname, '..', 'ingest_logs', `${slug}.csv`);
-          fs.writeFileSync(tempPath, csvContent);
-
-          await bot.sendDocument(chatId, tempPath, {
-            caption: `📄 CSV para *${slug}*`,
-            parse_mode: 'Markdown'
-          });
-
-          await bot.editMessageText(`📄 *Archivo CSV generado*\n\nRevisa el documento adjunto.`, {
-            chat_id: chatId,
-            message_id: messageId,
-            parse_mode: 'Markdown'
-          });
-
-          fs.unlinkSync(tempPath);
-        } else {
-          await bot.editMessageText(`❌ Error generando CSV.`, {
+        const recipe = await Recipe.findOne({ where: { slug } });
+        if (!recipe) {
+          await bot.editMessageText(`❌ Receta "${slug}" no encontrada.`, {
             chat_id: chatId,
             message_id: messageId
           });
+          return;
         }
+
+        const csvContent = buildCSVRow(recipe.toJSON());
+        const tempPath = path.join(__dirname, '..', 'ingest_logs', `${slug}.csv`);
+        fs.writeFileSync(tempPath, csvContent);
+
+        await bot.sendDocument(chatId, tempPath, {
+          caption: `📄 CSV para *${slug}*`,
+          parse_mode: 'Markdown'
+        });
+
+        await bot.editMessageText(`📄 *Archivo CSV generado*\n\nRevisa el documento adjunto.`, {
+          chat_id: chatId,
+          message_id: messageId,
+          parse_mode: 'Markdown'
+        });
+
+        fs.unlinkSync(tempPath);
         break;
       }
 
       case 'curl': {
-        const res = await fetch(`${API_BASE}/api/ingest/${slug}/curl`, {
-          method: 'POST',
-          headers: {
-            'X-Telegram-User-Id': callbackQuery.from.id.toString()
-          }
-        });
-
-        const result = await res.json();
-
-        if (res.ok) {
-          await bot.editMessageText(`🛠️ *Comando cURL listo:*\n\n` +
-            `\`\`\`bash\n${result.curl}\n\`\`\``, {
-            chat_id: chatId,
-            message_id: messageId,
-            parse_mode: 'Markdown'
-          });
-        } else {
-          await bot.editMessageText(`❌ Error generando cURL.`, {
+        const recipe = await Recipe.findOne({ where: { slug } });
+        if (!recipe) {
+          await bot.editMessageText(`❌ Receta "${slug}" no encontrada.`, {
             chat_id: chatId,
             message_id: messageId
           });
+          return;
         }
+
+        const curlCmd = buildCurlCommand(recipe.toJSON());
+
+        await bot.editMessageText(`🛠️ *Comando cURL listo:*\n\n` +
+          `\`\`\`bash\n${curlCmd}\n\`\`\``, {
+          chat_id: chatId,
+          message_id: messageId,
+          parse_mode: 'Markdown'
+        });
         break;
       }
     }
@@ -291,9 +361,10 @@ export function initializeTelegramBot() {
       bot.sendMessage(msg.chat.id,
         '🍳 *Wati Recipe Ingest Bot*\n\n' +
         'Envíame:\n' +
-        '📸 *Fotos* de libros de recetas (OCR)\n' +
+        '📸 *Fotos* de libros de recetas (OCR con Llama 4 Maverick)\n' +
         '📝 *Texto* de recetas para analizar\n\n' +
-        'Procesaré todo con NVIDIA NIMs y te daré opciones para guardar.',
+        'Procesado con NVIDIA NIM (Llama 4 Maverick + SDXL)\n\n' +
+        'Procesaré todo y te daré opciones para guardar.',
         { parse_mode: 'Markdown' }
       );
     });
@@ -301,13 +372,20 @@ export function initializeTelegramBot() {
     bot.onText(/\/logs/, async (msg) => {
       const chatId = msg.chat.id;
       try {
-        const res = await fetch(`${API_BASE}/api/ingest/logs`, {
-          headers: { 'X-Telegram-User-Id': msg.from.id.toString() }
-        });
-        const data = await res.json();
+        const logsDir = path.join(__dirname, '..', 'ingest_logs');
+        if (!fs.existsSync(logsDir)) {
+          bot.sendMessage(chatId, '📋 No hay logs de ingestión.');
+          return;
+        }
 
-        if (data.logs?.length > 0) {
-          const logList = data.logs.slice(0, 10).map(l => `• ${l.filename}`).join('\n');
+        const files = fs.readdirSync(logsDir)
+          .filter(f => f.endsWith('.json'))
+          .sort()
+          .reverse()
+          .slice(0, 10);
+
+        if (files.length > 0) {
+          const logList = files.map(f => `• ${f}`).join('\n');
           bot.sendMessage(chatId, `📋 *Últimos logs:*\n\n${logList}`, { parse_mode: 'Markdown' });
         } else {
           bot.sendMessage(chatId, '📋 No hay logs de ingestión.');

@@ -1,7 +1,8 @@
 const NVIDIA_API_BASE = 'https://integrate.api.nvidia.com/v1';
+const NVIDIA_CV_BASE = 'https://ai.api.nvidia.com/v1/cv';
 
-async function nvidiaRequest(endpoint, body, apiKey) {
-  const res = await fetch(`${NVIDIA_API_BASE}${endpoint}`, {
+async function nvidiaChatRequest(body, apiKey) {
+  const res = await fetch(`${NVIDIA_API_BASE}/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -15,32 +16,64 @@ async function nvidiaRequest(endpoint, body, apiKey) {
     throw new Error(`NVIDIA NIM error (${res.status}): ${errText}`);
   }
 
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content || '';
+}
+
+async function nvidiaCVRequest(endpoint, body, apiKey) {
+  const res = await fetch(`${NVIDIA_CV_BASE}${endpoint}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`NVIDIA NIM CV error (${res.status}): ${errText}`);
+  }
+
   return res.json();
 }
 
-export async function extractTextFromImage(imageUrl, apiKey) {
-  const response = await nvidiaRequest('/chat/completions', {
-    model: 'nvidia/llama-3.1-70b-instruct',
-    messages: [
-      {
-        role: 'user',
-        content: [
-          {
-            type: 'text',
-            text: 'Extract ALL text from this recipe image. Return ONLY the raw text with ingredient lists, measurements, cooking steps, and any other recipe information. Do not add commentary. Maintain the original structure.'
-          },
-          {
-            type: 'image_url',
-            image_url: { url: imageUrl }
-          }
-        ]
-      }
-    ],
-    max_tokens: 4096,
-    temperature: 0.1
+async function nvidiaImageRequest(body, apiKey) {
+  const res = await fetch(`${NVIDIA_API_BASE}/images/generations`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify(body)
   });
 
-  return response.choices?.[0]?.message?.content || '';
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`NVIDIA NIM Image error (${res.status}): ${errText}`);
+  }
+
+  return res.json();
+}
+
+async function downloadImageAsBase64(imageUrl) {
+  const res = await fetch(imageUrl);
+  if (!res.ok) throw new Error(`Failed to download image: ${res.status}`);
+  const buffer = await res.arrayBuffer();
+  const base64 = Buffer.from(buffer).toString('base64');
+  const mimeType = res.headers.get('content-type') || 'image/png';
+  return { base64, mimeType };
+}
+
+export async function extractTextFromImage(imageUrl, apiKey) {
+  const { base64 } = await downloadImageAsBase64(imageUrl);
+
+  const response = await nvidiaCVRequest('/nvidia/ocdrnet', {
+    image: base64
+  }, apiKey);
+
+  const textLines = response?.metadata?.text || [];
+  return textLines.join('\n').trim();
 }
 
 export async function analyzeAndStructureRecipe(rawText, apiKey) {
@@ -80,38 +113,36 @@ CRITICAL RULES:
 - If prep time cannot be determined, estimate based on recipe type
 - Return ONLY the JSON object, no markdown code blocks, no extra text`;
 
-  const response = await nvidiaRequest('/chat/completions', {
-    model: 'nvidia/nemotron-4-340b-instruct',
+  const content = await nvidiaChatRequest({
+    model: 'meta/llama-4-maverick-17b-128e-instruct',
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: `Analyze and structure this recipe text into JSON:\n\n${rawText}` }
     ],
     max_tokens: 4096,
     temperature: 0.2
-  });
+  }, apiKey);
 
-  let content = response.choices?.[0]?.message?.content || '';
-
-  content = content.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+  let cleaned = content.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
 
   try {
-    return JSON.parse(content);
+    return JSON.parse(cleaned);
   } catch {
-    throw new Error('Failed to parse Nemotron response as JSON');
+    throw new Error('Failed to parse Llama 4 response as JSON');
   }
 }
 
-export async function generateRecipeImage(prompt, apiKey, outputPath) {
+export async function generateRecipeImage(prompt, apiKey) {
   const decoratedPrompt = `Professional editorial food photography of ${prompt}, 8k, macro lens, soft natural lighting, high-end restaurant plating, vibrant colors, shallow depth of field --ar 16:9`;
 
-  const response = await nvidiaRequest('/images/generations', {
-    model: 'stabilityai/stable-diffusion-xl-base',
+  const response = await nvidiaImageRequest({
+    model: 'stabilityai/stable-diffusion-xl',
     prompt: decoratedPrompt,
     height: 768,
     width: 1344,
     cfg_scale: 7,
     steps: 30
-  });
+  }, apiKey);
 
   const imageData = response.data?.[0]?.b64_json;
   if (!imageData) {
