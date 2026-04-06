@@ -4,6 +4,7 @@ import { Recipe } from '../types/recipe';
 import { useFavorites } from '../hooks/useFavorites';
 import { useTranslation } from 'react-i18next';
 import { useCachedImage } from '../hooks/useCachedImage';
+import { AuthGuard } from '../components/auth/AuthGuard';
 
 interface RecipeDetailPageProps {
   recipe: Recipe;
@@ -50,17 +51,19 @@ export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
             <ArrowLeft className="w-6 h-6 drop-shadow-sm" />
           </button>
 
-          <button 
-            onClick={handleToggle}
-            className={`p-3 rounded-2xl backdrop-blur-xl transition-all border shadow-xl active:scale-95 ${
-              favorited 
-                ? 'bg-red-500 text-white border-red-400' 
-                : 'bg-black/20 text-white hover:bg-black/30 border-white/10'
-            }`}
-            aria-label={favorited ? t('recipe.removeFavorite') : t('recipe.addFavorite')}
-          >
-            <Heart className={`w-6 h-6 ${favorited ? 'fill-current' : ''}`} />
-          </button>
+          <AuthGuard>
+            <button 
+              onClick={handleToggle}
+              className={`p-3 rounded-2xl backdrop-blur-xl transition-all border shadow-xl active:scale-95 ${
+                favorited 
+                  ? 'bg-red-500 text-white border-red-400' 
+                  : 'bg-black/20 text-white hover:bg-black/30 border-white/10'
+              }`}
+              aria-label={favorited ? t('recipe.removeFavorite') : t('recipe.addFavorite')}
+            >
+              <Heart className={`w-6 h-6 ${favorited ? 'fill-current' : ''}`} />
+            </button>
+          </AuthGuard>
         </div>
 
         {/* Title and Badge Over Image */}
@@ -130,9 +133,11 @@ export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
                         {lang === 'en' && ing.nameEn ? ing.nameEn : ing.name}
                       </span>
                       {ing.isBorderlineSafe && (
-                        <span className="ml-auto px-2 py-1 text-[9px] font-black bg-brand-peach/20 text-brand-forest border border-brand-peach/40 rounded-lg uppercase tracking-tight">
-                          {t('recipe.personalLimit')}
-                        </span>
+                        <AuthGuard>
+                          <span className="ml-auto px-2 py-1 text-[9px] font-black bg-brand-peach/20 text-brand-forest border border-brand-peach/40 rounded-lg uppercase tracking-tight">
+                            {t('recipe.personalLimit')}
+                          </span>
+                        </AuthGuard>
                       )}
                     </li>
                   ))}

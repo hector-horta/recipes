@@ -28,7 +28,10 @@
     "noRecipesDesc": "Prueba con otros ingredientes o términos más generales para que podamos ayudarte.",
     "serverError": "Error al conectar con el servidor.",
     "page": "Página",
-    "of": "de"
+    "of": "de",
+    "ctaTitle": "Descubre recetas seguras para ti",
+    "ctaDesc": "Explora un catálogo especializado de recetas rigurosamente curadas para protocolos SIBO y múltiples intolerancias alimentarias. Crea tu perfil para filtrar dinámicamente nuestras recetas y proteger tu nutrición.",
+    "ctaButton": "Crear Cuenta o Iniciar Sesión"
   },
   "recipe": {
     "favorite": "Favorito",

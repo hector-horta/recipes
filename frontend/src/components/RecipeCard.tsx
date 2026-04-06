@@ -3,6 +3,7 @@ import { Recipe } from '../types/recipe';
 import { useTranslation } from 'react-i18next';
 import { Button } from './ui/Button';
 import { useCachedImage } from '../hooks/useCachedImage';
+import { AuthGuard } from './auth/AuthGuard';
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -50,26 +51,30 @@ export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite }:
         <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-slate-900/60 to-transparent pointer-events-none"></div>
         
         <div className="absolute top-4 left-4 flex gap-2">
-          <span className={`px-3 py-1.5 rounded-full text-xs font-bold shadow-sm border tracking-wide uppercase ${safetyColor}`}>
-            {safetyText}
-          </span>
+          <AuthGuard>
+            <span className={`px-3 py-1.5 rounded-full text-xs font-bold shadow-sm border tracking-wide uppercase ${safetyColor}`}>
+              {safetyText}
+            </span>
+          </AuthGuard>
         </div>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleFavorite?.(e);
-          }}
-          className={`absolute top-4 right-4 backdrop-blur-md transition-all shadow-sm border border-white/20 active:scale-90 ${
-            isFavorited 
-              ? 'bg-red-500 text-white hover:bg-red-600' 
-              : 'bg-white/80 text-slate-500 hover:text-red-500 hover:bg-white'
-          }`}
-        >
-          <Heart className={`w-4 h-4 ${isFavorited ? 'fill-current' : ''}`} />
-        </Button>
+        <AuthGuard>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleFavorite?.(e);
+            }}
+            className={`absolute top-4 right-4 backdrop-blur-md transition-all shadow-sm border border-white/20 active:scale-90 ${
+              isFavorited 
+                ? 'bg-red-500 text-white hover:bg-red-600' 
+                : 'bg-white/80 text-slate-500 hover:text-red-500 hover:bg-white'
+            }`}
+          >
+            <Heart className={`w-4 h-4 ${isFavorited ? 'fill-current' : ''}`} />
+          </Button>
+        </AuthGuard>
 
         <div className="absolute bottom-4 left-4">
           <span className="px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-md bg-white/90 text-slate-700 shadow-sm border border-slate-200/50 tracking-wide flex items-center gap-1.5">
@@ -87,15 +92,17 @@ export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite }:
           </h3>
           
           {hasBorderlineIngredients && (
-            <div className="group/tooltip relative shrink-0 pt-0.5">
-              <AlertCircle className="w-5 h-5 text-amber-500 cursor-help" />
-              <div className="absolute right-0 bottom-full mb-2 w-56 p-2.5 bg-slate-800 text-white text-xs rounded-lg opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-10 shadow-xl font-medium">
-                {t('recipe.borderlineTooltip')}
-                <svg className="absolute text-slate-800 h-2 w-full left-0 top-full translate-x-[4.5rem]" x="0px" y="0px" viewBox="0 0 255 255" xmlSpace="preserve">
-                  <polygon className="fill-current" points="0,0 127.5,127.5 255,0"/>
-                </svg>
+            <AuthGuard>
+              <div className="group/tooltip relative shrink-0 pt-0.5">
+                <AlertCircle className="w-5 h-5 text-amber-500 cursor-help" />
+                <div className="absolute right-0 bottom-full mb-2 w-56 p-2.5 bg-slate-800 text-white text-xs rounded-lg opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-10 shadow-xl font-medium">
+                  {t('recipe.borderlineTooltip')}
+                  <svg className="absolute text-slate-800 h-2 w-full left-0 top-full translate-x-[4.5rem]" x="0px" y="0px" viewBox="0 0 255 255" xmlSpace="preserve">
+                    <polygon className="fill-current" points="0,0 127.5,127.5 255,0"/>
+                  </svg>
+                </div>
               </div>
-            </div>
+            </AuthGuard>
           )}
         </div>
 
