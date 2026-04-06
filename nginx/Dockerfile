@@ -29,5 +29,4 @@ RUN mkdir -p /var/log/nginx /var/cache/nginx \
 # Exponer puertos HTTP (redirect) y HTTPS
 EXPOSE 80 443
 
-# Run as non-root user
-USER nginx
+# USER nginx
