@@ -126,7 +126,7 @@ export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
                       </div>
                       <span className="text-brand-text font-bold capitalize">
                         {ing.quantity && <span className="text-brand-teal font-black">{ing.quantity} </span>}
-                        {ing.unit && <span className="text-brand-text-muted text-sm">{ing.unit} </span>}
+                        {(lang === 'en' && ing.unitEn) || ing.unit ? <span className="text-brand-text-muted text-sm">{(lang === 'en' && ing.unitEn) ? ing.unitEn : ing.unit} </span> : null}
                         {lang === 'en' && ing.nameEn ? ing.nameEn : ing.name}
                       </span>
                       {ing.isBorderlineSafe && (

@@ -28,3 +28,7 @@ yarn-error.log*
 
 # TLS certificates (nunca commitear claves privadas)
 nginx/certs/
+
+# backend
+backend/ingest_logs/
+backend/public/

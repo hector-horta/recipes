@@ -9,8 +9,10 @@ export interface Ingredient {
   nameEn?: string;
   quantity?: string;
   unit?: string;
+  unitEn?: string;
   isBorderlineSafe?: boolean;
 }
+
 
 export interface Recipe {
   id: string;
