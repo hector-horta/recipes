@@ -34,11 +34,7 @@ export default defineConfig(({ mode }) => {
       include: ['react', 'react-dom'],
     },
     resolve: {
-      dedupe: ['react', 'react-dom'],
-      alias: {
-        'react': path.resolve(__dirname, 'node_modules/react'),
-        'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
-      },
+      dedupe: ['react', 'react-dom', '@tanstack/react-query', 'react-i18next', 'react-router-dom'],
     },
     envDir: '../',
     test: {
