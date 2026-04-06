@@ -62,6 +62,7 @@ export function RecipePage({
           showLoader={hookLoading || isPending}
           isRefreshing={isRefreshing}
           onRefresh={refresh}
+          onOpenLogin={onOpenLogin}
         />
 
         <RecipeGrid
