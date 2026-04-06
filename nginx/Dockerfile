@@ -11,9 +11,10 @@ USER root
 RUN addgroup -g 1001 -S nginx && \
     adduser -S nginx -G nginx -u 1001
 
-# Copiar configuración TLS post-cuántica
-# OQS Nginx espera la configuración en /opt/nginx/nginx-conf/nginx.conf por defecto
+# Copiar configuración TLS post-cuántica y tipos MIME
+# OQS Nginx espera la configuración en /opt/nginx/nginx-conf/ por defecto
 COPY nginx.conf /opt/nginx/nginx-conf/nginx.conf
+COPY mime.types /opt/nginx/nginx-conf/mime.types
 
 # Set correct permissions for directories nginx needs to write to
 RUN mkdir -p /var/log/nginx /var/cache/nginx \

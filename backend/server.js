@@ -32,8 +32,10 @@ const corsOptions = {
 import authRoutes from './routes/auth.js';
 import favoritesRoutes from './routes/favorites.js';
 import ingestRoutes from './routes/ingest.js';
+import adminRoutes from './routes/admin.js';
 import { connectDB, sequelize } from './config/database.js';
 import { connectRedis } from './config/redis.js';
+import { ActivityLogger } from './services/ActivityLogger.js';
 
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -78,6 +80,7 @@ connectRedis();
 app.use('/api/auth', authRoutes);
 app.use('/api/favorites', favoritesRoutes);
 app.use('/api/ingest', ingestRoutes);
+app.use('/admin', adminRoutes);
 
 // Data previously hardcoded in frontend
 const INTOLERANCE_CATALOG = [
@@ -140,6 +143,27 @@ app.get('/api/recipes', optionalAuthenticateToken, recipeLimiter, async (req, re
     }
 
     const data = await RecipeProvider.getRecipes(req.query, userProfile);
+
+    // ── Telemetría de búsquedas ───────────────────────────────────────────
+    const query = req.query.query?.trim() || '';
+    const isEmpty = !data || data.length === 0;
+
+    ActivityLogger.log('SEARCH', { query }, {
+      userId: req.user?.id || null,
+      ip: req.ip,
+      failedSearch: isEmpty
+    });
+
+    // Alerta Telegram cuando no hay resultados
+    if (isEmpty && query) {
+      ActivityLogger.alertAsync(
+        `🔍 *Búsqueda sin resultados:* "${query}"\n\n` +
+        `_El usuario buscó algo que no existe en la base de datos._\n` +
+        `Considerá agregar una receta con este término.`
+      );
+    }
+    // ─────────────────────────────────────────────────────────────────────
+
     res.json(data);
   } catch (error) {
     next(error);
@@ -158,9 +182,26 @@ app.use((err, req, res, next) => {
   } else if (status === 504) {
     message = 'La búsqueda tardó más de lo esperado en responder. Inténtalo de nuevo.';
   } else if (status === 400 && err.error === 'Petición malformada.') {
-    // Preserve validaton error text explicitly
     return res.status(status).json(err);
   }
+
+  // ── Alertas Telegram para errores graves ─────────────────────────────────
+  const isNvidiaError = err.message?.includes('NVIDIA') || err.message?.includes('SDXL');
+  const isGroqError   = err.message?.includes('GROQ') || err.message?.includes('Whisper') || err.message?.includes('Groq');
+  const isFatal       = status >= 500;
+
+  if (isNvidiaError || isGroqError || isFatal) {
+    const service  = isNvidiaError ? 'NVIDIA API' : isGroqError ? 'Groq API' : 'Backend';
+    const shortMsg = (err.message || 'Unknown error').slice(0, 200);
+    const fullUrl  = req.originalUrl || req.url;
+    
+    ActivityLogger.alertAsync(
+      `🔴 *[ERROR ${status}] ${service}*\n\n` +
+      `\`${shortMsg}\`\n\n` +
+      `📍 ${req.method} ${fullUrl}`
+    );
+  }
+  // ─────────────────────────────────────────────────────────────────────────
 
   res.status(status).json({ error: message });
 });

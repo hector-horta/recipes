@@ -1,16 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Wati</title>
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <link rel="apple-touch-icon" href="/favicon.png" />
-    <meta name="theme-color" content="#1B4332" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <!-- 
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wati</title>
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="apple-touch-icon" href="/favicon.png" />
+  <meta name="theme-color" content="#1B4332" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <!-- 
       Content Security Policy (CSP):
       - Impide llamadas a cualquier API externa de terceros directamente.
       - Bloquea iFrames, Plugins u Objectos incrustados.
@@ -20,18 +21,24 @@
       so the CSP might cause console errors if strictly enforced during dev.
       We added 'unsafe-inline' and 'unsafe-eval' to allow Vite HMR.
     -->
-    <meta http-equiv="Content-Security-Policy" content="
+  <meta http-equiv="Content-Security-Policy" content="
       default-src 'self'; 
-      connect-src 'self' ws: wss: __CSP_CONNECT_SRC__; 
-      script-src 'self' 'unsafe-inline' 'unsafe-eval'; 
+      connect-src 'self' ws: wss: http://analytics.localhost __CSP_CONNECT_SRC__; 
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' http://analytics.localhost; 
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
       font-src 'self' data: https://fonts.gstatic.com;
       img-src 'self' data: blob: https:;
       object-src 'none';
     ">
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+
+  <!-- Umami Analytics -->
+  <script async src="http://analytics.localhost/script.js"
+    data-website-id="df2a11f8-ebb3-482b-bb26-84563aa3357b"></script>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>
