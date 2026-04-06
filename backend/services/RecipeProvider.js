@@ -1,4 +1,4 @@
-import { Op } from 'sequelize';
+import { Op, where, cast, col } from 'sequelize';
 import { Recipe } from '../models/Recipe.js';
 import { redisClient } from '../config/redis.js';
 import crypto from 'crypto';
@@ -9,20 +9,20 @@ export class RecipeProvider {
   static async getRecipes(params, userProfile) {
     const { query, number = 10 } = params;
 
-    const where = { status: 'published' };
+    const whereClause = { status: 'published' };
 
     if (query && query.trim()) {
       const q = query.trim();
-      where[Op.or] = [
+      whereClause[Op.or] = [
         { title_es: { [Op.iLike]: `%${q}%` } },
         { title_en: { [Op.iLike]: `%${q}%` } },
-        { tags: { [Op.overlap]: [q] } }
+        where(cast(col('tags'), 'text'), { [Op.iLike]: `%${q}%` })
       ];
     }
 
     const hasSiboFilter = userProfile && userProfile.intolerances && userProfile.intolerances.some(i => i.toLowerCase() === 'sibo');
     if (hasSiboFilter) {
-      where.sibo_risk_level = { [Op.ne]: 'avoid' };
+      whereClause.sibo_risk_level = { [Op.ne]: 'avoid' };
     }
 
     const cachePayload = {
@@ -46,7 +46,7 @@ export class RecipeProvider {
     }
 
     const recipes = await Recipe.findAll({
-      where,
+      where: whereClause,
       order: [['created_at', 'DESC']],
       limit: parseInt(number, 10) || 10
     });

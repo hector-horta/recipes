@@ -8,7 +8,7 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/certs:/etc/nginx/certs:ro
+      - ./nginx/certs_new:/etc/nginx/certs:ro
     depends_on:
       - frontend
       - backend
@@ -24,8 +24,8 @@ services:
     ports:
       - "5173:5173"
     volumes:
-      - ./frontend:/app          # source code hot-reload
-      - /app/node_modules        # anonymous volume: protects container's node_modules
+      - ./frontend:/app # source code hot-reload
+      - /app/node_modules # anonymous volume: protects container's node_modules
     env_file:
       - .env
     environment:
@@ -48,8 +48,8 @@ services:
     ports:
       - "${PORT:-5001}:${PORT:-5001}"
     volumes:
-      - ./backend:/app           # source code hot-reload
-      - /app/node_modules        # anonymous volume: protects container's node_modules
+      - ./backend:/app # source code hot-reload
+      - /app/node_modules # anonymous volume: protects container's node_modules
       - ingest_logs:/app/ingest_logs
       - public_recipes:/app/public/recipes
     environment:
@@ -96,6 +96,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
     networks:
       - app-network
     user: postgres
@@ -112,20 +113,7 @@ services:
   redis:
     image: redis:7-alpine
     command: >
-      redis-server
-      --protected-mode no
-      --save ""
-      --appendonly no
-      --loglevel notice
-      --rename-command FLUSHDB ""
-      --rename-command FLUSHALL ""
-      --rename-command CONFIG ""
-      --rename-command SHUTDOWN ""
-      --rename-command DEBUG ""
-      --rename-command SLAVEOF ""
-      --rename-command REPLICAOF ""
-      --rename-command CLUSTER ""
-      --requirepass ""
+      redis-server --protected-mode no --save "" --appendonly no --loglevel notice --rename-command FLUSHDB "" --rename-command FLUSHALL "" --rename-command CONFIG "" --rename-command SHUTDOWN "" --rename-command DEBUG "" --rename-command SLAVEOF "" --rename-command REPLICAOF "" --rename-command CLUSTER "" --requirepass ""
     ports:
       - "6379:6379"
     networks:
@@ -138,6 +126,37 @@ services:
     tmpfs:
       - /data:uid=1000,gid=1000,mode=1777
 
+  # ── Umami Analytics ─────────────────────────────────────────────────────────
+  # Panel: https://analytics.localhost  (requiere entrada en /etc/hosts o DNS)
+  # Primer arranque: crea cuenta admin en el panel, luego obtén el WEBSITE_ID
+  # y agrégalo en .env como UMAMI_WEBSITE_ID y en frontend/index.html.
+  umami:
+    image: ghcr.io/umami-software/umami:postgresql-latest
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-wati_user}:${POSTGRES_PASSWORD}@postgres:5432/umami_db
+      DATABASE_TYPE: postgresql
+      APP_SECRET: ${UMAMI_APP_SECRET:-change_me_in_env_file}
+      DISABLE_TELEMETRY: "1"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # ── Dozzle: Log Viewer ──────────────────────────────────────────────────────
+  # Acceso: http://localhost:8080  (solo accesible desde la máquina local / VPN)
+  # Login requerido: usuario y contraseña definidos en .env
+  dozzle:
+    image: amir20/dozzle:latest
+    environment:
+      DOZZLE_USERNAME: ${DOZZLE_USERNAME:-admin}
+      DOZZLE_PASSWORD: ${DOZZLE_PASSWORD:-change_me_in_env_file}
+      DOZZLE_NO_ANALYTICS: "true"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
+    networks:
+      - app-network
 
 networks:
   app-network:

@@ -1,6 +1,8 @@
 import express from 'express';
 import { FavoriteRecipe } from '../models/FavoriteRecipe.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { ActivityLogger } from '../services/ActivityLogger.js';
+
 
 const router = express.Router();
 
@@ -42,6 +44,12 @@ router.post('/', authenticateToken, async (req, res) => {
         title,
         image
       });
+      // ── Telemetría: ADD_FAVORITE ──────────────────────────────────────────
+      ActivityLogger.log('ADD_FAVORITE', { recipeId, title }, {
+        userId: req.user.id,
+        ip: req.ip
+      });
+      // ───────────────────────────────────────────────────────
       return res.status(201).json({ favorited: true, data: favorite });
     }
   } catch (error) {

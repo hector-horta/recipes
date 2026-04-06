@@ -8,6 +8,7 @@ import { transcribeAudio } from '../services/GroqWhisper.js';
 import { saveIngestLog } from '../middleware/recoveryLogger.js';
 import { RecipeProvider } from '../services/RecipeProvider.js';
 import { normalizeTags } from '../utils/tagTranslations.js';
+import { ActivityLogger } from '../services/ActivityLogger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -83,6 +84,13 @@ router.post('/image', async (req, res, next) => {
 
     await RecipeProvider.clearCache();
 
+    // ── Telemetría de ingesta ───────────────────────────────────────────
+    ActivityLogger.log('INGEST_SUCCESS', {
+      source_type: 'ocr_image',
+      title_es: recipeData.title_es
+    });
+    // ───────────────────────────────────────────────────────────────────
+
     res.status(200).json({
       status: 'processed',
       recipe: recipe.toJSON(),
@@ -90,6 +98,8 @@ router.post('/image', async (req, res, next) => {
       tripleCheck: buildTripleCheckMenu(recipeData)
     });
   } catch (error) {
+    ActivityLogger.log('INGEST_FAIL', { source_type: 'ocr_image', error: error.message });
+    ActivityLogger.alertAsync(`⚠️ *[INGEST FAIL] OCR Single Image*\n\`${error.message.slice(0, 200)}\``);
     next(error);
   }
 });
@@ -151,6 +161,13 @@ router.post('/images', async (req, res, next) => {
 
     await RecipeProvider.clearCache();
 
+    // ── Telemetría de ingesta ───────────────────────────────────────────
+    ActivityLogger.log('INGEST_SUCCESS', {
+      source_type: 'ocr_image_dual',
+      title_es: recipeData.title_es
+    });
+    // ───────────────────────────────────────────────────────────────────
+
     res.status(200).json({
       status: 'processed',
       recipe: recipe.toJSON(),
@@ -158,6 +175,8 @@ router.post('/images', async (req, res, next) => {
       tripleCheck: buildTripleCheckMenu(recipeData)
     });
   } catch (error) {
+    ActivityLogger.log('INGEST_FAIL', { source_type: 'ocr_image_dual', error: error.message });
+    ActivityLogger.alertAsync(`⚠️ *[INGEST FAIL] OCR Dual Image*\n\`${error.message.slice(0, 200)}\``);
     next(error);
   }
 });
@@ -211,12 +230,21 @@ router.post('/text', async (req, res, next) => {
 
     await RecipeProvider.clearCache();
 
+    // ── Telemetría de ingesta ───────────────────────────────────────────
+    ActivityLogger.log('INGEST_SUCCESS', {
+      source_type: req.body.sourceType || 'manual',
+      title_es: recipeData.title_es
+    });
+    // ───────────────────────────────────────────────────────────────────
+
     res.status(200).json({
       status: 'processed',
       recipe: recipe.toJSON(),
       tripleCheck: buildTripleCheckMenu(recipeData)
     });
   } catch (error) {
+    ActivityLogger.log('INGEST_FAIL', { source_type: 'text', error: error.message });
+    ActivityLogger.alertAsync(`⚠️ *[INGEST FAIL] Texto*\n\`${error.message.slice(0, 200)}\``);
     next(error);
   }
 });
