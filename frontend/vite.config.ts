@@ -16,7 +16,10 @@ export default defineConfig(({ mode }) => {
       {
         name: 'dynamic-csp',
         transformIndexHtml(html) {
-          return html.replace(/__CSP_CONNECT_SRC__/g, apiHost);
+          const umamiWebsiteId = env.UMAMI_WEBSITE_ID || '';
+          return html
+            .replace(/__CSP_CONNECT_SRC__/g, apiHost)
+            .replace(/__UMAMI_WEBSITE_ID__/g, umamiWebsiteId);
         }
       }
     ],
