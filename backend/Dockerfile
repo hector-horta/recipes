@@ -5,7 +5,8 @@
 FROM node:20-alpine
 
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodeapp -u 1001 -G nodejs
+    adduser -S nodeapp -u 1001 -G nodejs && \
+    apk add --no-cache su-exec
 
 WORKDIR /app
 
@@ -15,9 +16,7 @@ COPY package.json ./
 RUN mkdir -p /app/ingest_logs /app/public/recipes && \
     chown -R nodeapp:nodejs /app
 
-USER nodeapp
-
 EXPOSE 5001
 
-# At container startup: always run npm install inside the container
-CMD ["sh", "-c", "npm install && node server.js"]
+# At container startup: install deps as root, fix permissions, then run as non-root
+CMD ["sh", "-c", "npm install && chown -R nodeapp:nodejs /app/node_modules && exec su-exec nodeapp node server.js"]

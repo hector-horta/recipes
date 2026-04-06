@@ -5,21 +5,19 @@
 FROM node:20-alpine AS base
 
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodeapp -u 1001 -G nodejs
+    adduser -S nodeapp -u 1001 -G nodejs && \
+    apk add --no-cache su-exec
 
 WORKDIR /app
 
 # Copy only manifests first so Docker can cache the install layer
 COPY package.json ./
 
-# Switch to non-root user
-USER nodeapp
-
 EXPOSE 5173
 
-# At container startup: always run npm install inside the container
+# At container startup: install deps as root, fix permissions, then run as non-root
 # so the correct platform binaries are used regardless of the host OS.
-CMD ["sh", "-c", "npm install --include=optional && npm run dev -- --host"]
+CMD ["sh", "-c", "npm install --include=optional && chown -R nodeapp:nodejs /app/node_modules && exec su-exec nodeapp npm run dev -- --host"]
 
 # ── Production build (optional) ─────────────────────────────────────────────
 FROM base AS build
