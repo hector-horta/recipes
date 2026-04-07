@@ -7,6 +7,7 @@ import { PageHeader } from '../components/recipe/PageHeader';
 import { RecipeGrid } from '../components/recipe/RecipeGrid';
 import { Pagination } from '../components/recipe/Pagination';
 import { PageLayout } from '../components/recipe/PageLayout';
+import { SearchFeedback } from '../components/recipe/SearchFeedback';
 
 interface RecipePageProps {
   onSelectRecipe: (recipe: Recipe) => void;
@@ -48,6 +49,7 @@ export function RecipePage({
 
   const isLoading = (hookLoading || favsLoading || isPending) && displayRecipes.length === 0;
   const isRefreshing = (hookLoading || isPending) && displayRecipes.length > 0;
+  const showSearchFeedback = isSearchActive && !isLoading && !isRefreshing && displayRecipes.length === 0;
 
   return (
     <>
@@ -73,6 +75,8 @@ export function RecipePage({
           onToggleFavorite={toggleFavorite}
           onSelectRecipe={onSelectRecipe}
         />
+
+        {showSearchFeedback && <SearchFeedback searchTerm={searchQuery} />}
 
         <Pagination
           currentPage={currentPage}
