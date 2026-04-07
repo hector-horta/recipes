@@ -1,5 +1,6 @@
 import express from 'express';
 import { FavoriteRecipe } from '../models/FavoriteRecipe.js';
+import { Recipe } from '../models/Recipe.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { ActivityLogger } from '../services/ActivityLogger.js';
 
@@ -8,8 +9,16 @@ const router = express.Router();
 
 router.get('/', authenticateToken, async (req, res) => {
   try {
+    // Asociación dinámica para evitar imports circulares
+    FavoriteRecipe.belongsTo(Recipe, { foreignKey: 'recipe_id', as: 'recipe', constraints: false });
+
     const favorites = await FavoriteRecipe.findAll({
       where: { user_id: req.user.id },
+      include: [{ 
+        model: Recipe, 
+        as: 'recipe', 
+        attributes: ['id', 'title_es', 'title_en', 'ingredients', 'steps', 'prep_time_minutes', 'cook_time_minutes', 'sibo_risk_level', 'sibo_alerts', 'tags', 'image_url', 'image_filename'] 
+      }],
       order: [['created_at', 'DESC']]
     });
     res.json(favorites);
