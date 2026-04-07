@@ -87,7 +87,3 @@ cd backend && npm install && npm run coverage
 
 ---
 **Wati** — *Seguridad alimentaria impulsada por IA, ahora multicapa.*
-
-
----
-**Wati** — *Seguridad alimentaria impulsada por IA, ahora multicapa.*
