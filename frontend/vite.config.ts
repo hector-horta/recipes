@@ -5,24 +5,12 @@ import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, path.resolve(__dirname, '../'), '');
   const apiHost = env.VITE_API_URL || 'http://localhost:5001';
 
   return {
-    plugins: [
-      react(),
-      {
-        name: 'dynamic-csp',
-        transformIndexHtml(html) {
-          const umamiWebsiteId = env.UMAMI_WEBSITE_ID || '';
-          return html
-            .replace(/__CSP_CONNECT_SRC__/g, apiHost)
-            .replace(/__UMAMI_WEBSITE_ID__/g, umamiWebsiteId);
-        }
-      }
-    ],
+    plugins: [react()],
     server: {
       host: '0.0.0.0',
       allowedHosts: true,

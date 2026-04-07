@@ -11,19 +11,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
-  <!-- 
-      Content Security Policy (CSP):
-      - Impide llamadas a cualquier API externa de terceros directamente.
-      - Bloquea iFrames, Plugins u Objectos incrustados.
-      - Fuerz siempre la actualización a HTTPS.
-      
-      Note: For local Vite dev, inline scripts and styles are needed, 
-      so the CSP might cause console errors if strictly enforced during dev.
-      We added 'unsafe-inline' and 'unsafe-eval' to allow Vite HMR.
-    -->
   <meta http-equiv="Content-Security-Policy" content="
       default-src 'self'; 
-      connect-src 'self' ws: wss: http://analytics.localhost __CSP_CONNECT_SRC__; 
+      connect-src 'self' ws: wss: http://analytics.localhost http://localhost:5001; 
       script-src 'self' 'unsafe-inline' 'unsafe-eval' http://analytics.localhost; 
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
       font-src 'self' data: https://fonts.gstatic.com;
@@ -31,9 +21,18 @@
       object-src 'none';
     ">
 
-  <!-- Umami Analytics -->
-  <script async src="http://analytics.localhost/script.js"
-    data-website-id="__UMAMI_WEBSITE_ID__"></script>
+  <script>
+    (function() {
+      var websiteId = '66223814-b2c2-4abd-b891-efff3f78d794';
+      if (websiteId && websiteId !== '66223814-b2c2-4abd-b891-efff3f78d794') {
+        var script = document.createElement('script');
+        script.async = true;
+        script.src = 'http://analytics.localhost/script.js';
+        script.setAttribute('data-website-id', websiteId);
+        document.head.appendChild(script);
+      }
+    })();
+  </script>
 </head>
 
 <body>
