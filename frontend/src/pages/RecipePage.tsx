@@ -67,16 +67,18 @@ export function RecipePage({
           onOpenLogin={onOpenLogin}
         />
 
-        <RecipeGrid
-          recipes={displayRecipes}
-          isLoading={isLoading}
-          isPending={isPending || hookLoading}
-          isFavorited={isFavorited}
-          onToggleFavorite={toggleFavorite}
-          onSelectRecipe={onSelectRecipe}
-        />
+        {!showSearchFeedback && (
+          <RecipeGrid
+            recipes={displayRecipes}
+            isLoading={isLoading}
+            isPending={isPending || hookLoading}
+            isFavorited={isFavorited}
+            onToggleFavorite={toggleFavorite}
+            onSelectRecipe={onSelectRecipe}
+          />
+        )}
 
-        {showSearchFeedback && <SearchFeedback searchTerm={searchQuery} />}
+        {showSearchFeedback && <SearchFeedback searchTerm={searchQuery} onGoHome={() => setSearchQuery('')} />}
 
         <Pagination
           currentPage={currentPage}

@@ -17,6 +17,7 @@ const corsOptions = {
     const allowed = [
       process.env.FRONTEND_URL || 'http://localhost:5173',
       'http://localhost:5173',
+      'http://localhost',
       'http://192.168.0.187:5173',
       'http://172.18.0.5:5173'
     ];

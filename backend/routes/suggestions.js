@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { SearchLog } from '../models/SearchLog.js';
 import { ActivityLogger } from '../services/ActivityLogger.js';
+import { User } from '../models/User.js';
 
 const router = Router();
 
@@ -13,12 +14,22 @@ async function sendTelegramSuggestion(term, userId) {
     return;
   }
 
-  const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(term + ' recipe')}`;
+  let userInfo = 'anonymous';
+  if (userId) {
+    try {
+      const user = await User.findByPk(userId, { attributes: ['display_name', 'email'] });
+      if (user) {
+        userInfo = `${user.display_name} (${user.email})`;
+      }
+    } catch (err) {
+      console.error('[Suggestions] Failed to fetch user info:', err.message);
+    }
+  }
+
   const message =
     `👨‍🍳 *Chef Suggestion*\n\n` +
     `A user searched for *"${term}"* and wants the recipe.\n\n` +
-    `🔍 [Search on Google](${googleSearchUrl})\n` +
-    `👤 User ID: \`${userId || 'anonymous'}\``;
+    `👤 ${userInfo}`;
 
   try {
     const res = await fetch(
@@ -29,8 +40,7 @@ async function sendTelegramSuggestion(term, userId) {
         body: JSON.stringify({
           chat_id: TELEGRAM_USER_ID,
           text: message,
-          parse_mode: 'Markdown',
-          disable_web_page_preview: false
+          parse_mode: 'Markdown'
         })
       }
     );

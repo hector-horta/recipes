@@ -120,9 +120,9 @@
     "title": "We couldn't find that recipe",
     "desc": "We didn't find \"{{term}}\" in our catalog, but our chef can learn it. Would you like to suggest it?",
     "suggestButton": "Suggest to the Chef",
-    "googleButton": "Search on Google",
     "submitting": "Sending...",
     "submittedTitle": "Suggestion Sent!",
-    "submittedDesc": "Thanks! We'll look into \"{{term}}\" and consider adding it to the catalog."
+    "submittedDesc": "Thanks! We'll look into \"{{term}}\" and consider adding it to the catalog.",
+    "backToHome": "Back to Home"
   }
 }
