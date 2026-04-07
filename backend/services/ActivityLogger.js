@@ -1,4 +1,5 @@
 import { ActivityLog } from '../models/ActivityLog.js';
+import { SearchLog } from '../models/SearchLog.js';
 
 const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_USER_ID = process.env.TELEGRAM_USER_ID;
@@ -30,6 +31,18 @@ export class ActivityLogger {
     }).catch(err =>
       console.error(`[ActivityLogger] DB write failed (${action}):`, err.message)
     );
+
+    if (failedSearch && metadata.query) {
+      SearchLog.create({
+        term: metadata.query,
+        status: 'failed',
+        conversion: false,
+        user_id: userId,
+        ip
+      }).catch(err =>
+        console.error(`[ActivityLogger] SearchLog write failed:`, err.message)
+      );
+    }
   }
 
   /**

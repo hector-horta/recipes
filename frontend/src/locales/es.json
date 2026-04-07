@@ -115,5 +115,15 @@
     "cornDesc": "Jarabe de maíz, dextrosa",
     "sibo": "SIBO",
     "siboDesc": "Dieta baja en FODMAPs"
+  },
+  "searchFeedback": {
+    "title": "No encontramos esa receta",
+    "desc": "No encontramos \"{{term}}\" en nuestro catálogo, pero nuestro chef puede aprenderla. ¿Quieres sugerirla?",
+    "suggestButton": "Sugerirle al Chef",
+    "submitting": "Enviando...",
+    "submittedTitle": "¡Sugerencia Enviada!",
+    "submittedDesc": "¡Gracias! Revisaremos \"{{term}}\" y consideraremos agregarla al catálogo.",
+    "backToHome": "Volver al Inicio",
+    "dismissButton": "Ahora no"
   }
 }

@@ -17,6 +17,7 @@ const corsOptions = {
     const allowed = [
       process.env.FRONTEND_URL || 'http://localhost:5173',
       'http://localhost:5173',
+      'http://localhost',
       'http://192.168.0.187:5173',
       'http://172.18.0.5:5173'
     ];
@@ -33,6 +34,7 @@ import authRoutes from './routes/auth.js';
 import favoritesRoutes from './routes/favorites.js';
 import ingestRoutes from './routes/ingest.js';
 import adminRoutes from './routes/admin.js';
+import suggestionRoutes from './routes/suggestions.js';
 import { connectDB, sequelize } from './config/database.js';
 import { connectRedis } from './config/redis.js';
 import { ActivityLogger } from './services/ActivityLogger.js';
@@ -81,6 +83,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/favorites', favoritesRoutes);
 app.use('/api/ingest', ingestRoutes);
 app.use('/admin', adminRoutes);
+app.use('/api/suggestions', suggestionRoutes);
 
 // Data previously hardcoded in frontend
 const INTOLERANCE_CATALOG = [
@@ -153,15 +156,6 @@ app.get('/api/recipes', optionalAuthenticateToken, recipeLimiter, async (req, re
       ip: req.ip,
       failedSearch: isEmpty
     });
-
-    // Alerta Telegram cuando no hay resultados
-    if (isEmpty && query) {
-      ActivityLogger.alertAsync(
-        `🔍 *Búsqueda sin resultados:* "${query}"\n\n` +
-        `_El usuario buscó algo que no existe en la base de datos._\n` +
-        `Considerá agregar una receta con este término.`
-      );
-    }
     // ─────────────────────────────────────────────────────────────────────
 
     res.json(data);
