@@ -47,13 +47,12 @@ export function TopNav({ onOpenLogin, onOpenOnboarding }: TopNavProps) {
               >
                 {t('nav.allergies')}
               </Button>
-              <div className="flex items-center gap-3 pl-3 border-l border-brand-sage/20">
-                <div className="w-9 h-9 rounded-full bg-brand-mint/20 flex items-center justify-center border border-brand-mint/30">
-                  <UserCircle className="w-6 h-6 text-brand-forest" />
+              <div className="flex items-center gap-2 pl-3 border-l border-brand-sage/20">
+                <div className="w-8 h-8 rounded-full bg-brand-mint/20 flex items-center justify-center border border-brand-mint/30 shrink-0">
+                  <UserCircle className="w-5 h-5 text-brand-forest" />
                 </div>
-                <div className="hidden sm:block">
-                  <p className="text-xs font-extrabold text-brand-forest leading-tight">{user.displayName}</p>
-                  <Button
+                <p className="text-xs font-extrabold text-brand-forest leading-tight whitespace-nowrap max-w-[100px] truncate">{user.displayName}</p>
+                <Button
                   variant="link"
                   onClick={logout}
                   className="flex items-center gap-1 text-[10px] font-bold text-brand-text-muted hover:text-danger transition-colors p-0 h-auto"
@@ -61,7 +60,6 @@ export function TopNav({ onOpenLogin, onOpenOnboarding }: TopNavProps) {
                   <LogOut size={10} />
                   {t('nav.logout')}
                 </Button>
-                </div>
               </div>
             </>
           )}
