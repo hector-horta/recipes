@@ -36,6 +36,36 @@ function App() {
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [activeModal, setActiveModal] = useState<ModalState>('none');
 
+  // Handle browser back/forward buttons
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      const recipeId = event.state?.recipeId;
+      if (recipeId) {
+        const stored = sessionStorage.getItem(`recipe_${recipeId}`);
+        if (stored) {
+          setSelectedRecipe(JSON.parse(stored));
+        }
+      } else {
+        setSelectedRecipe(null);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const handleSelectRecipe = (recipe: Recipe) => {
+    sessionStorage.setItem(`recipe_${recipe.id}`, JSON.stringify(recipe));
+    setSelectedRecipe(recipe);
+    history.pushState({ recipeId: recipe.id }, '');
+  };
+
+  const handleBack = () => {
+    if (selectedRecipe) {
+      history.back();
+    }
+  };
+
   const handleLoginSuccess = (userData?: any) => {
     const needsOnboarding = userData ? !userData.onboardingComplete : !user?.onboardingComplete;
     
@@ -64,12 +94,12 @@ function App() {
       {selectedRecipe ? (
         <RecipeDetailPage
           recipe={selectedRecipe}
-          onBack={() => setSelectedRecipe(null)}
+          onBack={handleBack}
         />
       ) : (
         <RecipePage
           {...searchProps}
-          onSelectRecipe={setSelectedRecipe}
+          onSelectRecipe={handleSelectRecipe}
           onOpenLogin={() => setActiveModal('login')}
           onOpenOnboarding={() => setActiveModal('onboarding')}
         />
