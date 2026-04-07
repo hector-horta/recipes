@@ -151,11 +151,13 @@ app.get('/api/recipes', optionalAuthenticateToken, recipeLimiter, async (req, re
     const query = req.query.query?.trim() || '';
     const isEmpty = !data || data.length === 0;
 
-    ActivityLogger.log('SEARCH', { query }, {
-      userId: req.user?.id || null,
-      ip: req.ip,
-      failedSearch: isEmpty
-    });
+    if (query.length >= 3) {
+      ActivityLogger.log('SEARCH', { query }, {
+        userId: req.user?.id || null,
+        ip: req.ip,
+        failedSearch: isEmpty
+      });
+    }
     // ─────────────────────────────────────────────────────────────────────
 
     res.json(data);

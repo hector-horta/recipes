@@ -1,6 +1,6 @@
 
 import { useTranslation } from 'react-i18next';
-import { Search, AlertCircle, Globe, RefreshCw, Sparkles } from 'lucide-react';
+import { Search, AlertCircle, Globe, RefreshCw, Sparkles, Loader2 } from 'lucide-react';
 import { useAuth } from '../../AuthContext';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -14,6 +14,7 @@ interface PageHeaderProps {
   isQuotaExhausted: boolean;
   showLoader: boolean;
   isRefreshing: boolean;
+  isSearching: boolean;
   onRefresh: () => void;
   onOpenLogin: () => void;
 }
@@ -26,6 +27,7 @@ export function PageHeader({
   isQuotaExhausted,
   showLoader,
   isRefreshing,
+  isSearching,
   onRefresh,
   onOpenLogin
 }: PageHeaderProps) {
@@ -57,8 +59,13 @@ export function PageHeader({
               placeholder={t('home.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              leftIcon={<Search className="w-4 h-4" />}
+              leftIcon={isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
             />
+            {isSearching && (
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-brand-teal/70 font-medium">
+                {t('common.searching')}
+              </span>
+            )}
           </div>
 
           {isQuotaExhausted && (
@@ -69,7 +76,7 @@ export function PageHeader({
           )}
 
           {/* Status Indicator (Online Search) */}
-          {showLoader && (
+          {showLoader && !isSearching && (
             <div className="mt-4 flex items-center gap-2.5 text-brand-teal/80 text-[10px] sm:text-xs font-black uppercase tracking-widest animate-pulse">
               <Globe className="w-3.5 h-3.5 animate-[spin_3s_linear_infinite]" />
               <span>{t('common.searching')}</span>
