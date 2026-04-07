@@ -20,6 +20,13 @@ export function SearchFeedback({ searchTerm, onGoHome }: SearchFeedbackProps) {
     onGoHome();
   };
 
+  const handleDismiss = () => {
+    if (typeof window !== 'undefined' && (window as any).umami) {
+      (window as any).umami.track('suggest_dismiss', { term: searchTerm });
+    }
+    onGoHome();
+  };
+
   if (submitted) {
     return (
       <div className="bg-brand-mint/10 border border-brand-mint/30 rounded-3xl p-8 max-w-md mx-auto text-center animate-in fade-in zoom-in">
@@ -53,23 +60,33 @@ export function SearchFeedback({ searchTerm, onGoHome }: SearchFeedbackProps) {
         {t('searchFeedback.desc', { term: searchTerm })}
       </p>
 
-      <button
-        onClick={() => suggestToChef(searchTerm, user?.id)}
-        disabled={isSubmitting}
-        className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-brand-forest text-white font-semibold rounded-xl hover:bg-brand-forest/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-      >
-        {isSubmitting ? (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin" />
-            {t('searchFeedback.submitting')}
-          </>
-        ) : (
-          <>
-            <ChefHat className="w-4 h-4" />
-            {t('searchFeedback.suggestButton')}
-          </>
-        )}
-      </button>
+      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+        <button
+          onClick={() => suggestToChef(searchTerm, user?.id)}
+          disabled={isSubmitting}
+          className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-brand-forest text-white font-semibold rounded-xl hover:bg-brand-forest/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              {t('searchFeedback.submitting')}
+            </>
+          ) : (
+            <>
+              <ChefHat className="w-4 h-4" />
+              {t('searchFeedback.suggestButton')}
+            </>
+          )}
+        </button>
+
+        <button
+          onClick={handleDismiss}
+          className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white border border-brand-sage/30 text-brand-text-muted font-semibold rounded-xl hover:bg-brand-sage/10 transition-colors text-sm"
+        >
+          <Home className="w-4 h-4" />
+          {t('searchFeedback.dismissButton')}
+        </button>
+      </div>
 
       {error && (
         <p className="text-red-500 text-xs font-medium mt-3">

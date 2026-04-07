@@ -123,6 +123,7 @@
     "submitting": "Enviando...",
     "submittedTitle": "¡Sugerencia Enviada!",
     "submittedDesc": "¡Gracias! Revisaremos \"{{term}}\" y consideraremos agregarla al catálogo.",
-    "backToHome": "Volver al Inicio"
+    "backToHome": "Volver al Inicio",
+    "dismissButton": "Ahora no"
   }
 }

@@ -123,6 +123,7 @@
     "submitting": "Sending...",
     "submittedTitle": "Suggestion Sent!",
     "submittedDesc": "Thanks! We'll look into \"{{term}}\" and consider adding it to the catalog.",
-    "backToHome": "Back to Home"
+    "backToHome": "Back to Home",
+    "dismissButton": "Not now"
   }
 }

@@ -42,12 +42,13 @@ const authHeaders = (): Record<string, string> => {
 };
 
 function mapProfileData(data: any): UserProfile {
+  const { id: _profileId, ...profileWithoutId } = data.profile || {};
   return {
     id: data.id,
     email: data.email,
     displayName: data.displayName,
     avatarUrl: data.avatarUrl,
-    ...data.profile,
+    ...profileWithoutId,
     onboardingComplete: data.profile?.onboarding_completed || false
   };
 }
