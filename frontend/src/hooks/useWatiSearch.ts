@@ -29,15 +29,22 @@ export function useWatiSearch() {
     retry: 1,
   });
 
-  // Umami Event Tracking: search_success
+  // Umami Event Tracking: search_success / search_failed
   useEffect(() => {
-    if (results.length > 0 && debouncedQuery.trim().length >= 3) {
-      if (typeof window !== 'undefined' && (window as any).umami) {
-        (window as any).umami.track('search_success', {
-          query: debouncedQuery.trim(),
-          resultsCount: results.length
-        });
-      }
+    const trimmedQuery = debouncedQuery.trim();
+    if (trimmedQuery.length < 3) return;
+    if (typeof window === 'undefined' || !(window as any).umami) return;
+
+    if (results.length > 0) {
+      (window as any).umami.track('search_success', {
+        query: trimmedQuery,
+        resultsCount: results.length
+      });
+    } else {
+      (window as any).umami.track('search_failed', {
+        query: trimmedQuery,
+        resultsCount: 0
+      });
     }
   }, [results.length, debouncedQuery]);
 
