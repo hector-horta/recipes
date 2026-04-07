@@ -1,17 +1,16 @@
 import express from 'express';
-import { FavoriteRecipe } from '../models/FavoriteRecipe.js';
+import { FavoriteRecipe, associateWithRecipe } from '../models/FavoriteRecipe.js';
 import { Recipe } from '../models/Recipe.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { ActivityLogger } from '../services/ActivityLogger.js';
 
+// Initialize association once
+associateWithRecipe(Recipe);
 
 const router = express.Router();
 
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    // Asociación dinámica para evitar imports circulares
-    FavoriteRecipe.belongsTo(Recipe, { foreignKey: 'recipe_id', as: 'recipe', constraints: false });
-
     const favorites = await FavoriteRecipe.findAll({
       where: { user_id: req.user.id },
       include: [{ 

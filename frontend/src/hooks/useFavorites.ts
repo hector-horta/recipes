@@ -49,6 +49,22 @@ export function useFavorites() {
       if (!res.ok) throw new Error('Failed to toggle favorite');
       return res.json();
     },
+    onSuccess: (data, recipe) => {
+      // Umami Event Tracking
+      if (typeof window !== 'undefined' && (window as any).umami) {
+        if (data?.favorited) {
+          (window as any).umami.track('recipe_favorited', {
+            title: recipe.title,
+            id: recipe.id
+          });
+        } else {
+          (window as any).umami.track('recipe_unfavorited', {
+            title: recipe.title,
+            id: recipe.id
+          });
+        }
+      }
+    },
     onMutate: async (recipe) => {
       await queryClient.cancelQueries({ queryKey: ['favorites', user?.id] });
       const previous = queryClient.getQueryData<FavoriteItem[]>(['favorites', user?.id]) ?? [];

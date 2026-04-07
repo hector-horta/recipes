@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Recipe } from '../types/recipe';
 import { useDebounce } from './useDebounce';
@@ -28,6 +28,18 @@ export function useWatiSearch() {
     refetchOnWindowFocus: true,
     retry: 1,
   });
+
+  // Umami Event Tracking: search_success
+  useEffect(() => {
+    if (results.length > 0 && debouncedQuery.trim().length >= 3) {
+      if (typeof window !== 'undefined' && (window as any).umami) {
+        (window as any).umami.track('search_success', {
+          query: debouncedQuery.trim(),
+          resultsCount: results.length
+        });
+      }
+    }
+  }, [results.length, debouncedQuery]);
 
   const isSearching = isFetching && query !== debouncedQuery;
   const isPending = isFetching && results.length === 0 && !isSearching;

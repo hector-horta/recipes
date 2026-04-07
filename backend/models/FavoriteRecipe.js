@@ -39,3 +39,11 @@ export const FavoriteRecipe = sequelize.define('FavoriteRecipe', {
 // Associations
 User.hasMany(FavoriteRecipe, { foreignKey: 'user_id', as: 'favorites' });
 FavoriteRecipe.belongsTo(User, { foreignKey: 'user_id' });
+
+// Lazy association to Recipe (avoids circular imports)
+let _recipeAssociationDefined = false;
+export function associateWithRecipe(Recipe) {
+  if (_recipeAssociationDefined) return;
+  FavoriteRecipe.belongsTo(Recipe, { foreignKey: 'recipe_id', as: 'recipe', constraints: false });
+  _recipeAssociationDefined = true;
+}
