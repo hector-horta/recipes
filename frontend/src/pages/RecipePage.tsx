@@ -18,6 +18,7 @@ interface RecipePageProps {
   results: Recipe[];
   isLoading: boolean;
   isPending: boolean;
+  isSearching: boolean;
   isQuotaExhausted: boolean;
   refresh: () => void;
 }
@@ -31,6 +32,7 @@ export function RecipePage({
   results: recipes,
   isLoading: hookLoading,
   isPending,
+  isSearching,
   isQuotaExhausted,
   refresh
 }: RecipePageProps) {
@@ -63,6 +65,7 @@ export function RecipePage({
           isQuotaExhausted={isQuotaExhausted}
           showLoader={hookLoading || isPending}
           isRefreshing={isRefreshing}
+          isSearching={isSearching}
           onRefresh={refresh}
           onOpenLogin={onOpenLogin}
         />

@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Recipe } from '../types/recipe';
+import { useDebounce } from './useDebounce';
 
 async function fetchRecipes(query: string): Promise<Recipe[]> {
   const params = new URLSearchParams();
@@ -15,27 +16,21 @@ async function fetchRecipes(query: string): Promise<Recipe[]> {
 export function useWatiSearch() {
   const queryClient = useQueryClient();
   const [query, setQuery] = useState('');
-  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const debouncedQuery = useDebounce(query, 500);
+
+  const shouldSearch = debouncedQuery.trim().length === 0 || debouncedQuery.trim().length >= 3;
 
   const { data: results = [], isLoading, isFetching } = useQuery({
     queryKey: ['recipes', debouncedQuery],
     queryFn: () => fetchRecipes(debouncedQuery),
+    enabled: shouldSearch,
     staleTime: 1000 * 30,
     refetchOnWindowFocus: true,
     retry: 1,
   });
 
-  useEffect(() => {
-    const trimmed = query.trim();
-    if (trimmed.length === 0 || trimmed.length >= 3) {
-      const timer = setTimeout(() => {
-        setDebouncedQuery(query);
-      }, 600);
-      return () => clearTimeout(timer);
-    }
-  }, [query]);
-
-  const isPending = isFetching && results.length === 0;
+  const isSearching = isFetching && query !== debouncedQuery;
+  const isPending = isFetching && results.length === 0 && !isSearching;
 
   const refresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['recipes', debouncedQuery] });
@@ -46,6 +41,7 @@ export function useWatiSearch() {
     setQuery,
     results,
     isLoading,
+    isSearching,
     isPending,
     error: null,
     isQuotaExhausted: false,
