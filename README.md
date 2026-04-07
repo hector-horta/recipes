@@ -99,6 +99,7 @@ cd backend && npm install && npm run coverage
 | Documento | Descripción |
 |---|---|
 | [ArchitectureNotes.md](./docs/ArchitectureNotes.md) | Notas de arquitectura: filtrado de recetas, Express 5, modos MOCK/LIVE, TLS post-cuántico. |
+| [FeatureDevelopmentGuide.md](./docs/FeatureDevelopmentGuide.md) | Manual para desarrollar nuevos features: DB, Backend, Frontend, Seguridad y Analytics. |
 | [ProductionChecklist.md](./docs/ProductionChecklist.md) | Checklist paso a paso para poner la aplicación en producción. |
 | [HCP_VAULT_SETUP.md](./docs/HCP_VAULT_SETUP.md) | Guía de configuración para HCP Vault Secrets y Terraform. |
 
