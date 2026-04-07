@@ -11,17 +11,26 @@ dotenv.config(); // Fallback to local .env if exists
 const app = express();
 const port = process.env.PORT || 5001;
 
-// Enable CORS for frontend origins
+// Enable CORS for frontend origins (localhost + local network)
 const corsOptions = {
   origin: function (origin, callback) {
-    const allowed = [
+    // Allow localhost, local network IPs, and undefined (mobile apps, direct requests)
+    const allowedHosts = [
       process.env.FRONTEND_URL || 'http://localhost:5173',
       'http://localhost:5173',
       'http://localhost',
-      'http://192.168.0.187:5173',
-      'http://172.18.0.5:5173'
+      'http://127.0.0.1:5173'
     ];
-    if (!origin || allowed.includes(origin)) {
+    
+    // Allow local network IPs (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+    const isLocalhost = !origin || allowedHosts.includes(origin);
+    const isLocalNetwork = origin && (
+      /^https?:\/\/192\.168\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(origin) ||
+      /^https?:\/\/10\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(origin) ||
+      /^https?:\/\/172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(origin)
+    );
+    
+    if (isLocalhost || isLocalNetwork) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
