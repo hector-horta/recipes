@@ -24,7 +24,7 @@
   <script>
     (function() {
       var websiteId = '66223814-b2c2-4abd-b891-efff3f78d794';
-      if (websiteId && websiteId !== '66223814-b2c2-4abd-b891-efff3f78d794') {
+      if (websiteId && !websiteId.startsWith('__UMAMI_')) {
         var script = document.createElement('script');
         script.async = true;
         script.src = 'http://analytics.localhost/script.js';
