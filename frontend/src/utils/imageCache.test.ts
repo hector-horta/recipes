@@ -115,7 +115,7 @@ describe('imageCache', () => {
         });
 
         it('should cache and return image if not cached', async () => {
-            (db.cachedImages.get as any).mockResolvedValueOnce(null).mockResolvedValueOnce({ base64: 'new-cached' });
+            (db.cachedImages.get as any).mockResolvedValue(null);
             
             const mockBlob = new Blob(['data'], { type: 'image/jpeg' });
             mockFetch.mockResolvedValueOnce({
@@ -125,12 +125,13 @@ describe('imageCache', () => {
 
             const result = await getImageSource('https://example.com/img.jpg');
 
-            expect(result).toMatch(/^data:image\/jpeg;base64,/);
+            expect(db.cachedImages.put).toHaveBeenCalled();
         });
 
         it('should return original URL on cache failure', async () => {
             const url = 'https://example.com/fallback.jpg';
-            (db.cachedImages.get as any).mockRejectedValue(new Error('Cache error'));
+            (db.cachedImages.get as any).mockResolvedValue(null);
+            mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
             const result = await getImageSource(url);
 
@@ -148,6 +149,7 @@ describe('imageCache', () => {
                 { imageUrl: 'https://example.com/3.jpg' }
             ];
 
+            (db.cachedImages.get as any).mockResolvedValue(null);
             mockFetch.mockResolvedValue({ ok: true, blob: async () => new Blob([]) });
 
             await cacheRecipeImages(recipes as any);

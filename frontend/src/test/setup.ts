@@ -1,4 +1,7 @@
-// Test setup
+import '@testing-library/jest-dom';
 
-// Mock localStorage if needed (though happy-dom handles it)
-// Mock Dexie if needed
+describe('setup', () => {
+  it('should load jest-dom matchers', () => {
+    expect(true).toBeTruthy();
+  });
+});

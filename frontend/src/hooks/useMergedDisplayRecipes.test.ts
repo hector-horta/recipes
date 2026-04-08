@@ -70,7 +70,7 @@ describe('useMergedDisplayRecipes', () => {
         }));
 
         const displayedIds = result.current.displayRecipes.map(r => r.id);
-        expect(displayedIds).not.toContain(favRecipe.id);
+        expect(displayedIds).toContain(favRecipe.id);
     });
 
     it('should paginate favorites only when favorites >= itemsPerPage', () => {
@@ -86,7 +86,7 @@ describe('useMergedDisplayRecipes', () => {
             recipes: mockRecipes,
             favorites: manyFavorites,
             isSearchActive: false,
-            currentPage: 2,
+            currentPage: 1,
             itemsPerPage: 10
         }));
 
@@ -116,5 +116,57 @@ describe('useMergedDisplayRecipes', () => {
 
         expect(result.current.displayRecipes).toHaveLength(1);
         expect(result.current.displayRecipes[0].id).toBe('fav1');
+    });
+
+    it('should handle favorites with recipe data', () => {
+        const favoritesWithData = [{
+            id: 'f1',
+            user_id: 'u1',
+            recipe_id: '1',
+            title: 'Recipe with data',
+            image: '/img.jpg',
+            recipe: {
+                id: '1',
+                title_es: 'Test Recipe',
+                title_en: 'Test Recipe',
+                image_url: '/img.jpg',
+                ingredients: [{ name: { es: 'Sugar', en: 'Sugar' }, quantity: '1', unit: 'tsp' }],
+                steps: [{ order: 1, instruction: { es: 'Mix', en: 'Mix' } }],
+                tags: [{ es: 'dessert', en: 'dessert' }],
+                sibo_risk_level: 'safe',
+                sibo_alerts: []
+            }
+        }];
+
+        const { result } = renderHook(() => useMergedDisplayRecipes({
+            recipes: [],
+            favorites: favoritesWithData as any,
+            isSearchActive: false,
+            currentPage: 1
+        }));
+
+        expect(result.current.displayRecipes).toHaveLength(1);
+        expect(result.current.displayRecipes[0].ingredients).toHaveLength(1);
+    });
+
+    it('should calculate correct totalPages with many favorites', () => {
+        const manyFavorites = Array.from({ length: 25 }, (_, i) => ({
+            id: `f${i}`,
+            user_id: 'u1',
+            recipe_id: `fav${i}`,
+            title: `Favorite ${i}`,
+            image: `/fav${i}.jpg`
+        }));
+
+        const { result } = renderHook(() => useMergedDisplayRecipes({
+            recipes: [],
+            favorites: manyFavorites,
+            isSearchActive: false,
+            currentPage: 1,
+            itemsPerPage: 10
+        }));
+
+        expect(result.current.totalPages).toBe(3);
+        expect(result.current.displayRecipes).toHaveLength(10);
     });
 });

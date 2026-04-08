@@ -4,7 +4,6 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-// 1. Mock modules WITH factories that don't depend on external variables
 vi.mock('../models/User.js', () => ({
   User: {
     findOne: vi.fn(),
@@ -46,7 +45,6 @@ vi.mock('../middleware/auth.js', () => ({
   }
 }));
 
-// 2. Import routes and the mocked models themselves
 import authRoutes from './auth.js';
 import { User } from '../models/User.js';
 import { Profile } from '../models/Profile.js';
@@ -115,6 +113,28 @@ describe('Auth Routes', () => {
 
       expect(res.status).toBe(200);
       expect(mockDestroy).toHaveBeenCalled();
+    });
+
+    it('should return 404 if user not found on delete', async () => {
+      User.findByPk.mockResolvedValue(null);
+
+      const res = await request(app).delete('/api/auth/me');
+
+      expect(res.status).toBe(404);
+    });
+  });
+
+  describe('GET /api/auth/me', () => {
+    it('should respond', async () => {
+      const res = await request(app).get('/api/auth/me');
+      expect([401, 404]).toContain(res.status);
+    });
+  });
+
+  describe('POST /api/auth/logout', () => {
+    it('should respond', async () => {
+      const res = await request(app).post('/api/auth/logout');
+      expect([200, 404]).toContain(res.status);
     });
   });
 });
