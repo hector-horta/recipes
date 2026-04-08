@@ -5,7 +5,7 @@ import requests
 from groq import Groq
 
 # --- CONFIGURACIÓN ACTUALIZADA 2026 ---
-PRIMARY_MODEL = "meta/llama-4-maverick-17b-128e-instruct"
+PRIMARY_MODEL = "llama-3.3-70b-versatile"
 MAX_CHARS_PER_BATCH = 80000  # Aprovechando el contexto extendido de Llama 4
 WHITELIST_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx"]
 IGNORE_DIRS = ["node_modules", "dist", "build", "tests", ".github", "venv"]
