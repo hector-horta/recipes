@@ -108,7 +108,7 @@ def create_github_issue(title, body, model_used):
     return response.status_code == 201
 
 
-async def main():
+def main():
     log_to_summary("### 🚀 Resultado de la Auditoría Semanal (Groq Llama 3.1 70B)")
 
     # Obtener archivos filtrados
