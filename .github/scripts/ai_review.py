@@ -7,7 +7,7 @@ from groq import Groq
 
 # --- CONFIGURACIÓN DE ESTRATEGIA (MODIFICABLE) ---
 PRIMARY_MODEL = "llama-3.1-70b-versatile"
-MAX_CHARS_PER_BATCH = 12000
+MAX_CHARS_PER_BATCH = 80000
 WHITELIST_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx"]
 IGNORE_DIRS = [
     "node_modules",
