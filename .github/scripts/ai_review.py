@@ -41,27 +41,17 @@ def log_to_summary(text):
 
 
 def get_filtered_files():
-    """Obtiene archivos filtrados para revisión."""
-    try:
-        files_cmd = ["git", "diff", "--name-only", "HEAD@{7.days.ago}", "HEAD"]
-        result = subprocess.run(files_cmd, capture_output=True, text=True)
+    """Busca todos los archivos reales en el repo, ignorando lo que no sirve."""
+    filtered_files = []
+    for root, dirs, files in os.walk("."):
+        # Modifica dirs in-place para que os.walk no entre en carpetas ignoradas
+        dirs[:] = [d for d in dirs if d not in IGNORE_DIRS]
 
-        if result.returncode != 0:
-            files_cmd = ["git", "diff", "--name-only", "HEAD~1", "HEAD"]
-            result = subprocess.run(files_cmd, capture_output=True, text=True)
-
-        files_changed = result.stdout.splitlines()
-
-        filtered_files = []
-        for file_path in files_changed:
-            if any(file_path.endswith(ext) for ext in WHITELIST_EXTENSIONS):
-                if not any(dir_name in file_path for dir_name in IGNORE_DIRS):
-                    filtered_files.append(file_path)
-
-        return filtered_files
-    except Exception as e:
-        print(f"Error en Git: {e}")
-        return []
+        for file in files:
+            if any(file.endswith(ext) for ext in WHITELIST_EXTENSIONS):
+                file_path = os.path.relpath(os.path.join(root, file), ".")
+                filtered_files.append(file_path)
+    return filtered_files
 
 
 def get_file_content(file_path):
@@ -196,7 +186,7 @@ Si no hay problemas, responde: {"has_issues": false}"""
 
     except Exception as e:
         log_to_summary(f"❌ **ERROR CRÍTICO:** {str(e)}")
-        console_error(e)
+        print(e)
         sys.exit(1)
 
     if not success:
@@ -205,6 +195,4 @@ Si no hay problemas, responde: {"has_issues": false}"""
 
 
 if __name__ == "__main__":
-    import asyncio
-
-    asyncio.run(main())
+    main() 
