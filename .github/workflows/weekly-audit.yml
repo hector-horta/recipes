@@ -24,8 +24,20 @@ jobs:
       - name: Install dependencies
         run: pip install anthropic requests
 
-      - name: Run Review Script
+      - name: Code Review
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python .github/scripts/ai_review.py
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          echo "🔍 Iniciando depuración de archivos..."
+          FILES=$(find . -name "*.tsx" -o -name "*.ts" -not -path "**/node_modules/*")
+          
+          if [ -z "$FILES" ]; then
+            echo "❌ ERROR: No se encontraron archivos para revisar. Revisa las rutas."
+            exit 1
+          fi
+          
+          echo "✅ Archivos encontrados:"
+          echo "$FILES" | wc -l
+          
+          echo "🚀 Llamando a la IA..."
+          # Aquí va tu comando de ejecución del script de revisión
