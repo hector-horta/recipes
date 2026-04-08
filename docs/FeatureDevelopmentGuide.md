@@ -5,7 +5,7 @@ Esta guía define el flujo de trabajo estándar para implementar nuevas funciona
 ---
 
 ## 🤖 Contexto para Agentes (System Prompt Snippet)
-Al desarrollar en este repositorio, sigue siempre este flujo: `Database -> Backend (Model/Route) -> Frontend (API/Hook/UI) -> Analytics -> Verification`.
+Al desarrollar en este repositorio, debes aplicar **Test Driven Development (TDD)** de forma estricta escribiendo los tests primero. Sigue siempre este flujo: `Database -> Backend (Model/Route) -> Frontend (API/Hook/UI) -> Analytics -> Verification`.
 
 ---
 
