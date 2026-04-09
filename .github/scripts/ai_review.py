@@ -1,135 +1,116 @@
 import os
-import subprocess
 import json
+import sys
 import requests
-import time
-from anthropic import Anthropic, APIStatusError, RateLimitError
+import time # Importante para la pausa
+from groq import Groq
 
-# --- CONFIGURACIÓN DE ESTRATEGIA (MODIFICABLE) ---
-PRIMARY_MODEL = "claude-3-5-sonnet-20240620"  # El auditor experto
-BACKUP_MODEL = "claude-3-haiku-20240307"      # El auditor de emergencia (más barato/rápido)
+# --- CONFIGURACIÓN PARA FREE TIER (MAX OPTIMIZED) ---
+PRIMARY_MODEL = "llama-3.3-70b-versatile"
+MAX_CHARS_PER_BATCH = 8500  # Ajustado para no exceder los 12k TPM
+WHITELIST_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx"]
+IGNORE_DIRS = ["node_modules", "dist", "build", "tests", ".github", "venv"]
+# ----------------------------------------------------
 
-WHITELIST_EXTENSIONS = ['.py', '.ts', '.js', '.tsx', '.jsx', '.go', '.rs', '.php', '.cs']
-IGNORE_DIRS = ['node_modules', 'dist', 'build', 'tests', 'migrations', 'vendor', '.github', 'venv']
-MAX_CHARS_ALLOWED = 15000  # Límite de seguridad para el Tier Gratuito (aprox 5k tokens)
-# ------------------------------------------------
+REPO_FULL_NAME = os.getenv("GITHUB_REPOSITORY")
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GITHUB_STEP_SUMMARY = os.getenv("GITHUB_STEP_SUMMARY")
 
-REPO_FULL_NAME = os.getenv('GITHUB_REPOSITORY')
-GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
-ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
-GITHUB_STEP_SUMMARY = os.getenv('GITHUB_STEP_SUMMARY')
+if not GROQ_API_KEY:
+    print("❌ ERROR: GROQ_API_KEY no configurada")
+    sys.exit(1)
 
-client = Anthropic(api_key=ANTHROPIC_API_KEY)
+client = Groq(api_key=GROQ_API_KEY)
 
 def log_to_summary(text):
-    """Escribe mensajes en el panel visual de GitHub Actions."""
     if GITHUB_STEP_SUMMARY:
         with open(GITHUB_STEP_SUMMARY, "a") as f:
             f.write(f"{text}\n")
 
-def get_filtered_weekly_diff():
-    """Obtiene el diff de la última semana aplicando filtros de ruido."""
+def get_all_files():
+    """Obtiene solo los archivos modificados en los últimos 7 días."""
     try:
-        # Intentamos obtener archivos modificados en los últimos 7 días
-        files_cmd = ["git", "diff", "--name-only", "HEAD@{7.days.ago}", "HEAD"]
+        # Forzamos a Git a buscar el hash del commit de hace 7 días
+        cmd_hash = ["git", "rev-list", "-n", "1", "--before='7 days ago'", "HEAD"]
+        since_commit = subprocess.run(cmd_hash, capture_output=True, text=True).stdout.strip()
+        
+        # Si no hay un commit tan viejo (repo nuevo), comparamos contra el primer commit
+        if not since_commit:
+            cmd_hash = ["git", "rev-list", "--max-parents=0", "HEAD"]
+            since_commit = subprocess.run(cmd_hash, capture_output=True, text=True).stdout.strip()
+
+        # Obtenemos la lista de archivos cambiados desde ese commit
+        files_cmd = ["git", "diff", "--name-only", since_commit, "HEAD"]
         result = subprocess.run(files_cmd, capture_output=True, text=True)
         
-        # Si falla el comando de tiempo (repos nuevos), intentamos el último commit
-        if result.returncode != 0:
-            files_cmd = ["git", "diff", "--name-only", "HEAD~1", "HEAD"]
-            result = subprocess.run(files_cmd, capture_output=True, text=True)
-
         files_changed = result.stdout.splitlines()
-        
-        full_diff = ""
+        filtered_files = []
         for file_path in files_changed:
             if any(file_path.endswith(ext) for ext in WHITELIST_EXTENSIONS):
                 if not any(dir_name in file_path for dir_name in IGNORE_DIRS):
-                    diff_cmd = ["git", "diff", "HEAD@{7.days.ago}", "HEAD", "--", file_path]
-                    file_diff = subprocess.run(diff_cmd, capture_output=True, text=True).stdout
-                    if file_diff:
-                        full_diff += f"\n--- FILE: {file_path} ---\n{file_diff}\n"
-
-        if not full_diff:
-            return None
-
-        return full_diff[:MAX_CHARS_ALLOWED] if len(full_diff) > MAX_CHARS_ALLOWED else full_diff
+                    if os.path.exists(file_path): # Aseguramos que el archivo no fue borrado
+                        filtered_files.append(file_path)
+        return filtered_files
     except Exception as e:
-        print(f"Error en Git: {e}")
-        return None
+        print(f"⚠️ Error obteniendo delta: {e}")
+        return []
 
-def create_github_issue(title, body, model_used):
-    """Crea el issue con una firma del modelo utilizado."""
-    url = f"https://api.github.com/repos/{REPO_FULL_NAME}/issues"
-    headers = {
-        "Authorization": f"token {GITHUB_TOKEN}",
-        "Accept": "application/vnd.github.v3+json"
-    }
-    footer = f"\n\n---\n> 🤖 **AI Audit Note:** Revisión generada automáticamente por `{model_used}`."
-    payload = {
-        "title": title, 
-        "body": body + footer, 
-        "labels": ["clean-code-audit", "ai-review"]
-    }
-    response = requests.post(url, headers=headers, json=payload)
-    return response.status_code == 201
+def split_into_batches(content, limit):
+    """Divide el contenido en pedazos que Groq Free Tier pueda digerir."""
+    return [content[i:i + limit] for i in range(0, len(content), limit)]
 
 def main():
-    log_to_summary("### 🚀 Resultado de la Auditoría Semanal")
-    diff_content = get_filtered_weekly_diff()
+    log_to_summary(f"### 🚀 Auditoría Semanal (Free Tier Optimized)")
     
-    if not diff_content or len(diff_content.strip()) < 100:
-        log_to_summary("✅ **No se detectaron cambios significativos** en los archivos de lógica esta semana.")
+    files_to_review = get_all_files()
+    if not files_to_review:
+        log_to_summary("✅ No hay archivos para revisar.")
         return
 
-    system_prompt = """Actúa como un Senior Staff Engineer experto en Clean Code. 
-    Busca: deuda técnica, nombres poco claros, funciones gigantes, funciones que no cumplen el SRP (Single Responsibility Principle), falta de modularidad, problemas de OWASP Top 10 y riesgos de seguridad.
-
-
-    RESPONDE ÚNICAMENTE EN JSON:
-    {
-      "has_issues": true,
-      "issue_title": "Clean Code Audit: [Breve descripción]",
-      "issue_body": "### 🚩 Hallazgos\n[Descripción]\n\n### 💡 Sugerencia\n```[lenguaje]\n[código]\n```"
-    }
-    Si no hay problemas, responde: {"has_issues": false}"""
-
-    models_to_try = [PRIMARY_MODEL, BACKUP_MODEL]
-    success = False
-
-    for model in models_to_try:
+    full_content = ""
+    for f in files_to_review:
         try:
-            print(f"Analizando con {model}...")
-            message = client.messages.create(
-                model=model,
-                max_tokens=2500,
-                system=system_prompt,
-                messages=[{"role": "user", "content": f"Audita el siguiente diff:\n\n{diff_content}"}]
+            with open(f, "r", encoding="utf-8", errors="ignore") as file_read:
+                full_content += f"\n--- FILE: {f} ---\n{file_read.read()}"
+        except: continue
+
+    batches = split_into_batches(full_content, MAX_CHARS_PER_BATCH)
+    print(f"📦 Total de archivos: {len(files_to_review)}. Dividido en {len(batches)} batches.")
+
+    system_prompt = "Actúa como Senior Tech Lead. Hallazgos críticos de seguridad y deuda técnica. Responde ÚNICAMENTE JSON: {\"has_issues\": true, \"issue_title\": \"...\", \"issue_body\": \"...\"} o {\"has_issues\": false}"
+
+    for idx, batch in enumerate(batches):
+        try:
+            print(f"🔍 Analizando batch {idx+1}/{len(batches)}...")
+            
+            # Si no es el primer batch, esperamos 10 segundos para no saturar el TPM
+            if idx > 0:
+                print("⏳ Esperando 10s para limpiar cuota de tokens...")
+                time.sleep(10)
+
+            response = client.chat.completions.create(
+                model=PRIMARY_MODEL,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": f"Audita este bloque de código:\n\n{batch}"}
+                ],
+                temperature=0.1
             )
 
-            response_data = json.loads(message.content[0].text)
-            
-            if response_data.get("has_issues"):
-                if create_github_issue(response_data['issue_title'], response_data['issue_body'], model):
-                    log_to_summary(f"📌 **Issue creado correctamente** usando `{model}`.")
+            res = json.loads(response.choices[0].message.content)
+            if res.get("has_issues"):
+                url = f"https://api.github.com/repos/{REPO_FULL_NAME}/issues"
+                headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
+                payload = {"title": f"{res['issue_title']} (Batch {idx+1})", "body": res['issue_body'], "labels": ["ai-review"]}
+                requests.post(url, headers=headers, json=payload)
+                log_to_summary(f"🚩 Batch {idx+1}: Hallazgos reportados.")
             else:
-                log_to_summary(f"✨ **Código aprobado** por `{model}`. No se encontraron fallos de Clean Code.")
-            
-            success = True
-            break 
+                log_to_summary(f"✅ Batch {idx+1}: Limpio.")
 
-        except (RateLimitError, APIStatusError) as e:
-            log_to_summary(f"⚠️ El modelo `{model}` falló (Límite de cuota o API).")
-            print(f"Fallo en {model}: {e}. Intentando failover...")
-            time.sleep(1)
-            continue
         except Exception as e:
-            log_to_summary(f"⚠️ Error inesperado con `{model}`: {str(e)}")
-            continue
-
-    if not success:
-        log_to_summary("❌ **ERROR CRÍTICO:** No se pudo completar la revisión con ningún modelo. Revisa tu cuenta de Anthropic.")
-        exit(1)
+            print(f"⚠️ Error en batch {idx+1}: {e}")
+            continue # Seguimos con el siguiente si uno falla
 
 if __name__ == "__main__":
     main()
