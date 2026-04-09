@@ -29,14 +29,32 @@ def log_to_summary(text):
             f.write(f"{text}\n")
 
 def get_all_files():
-    filtered_files = []
-    for root, dirs, files in os.walk("."):
-        dirs[:] = [d for d in dirs if d not in IGNORE_DIRS]
-        for file in files:
-            if any(file.endswith(ext) for ext in WHITELIST_EXTENSIONS):
-                file_path = os.path.relpath(os.path.join(root, file), ".")
-                filtered_files.append(file_path)
-    return filtered_files
+    """Obtiene solo los archivos modificados en los últimos 7 días."""
+    try:
+        # Forzamos a Git a buscar el hash del commit de hace 7 días
+        cmd_hash = ["git", "rev-list", "-n", "1", "--before='7 days ago'", "HEAD"]
+        since_commit = subprocess.run(cmd_hash, capture_output=True, text=True).stdout.strip()
+        
+        # Si no hay un commit tan viejo (repo nuevo), comparamos contra el primer commit
+        if not since_commit:
+            cmd_hash = ["git", "rev-list", "--max-parents=0", "HEAD"]
+            since_commit = subprocess.run(cmd_hash, capture_output=True, text=True).stdout.strip()
+
+        # Obtenemos la lista de archivos cambiados desde ese commit
+        files_cmd = ["git", "diff", "--name-only", since_commit, "HEAD"]
+        result = subprocess.run(files_cmd, capture_output=True, text=True)
+        
+        files_changed = result.stdout.splitlines()
+        filtered_files = []
+        for file_path in files_changed:
+            if any(file_path.endswith(ext) for ext in WHITELIST_EXTENSIONS):
+                if not any(dir_name in file_path for dir_name in IGNORE_DIRS):
+                    if os.path.exists(file_path): # Aseguramos que el archivo no fue borrado
+                        filtered_files.append(file_path)
+        return filtered_files
+    except Exception as e:
+        print(f"⚠️ Error obteniendo delta: {e}")
+        return []
 
 def split_into_batches(content, limit):
     """Divide el contenido en pedazos que Groq Free Tier pueda digerir."""
