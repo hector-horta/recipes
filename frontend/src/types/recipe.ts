@@ -11,6 +11,7 @@ export interface Ingredient {
   unit?: string;
   unitEn?: string;
   isBorderlineSafe?: boolean;
+  siboAlert?: boolean;
 }
 
 
@@ -27,4 +28,5 @@ export interface Recipe {
   summary?: string;
   safetyLevel: 'safe' | 'review' | 'unsafe';
   siboAllergiesTags: (Tag | string)[];
+  siboAlerts?: string[];
 }

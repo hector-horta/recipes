@@ -31,7 +31,10 @@
     "of": "of",
     "ctaTitle": "Discover safe recipes for you",
     "ctaDesc": "Explore a specialized catalog of recipes meticulously curated for SIBO protocols and multiple food intolerances. Create your profile to dynamically filter our recipes and safeguard your mindful nutrition.",
-    "ctaButton": "Create Account or Sign In"
+    "ctaButton": "Create Account or Sign In",
+    "communityFavorites": "Community Favorites",
+    "myFavorites": "My Favorites",
+    "thanksToYou": "Thanks to you!"
   },
   "recipe": {
     "favorite": "Favorite",

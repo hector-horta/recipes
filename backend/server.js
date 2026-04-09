@@ -146,6 +146,8 @@ app.get('/api/medical/triggers', (req, res) => {
 import { RecipeProvider } from './services/RecipeProvider.js';
 import { optionalAuthenticateToken } from './middleware/auth.js';
 import { Profile } from './models/Profile.js';
+import { FavoriteRecipe } from './models/FavoriteRecipe.js';
+import { Op } from 'sequelize';
 
 app.get('/api/recipes', optionalAuthenticateToken, recipeLimiter, async (req, res, next) => {
   try {
@@ -174,6 +176,141 @@ app.get('/api/recipes', optionalAuthenticateToken, recipeLimiter, async (req, re
     next(error);
   }
 });
+
+// ── Home Page Endpoints ────────────────────────────────────────────────
+
+app.get('/api/home/top-favorites', optionalAuthenticateToken, async (req, res) => {
+  try {
+    // Get top 10 most favorited recipes
+    const topFavorites = await FavoriteRecipe.findAll({
+      attributes: [
+        'recipe_id',
+        [sequelize.fn('COUNT', sequelize.col('recipe_id')), 'favorite_count']
+      ],
+      group: ['recipe_id'],
+      order: [[sequelize.literal('favorite_count'), 'DESC']],
+      limit: 10,
+      raw: false
+    });
+
+    if (topFavorites.length === 0) {
+      // Fallback: get random recipes if no favorites exist
+      const randomRecipes = await Recipe.findAll({
+        where: { status: 'published' },
+        order: sequelize.random(),
+        limit: 10
+      });
+      ActivityLogger.log('HOME_TOP_FAVORITES_FALLBACK', { count: randomRecipes.length }, { userId: req.user?.id, ip: req.ip });
+      return res.json({ type: 'top_favorites', recipes: randomRecipes.map(r => RecipeProvider.normalizeRecipe(r.toJSON())) });
+    }
+
+    const recipeIds = topFavorites.map(f => f.recipe_id);
+
+    // Get full recipe data
+    const recipes = await Recipe.findAll({
+      where: {
+        id: { [Op.in]: recipeIds },
+        status: 'published'
+      }
+    });
+
+    // Sort by favorite count
+    const recipeMap = new Map(recipes.map(r => [r.id, r]));
+    const orderedRecipes = recipeIds.map(id => recipeMap.get(id)).filter(Boolean);
+
+    // If less than 10, fill with random
+    if (orderedRecipes.length < 10) {
+      const existingIds = new Set(orderedRecipes.map(r => r.id));
+      const fillRecipes = await Recipe.findAll({
+        where: {
+          status: 'published',
+          id: { [Op.notIn]: existingIds }
+        },
+        order: sequelize.random(),
+        limit: 10 - orderedRecipes.length
+      });
+      orderedRecipes.push(...fillRecipes);
+    }
+
+    ActivityLogger.log('HOME_TOP_FAVORITES', { count: orderedRecipes.length }, { userId: req.user?.id, ip: req.ip });
+    res.json({ type: 'top_favorites', recipes: orderedRecipes.map(r => RecipeProvider.normalizeRecipe(r.toJSON())) });
+  } catch (error) {
+    console.error('[Home] Error fetching top favorites:', error);
+    res.status(500).json({ error: 'Error al obtener recetas más favoritas' });
+  }
+});
+
+app.get('/api/home/community-favorites', optionalAuthenticateToken, async (req, res) => {
+  try {
+    // Get top 5 community favorites
+    const topFavorites = await FavoriteRecipe.findAll({
+      attributes: [
+        'recipe_id',
+        [sequelize.fn('COUNT', sequelize.col('recipe_id')), 'favorite_count']
+      ],
+      group: ['recipe_id'],
+      order: [[sequelize.literal('favorite_count'), 'DESC']],
+      limit: 5,
+      raw: false
+    });
+
+    if (topFavorites.length === 0) {
+      ActivityLogger.log('HOME_COMMUNITY_FAVORITES_EMPTY', {}, { userId: req.user?.id, ip: req.ip });
+      return res.json({ type: 'community_favorites', recipes: [], userFavoriteIds: [] });
+    }
+
+    const recipeIds = topFavorites.map(f => f.recipe_id);
+
+    // Get full recipe data
+    const recipes = await Recipe.findAll({
+      where: {
+        id: { [Op.in]: recipeIds },
+        status: 'published'
+      }
+    });
+
+    // Sort by favorite count
+    const recipeMap = new Map(recipes.map(r => [r.id, r]));
+    const orderedRecipes = recipeIds.map(id => recipeMap.get(id)).filter(Boolean);
+
+    // Check if user has favorited any of these
+    let userFavoriteIds = [];
+    if (req.user) {
+      const userFavorites = await FavoriteRecipe.findAll({
+        where: { user_id: req.user.id, recipe_id: { [Op.in]: recipeIds } }
+      });
+      userFavoriteIds = userFavorites.map(f => f.recipe_id);
+    }
+
+    ActivityLogger.log('HOME_COMMUNITY_FAVORITES', { count: orderedRecipes.length, userHasFavorited: userFavoriteIds.length > 0 }, { userId: req.user?.id, ip: req.ip });
+    res.json({
+      type: 'community_favorites',
+      recipes: orderedRecipes.map(r => RecipeProvider.normalizeRecipe(r.toJSON())),
+      userFavoriteIds
+    });
+  } catch (error) {
+    console.error('[Home] Error fetching community favorites:', error);
+    res.status(500).json({ error: 'Error al obtener favoritos de la comunidad' });
+  }
+});
+
+app.get('/api/home/random', optionalAuthenticateToken, async (req, res) => {
+  try {
+    const randomRecipes = await Recipe.findAll({
+      where: { status: 'published' },
+      order: sequelize.random(),
+      limit: 10
+    });
+
+    ActivityLogger.log('HOME_RANDOM', { count: randomRecipes.length }, { userId: req.user?.id, ip: req.ip });
+    res.json({ type: 'random', recipes: randomRecipes.map(r => RecipeProvider.normalizeRecipe(r.toJSON())) });
+  } catch (error) {
+    console.error('[Home] Error fetching random recipes:', error);
+    res.status(500).json({ error: 'Error al obtener recetas aleatorias' });
+  }
+});
+
+// ───────────────────────────────────────────────────────────────────────
 
 // Global Error Handler
 app.use((err, req, res, next) => {

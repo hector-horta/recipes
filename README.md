@@ -54,6 +54,10 @@ El proyecto se divide en diferentes servicios orquestados por Docker Compose:
 | `recipe_favorited` | Al marcar receta como favorita | `{ title, id }` |
 | `recipe_unfavorited` | Al quitar receta de favoritos | `{ title, id }` |
 | `suggest_to_chef` | Al sugerir receta al chef | `{ term }` |
+| `home_top_favorites` | Carga de top recetas (anonimo) | `{ count, type }` |
+| `home_community_favorites` | Carga de favoritos comunidad (loguedo) | `{ count, userHasFavorited }` |
+| `home_random` | Carga de recetas aleatorias | `{ count }` |
+| `home_random_refresh` | Refrescar recetas aleatorias | - |
 
 **Dashboard de Umami**: `http://analytics.localhost` (requiere entrada en `/etc/hosts` o DNS local).
 

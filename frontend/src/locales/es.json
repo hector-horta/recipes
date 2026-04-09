@@ -31,7 +31,10 @@
     "of": "de",
     "ctaTitle": "Descubre recetas seguras para ti",
     "ctaDesc": "Explora un catálogo especializado de recetas rigurosamente curadas para protocolos SIBO y múltiples intolerancias alimentarias. Crea tu perfil para filtrar dinámicamente nuestras recetas y proteger tu nutrición.",
-    "ctaButton": "Crear Cuenta o Iniciar Sesión"
+    "ctaButton": "Crear Cuenta o Iniciar Sesión",
+    "communityFavorites": "Favoritas de la Comunidad",
+    "myFavorites": "Mis Favoritos",
+    "thanksToYou": "¡Gracias a ti!"
   },
   "recipe": {
     "favorite": "Favorito",
