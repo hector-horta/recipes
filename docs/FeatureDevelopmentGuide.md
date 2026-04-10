@@ -451,14 +451,18 @@ Si existe, responde `409 { error, conflict: true, recipe }`. El Telegram Bot usa
 
 > **Nota**: Las recetas ingestadas se publican directamente con `status: 'published'` (auto-publicación). Esto es intencional ya que el Telegram Bot es de uso privado y el chef revisa la receta en el mensaje del bot antes de confirmar.
 
-#### Filtrado por Intolerancias (RecipeProvider)
-`RecipeProvider.getRecipes()` filtra recetas en memoria según las intolerancias del perfil del usuario:
-1. Consulta un buffer de `requestedLimit × 5` recetas de la DB
-2. Cruza los ingredientes de cada receta con `MEDICAL_TRIGGERS` (de `config/medicalTriggers.js`)
-3. Excluye recetas que contengan ingredientes prohibidos
-4. Aplica el límite final
+#### Filtrado por Intolerancias y Seguridad Dinámica (RecipeProvider)
+`RecipeProvider.getRecipes()` y `normalizeRecipe()` personalizan los resultados según el perfil del usuario:
+1. **Buffer de candidatos**: Consulta un buffer de `requestedLimit × 5` recetas de la DB para compensar el filtrado posterior.
+2. **Evaluación de Riesgo Dinámico**:
+   - Si el usuario tiene **SIBO**, se respetan los niveles curados (`sibo_risk_level`) de la base de datos.
+   - Si NO tiene SIBO, los riesgos de SIBO se ignoran (la receta se marca como `safe` a menos que contenga un trigger de otra alergia activa).
+3. **Activadores Médicos (Triggers)**: Cruza los ingredientes con `MEDICAL_TRIGGERS` (de `config/medicalTriggers.js`) para cada intolerancia activa. Cualquier coincidencia marca la receta como `unsafe`.
+4. **Tags Personalizados**: Las etiquetas relacionadas con SIBO (ej: "Bajo en Fructanos", "SIBO: Safe") se filtran y ocultan si el usuario no tiene SIBO en su perfil.
+5. **Ingredientes Limitados**: Los ingredientes marcados como `isBorderlineSafe` (que requieren revisión) solo muestran su advertencia si el usuario tiene la intolerancia correspondiente (principalmente SIBO).
+6. **Límite final**: Se aplica el `requestedLimit` sobre el set filtrado y personalizado.
 
-Las intolerancias se incluyen en el hash de cache de Redis para que usuarios con distintos perfiles obtengan resultados personalizados.
+Las intolerancias se incluyen en el hash de cache de Redis para asegurar que la personalización sea consistente y eficiente.
 
 ---
 

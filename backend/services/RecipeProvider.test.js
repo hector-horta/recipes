@@ -133,5 +133,81 @@ describe('RecipeProvider', () => {
 
       expect(result.siboAllergiesTags).toBeDefined();
     });
+
+    it('should show "safe" for SIBO-caution recipe if user does NOT have SIBO', () => {
+      const recipe = {
+        id: '1',
+        title_es: 'Honey Cake',
+        sibo_risk_level: 'caution',
+        ingredients: [{ name: 'miel' }]
+      };
+      
+      const result = RecipeProvider.normalizeRecipe(recipe, ['egg']); // Only egg allergy
+      expect(result.safetyLevel).toBe('safe');
+    });
+
+    it('should show "review" for SIBO-caution recipe if user has SIBO', () => {
+      const recipe = {
+        id: '1',
+        title_es: 'Honey Cake',
+        sibo_risk_level: 'caution',
+        ingredients: [{ name: 'miel' }]
+      };
+      
+      const result = RecipeProvider.normalizeRecipe(recipe, ['sibo']);
+      expect(result.safetyLevel).toBe('review');
+    });
+
+    it('should show "unsafe" for recipe containing allergens for the user', () => {
+      const recipe = {
+        id: '1',
+        title_es: 'Omelette',
+        sibo_risk_level: 'safe',
+        ingredients: [{ name: 'huevo' }]
+      };
+      
+      const result = RecipeProvider.normalizeRecipe(recipe, ['egg']);
+      expect(result.safetyLevel).toBe('unsafe');
+    });
+
+    it('should show "safe" for guest (no intolerances)', () => {
+      const recipe = {
+        id: '1',
+        title_es: 'Honey Cake',
+        sibo_risk_level: 'caution',
+        ingredients: [{ name: 'miel' }]
+      };
+      
+      const result = RecipeProvider.normalizeRecipe(recipe, []);
+      expect(result.safetyLevel).toBe('safe');
+    });
+
+    it('should hide SIBO-related tags for non-SIBO users', () => {
+      const recipe = {
+        id: '1',
+        title_es: 'Test',
+        tags: ['SIBO: Bajo en Fructanos', 'Saludable', 'Bajo en Fodmap']
+      };
+      
+      const result = RecipeProvider.normalizeRecipe(recipe, ['egg']);
+      const tags = result.siboAllergiesTags.map(t => t.es);
+      expect(tags).toContain('Saludable');
+      expect(tags).not.toContain('SIBO: Bajo en Fructanos');
+      expect(tags).not.toContain('Bajo en Fodmap');
+    });
+
+    it('should show SIBO-related tags for SIBO users', () => {
+      const recipe = {
+        id: '1',
+        title_es: 'Test',
+        tags: ['SIBO: Bajo en Fructanos', 'Saludable']
+      };
+      
+      const result = RecipeProvider.normalizeRecipe(recipe, ['sibo']);
+      const tags = result.siboAllergiesTags.map(t => t.es);
+      expect(tags).toContain('Saludable');
+      expect(tags).toContain('SIBO: Bajo en Fructanos');
+    });
   });
 });
+

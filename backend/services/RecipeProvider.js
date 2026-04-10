@@ -24,18 +24,10 @@ export class RecipeProvider {
     const userIntolerances = userProfile?.intolerances || [];
     const hasSiboFilter = userIntolerances.some(i => i.toLowerCase() === 'sibo');
 
-    // Identificar activadores médicos para las intolerancias del usuario
-    const activeTriggers = [];
-    userIntolerances.forEach(intolerance => {
-      const triggers = MEDICAL_TRIGGERS[intolerance.toLowerCase()];
-      if (triggers) activeTriggers.push(...triggers);
-    });
-
     const cachePayload = {
       q: query || '',
       n: number,
-      intolerances: userIntolerances.sort(),
-      sibo: hasSiboFilter ? 1 : 0
+      intolerances: userIntolerances.sort()
     };
     const cacheHash = crypto.createHash('md5').update(JSON.stringify(cachePayload)).digest('hex');
     const cacheKey = `recipes:${cacheHash}`;
@@ -53,41 +45,22 @@ export class RecipeProvider {
     }
 
     const requestedLimit = parseInt(number, 10) || 10;
+    
+    // Identificar si necesitamos un buffer para el filtrado post-DB
+    const hasFilters = userIntolerances.length > 0;
 
-    // Buscamos todas las candidatas y filtramos por intolerancias específicas si es necesario
+    // Buscamos candidatos
     const recipes = await Recipe.findAll({
       where: whereClause,
       order: [['created_at', 'DESC']],
-      limit: activeTriggers.length > 0 ? requestedLimit * 5 : requestedLimit
+      limit: hasFilters ? requestedLimit * 5 : requestedLimit
     });
 
-    let results = recipes.map(r => this.normalizeRecipe(r.toJSON()));
+    let results = recipes.map(r => this.normalizeRecipe(r.toJSON(), userIntolerances));
 
     // Filtrado por intolerancias (Personalización)
-    if (userIntolerances.length > 0) {
-      results = results.filter(recipe => {
-        // 1. Filtrado SIBO (usando campo específico sibo_risk_level)
-        if (hasSiboFilter && recipe.safetyLevel === 'unsafe') {
-          return false;
-        }
-
-        // 2. Filtrado General por Ingredientes (Triggers)
-        // Si el usuario tiene intolerancias, comprobamos si alguno de los ingredientes de la receta
-        // contiene palabras prohibidas según MEDICAL_TRIGGERS.
-        const ingredientsString = recipe.ingredients
-          .map(ing => (ing.name || '').toLowerCase())
-          .join(' ');
-
-        const hasForbiddenIngredient = activeTriggers.some(trigger => 
-          ingredientsString.includes(trigger.toLowerCase())
-        );
-
-        if (hasForbiddenIngredient) {
-          return false;
-        }
-
-        return true;
-      });
+    if (hasFilters) {
+      results = results.filter(recipe => recipe.safetyLevel !== 'unsafe');
     }
 
     // Aplicar límite final después del filtrado
@@ -105,16 +78,68 @@ export class RecipeProvider {
     return results;
   }
 
-  static normalizeRecipe(recipe) {
-    const ingredients = (recipe.ingredients || []).map(i => ({
-      id: i.name?.es || i.name || 'unknown',
-      name: i.name?.es || i.name || 'Desconocido',
-      nameEn: i.name?.en || '',
-      quantity: i.quantity || '',
-      unit: typeof i.unit === 'object' ? (i.unit?.es || '') : (i.unit || ''),
-      unitEn: typeof i.unit === 'object' ? (i.unit?.en || '') : '',
-      isBorderlineSafe: i.siboAlert || i.isBorderlineSafe || false
-    }));
+  static normalizeRecipe(recipe, userIntolerances = []) {
+    const hasSibo = userIntolerances.some(i => i.toLowerCase() === 'sibo');
+    
+    const ingredients = (recipe.ingredients || []).map(i => {
+      let isBorderlineSafe = false;
+      
+      // La advertencia de ingrediente limitado SÓLO aplica si el usuario tiene SIBO
+      if (hasSibo && (i.siboAlert || i.isBorderlineSafe)) {
+        isBorderlineSafe = true;
+      }
+      
+      return {
+        id: i.name?.es || i.name || 'unknown',
+        name: i.name?.es || i.name || 'Desconocido',
+        nameEn: i.name?.en || '',
+        quantity: i.quantity || '',
+        unit: typeof i.unit === 'object' ? (i.unit?.es || '') : (i.unit || ''),
+        unitEn: typeof i.unit === 'object' ? (i.unit?.en || '') : '',
+        isBorderlineSafe
+      };
+    });
+
+    // 2. Determinar safetyLevel dinámicamente
+    let safetyLevel = 'safe';
+
+    // A) Evaluación por campo SIBO (si el usuario tiene SIBO)
+    let siboCurated = false;
+    if (hasSibo) {
+      if (recipe.sibo_risk_level === 'avoid') {
+        safetyLevel = 'unsafe';
+        siboCurated = true;
+      } else if (recipe.sibo_risk_level === 'caution') {
+        safetyLevel = 'review';
+        siboCurated = true;
+      }
+    }
+
+    // B) Evaluación por ingredientes (Triggers)
+    // Identificar activadores médicos para las intolerancias del usuario
+    const activeTriggers = [];
+    userIntolerances.forEach(intolerance => {
+      const lowerIntolerance = intolerance.toLowerCase();
+      // Si la receta ya tiene una curación SIBO (avoid/caution), no re-evaluamos triggers de SIBO 
+      // para evitar que un 'caution' de miel sea sobreescrito por un 'avoid' genérico de la lista de triggers.
+      if (lowerIntolerance === 'sibo' && siboCurated) return;
+      
+      const triggers = MEDICAL_TRIGGERS[lowerIntolerance];
+      if (triggers) activeTriggers.push(...triggers);
+    });
+
+    const ingredientsString = ingredients
+      .map(ing => (ing.name || '').toLowerCase())
+      .join(' ');
+
+    const hasForbiddenIngredient = activeTriggers.some(trigger => 
+      ingredientsString.includes(trigger.toLowerCase())
+    );
+
+    // Los triggers siempre marcan como 'unsafe' (Evitar)
+    if (hasForbiddenIngredient) {
+      safetyLevel = 'unsafe';
+    }
 
     const instructions = (recipe.steps || [])
       .sort((a, b) => (a.order || 0) - (b.order || 0))
@@ -126,9 +151,16 @@ export class RecipeProvider {
 
     const imageUrl = recipe.image_url || '';
 
-    const siboAllergiesTags = (recipe.tags || [])
+    const allTags = (recipe.tags || [])
       .map(t => typeof t === 'object' && t.es ? t : { es: t, en: t })
       .filter(t => t.es && t.es.trim() !== '');
+
+    const siboAllergiesTags = allTags.filter(t => {
+      const tagText = t.es.toLowerCase();
+      const isSiboRelated = tagText.includes('sibo') || tagText.includes('fructanos') || tagText.includes('fodmap');
+      if (isSiboRelated) return hasSibo;
+      return true;
+    });
 
     return {
       id: recipe.id,
@@ -143,7 +175,7 @@ export class RecipeProvider {
         .sort((a, b) => (a.order || 0) - (b.order || 0))
         .map(s => s.instruction?.en || ''),
       summary: '',
-      safetyLevel: recipe.sibo_risk_level === 'safe' ? 'safe' : (recipe.sibo_risk_level === 'caution' ? 'review' : 'unsafe'),
+      safetyLevel,
       siboAllergiesTags,
       siboAlerts: recipe.sibo_alerts || []
     };
