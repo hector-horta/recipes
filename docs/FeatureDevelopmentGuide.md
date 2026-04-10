@@ -13,6 +13,7 @@ Al desarrollar en este repositorio:
 4. Si un feature no requiere persistencia, saltar el paso de Database.
 5. Todo texto visible al usuario debe soportar **i18n** (español e inglés).
 6. **Mantener esta guía actualizada**: Al finalizar un feature nuevo o la corrección de un bug, **actualizar este archivo** si el cambio afectó la estructura de carpetas, esquemas de DB, endpoints, patrones, convenciones, componentes reutilizables, tipos TypeScript, eventos de analytics, o cualquier otra sección documentada aquí. Esta guía es la fuente de verdad — si no se actualiza, el próximo agente trabajará con información obsoleta.
+7. **Scratch scripts**: Los scripts en `backend/scratch/` son efímeros, para verificar funcionalidad durante desarrollo sin desplegar todo el sitio. **Deben eliminarse antes de hacer commit.** La carpeta está en `.gitignore` y no debe entrar al repositorio.
 
 ---
 
@@ -31,7 +32,8 @@ Al desarrollar en este repositorio:
 │   │   ├── config.cjs            # Sequelize CLI config (CommonJS requerido por CLI)
 │   │   ├── database.js           # Sequelize instance + connectDB()
 │   │   ├── redis.js              # Redis client + connectRedis()
-│   │   ├── medical.js            # INTOLERANCE_CATALOG + MEDICAL_TRIGGERS (data estática)
+│   │   ├── medical.js            # INTOLERANCE_CATALOG (data estática)
+│   │   ├── medicalTriggers.js    # MEDICAL_TRIGGERS map (ingredientes prohibidos por intolerancia)
 │   │   └── vault.js              # HCP Vault OAuth2 client
 │   ├── models/
 │   │   ├── User.js
@@ -53,16 +55,18 @@ Al desarrollar en este repositorio:
 │   │   └── admin.js              # /admin/*
 │   ├── services/
 │   │   ├── ActivityLogger.js     # Telemetría + alertas Telegram (fire-and-forget)
-│   │   ├── RecipeProvider.js     # Búsqueda en base de datos + caché Redis
+│   │   ├── RecipeProvider.js     # Búsqueda en DB + caché Redis + filtrado por intolerancias
 │   │   ├── NvidiaNIM.js          # OCR (Llama 4), estructurar recetas, generar imágenes (SDXL)
 │   │   └── GroqWhisper.js        # Transcripción de audio
 │   ├── utils/
 │   │   ├── tagTranslations.js    # TAG_TRANSLATIONS map, normalizeTag(), normalizeTags()
+│   │   ├── ingestSanitizer.js    # sanitizeStructuredRecipe() — mapea output LLM a ENUMs/tipos DB
 │   │   ├── regenerateAllImages.js
 │   │   └── regenerateSpecificImages.js
 │   ├── migrations/               # Sequelize CLI migrations (.cjs)
 │   ├── seeders/
 │   ├── tests/
+│   ├── scratch/                  # ⚠️ Scripts temporales de debug — NO COMMITEAR (en .gitignore)
 │   ├── public/recipes/           # Imágenes estáticas de recetas (servido por Express)
 │   └── ingest_logs/              # Recovery logs de ingesta (JSON)
 │
@@ -423,6 +427,39 @@ ActivityLogger.alertAsync('🔴 *Mensaje de alerta*');
 - Errores graves (5xx, NVIDIA, Groq) generan alertas Telegram automáticas.
 - Para errores custom, `throw` un error con `.status`: `const err = new Error('msg'); err.status = 400; throw err;`
 
+#### Sanitización de Ingesta (LLM → DB)
+Cuando el LLM (NvidiaNIM) estructura una receta, los valores pueden no coincidir con los ENUMs de la DB (ej: `"Fácil"` en vez de `"easy"`). El módulo `utils/ingestSanitizer.js` normaliza:
+- **`difficulty`**: mapea español/sinónimos → `'easy'|'medium'|'hard'`
+- **`siboRiskLevel`**: mapea español/colores → `'safe'|'caution'|'avoid'`
+- **`prepTimeMinutes/cookTimeMinutes/servings`**: extrae números de strings como `"15 min"`
+- **`tags`**: pasa por `normalizeTags()` para asegurar formato `{es, en}`
+- **`ingredients/steps/siboAlerts`**: asegura que sean arrays
+
+```javascript
+import { sanitizeStructuredRecipe } from '../utils/ingestSanitizer.js';
+const structuredRaw = await analyzeAndStructureRecipe(text, apiKey);
+const structured = sanitizeStructuredRecipe(structuredRaw);
+```
+> **Regla**: Siempre pasar el output del LLM por `sanitizeStructuredRecipe()` antes de crear el registro en DB.
+
+#### Detección de Duplicados (Ingest 409)
+Las rutas de ingesta verifican si ya existe una receta con el mismo slug antes de crearla:
+```javascript
+if (await checkConflict(slug, recipeData, res)) return;
+```
+Si existe, responde `409 { error, conflict: true, recipe }`. El Telegram Bot usa esta respuesta para ofrecer al usuario actualizar la receta existente.
+
+> **Nota**: Las recetas ingestadas se publican directamente con `status: 'published'` (auto-publicación). Esto es intencional ya que el Telegram Bot es de uso privado y el chef revisa la receta en el mensaje del bot antes de confirmar.
+
+#### Filtrado por Intolerancias (RecipeProvider)
+`RecipeProvider.getRecipes()` filtra recetas en memoria según las intolerancias del perfil del usuario:
+1. Consulta un buffer de `requestedLimit × 5` recetas de la DB
+2. Cruza los ingredientes de cada receta con `MEDICAL_TRIGGERS` (de `config/medicalTriggers.js`)
+3. Excluye recetas que contengan ingredientes prohibidos
+4. Aplica el límite final
+
+Las intolerancias se incluyen en el hash de cache de Redis para que usuarios con distintos perfiles obtengan resultados personalizados.
+
 ---
 
 ### Frontend
@@ -626,6 +663,11 @@ if (typeof window !== 'undefined' && (window as any).umami) {
 | `suggest_to_chef` | Sugerir receta al chef | `{ term }` |
 
 > **Regla**: Todo feature nuevo debe incluir al menos un evento de tracking.
+
+### Eventos Backend (ActivityLogger)
+| Evento (action) | Cuándo | Metadata |
+|---|---|---|
+| `SEARCH` | Búsqueda con intolerancias activas | `{ query, filteredByIntolerances, resultsAfterFilter }` |
 
 ---
 

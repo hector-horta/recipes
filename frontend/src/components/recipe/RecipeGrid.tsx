@@ -44,9 +44,7 @@ export function RecipeGrid({
           <RecipeCardSkeleton key={`skeleton-${idx}`} />
         ))
       ) : (
-        recipes
-          .filter(recipe => recipe.safetyLevel !== 'unsafe')
-          .map((recipe) => (
+        recipes.map((recipe) => (
             <RecipeCard 
               key={recipe.id} 
               recipe={recipe} 

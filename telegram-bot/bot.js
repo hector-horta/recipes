@@ -13,7 +13,25 @@ const BACKEND_URL = process.env.BACKEND_URL || 'http://backend:5001';
 let bot = null;
 const pendingVoiceEdits = new Map();
 const pendingImageGroups = new Map();
+const pendingOverwrites = new Map();
 const IMAGE_GROUP_TIMEOUT = 2000;
+
+async function sendConflictPrompt(chatId, recipe, statusMsgId) {
+  pendingOverwrites.set(chatId, { recipe, statusMsgId });
+  await bot.editMessageText(`⚠️ *La receta ya existe*\n\n"${recipe.title_es}" ya está publicada.\n\n¿Deseas actualizarla con los nuevos datos?`, {
+    chat_id: chatId,
+    message_id: statusMsgId,
+    parse_mode: 'Markdown',
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: '🔄 Sí, actualizar', callback_data: 'overwrite_confirm' },
+          { text: '❌ No, cancelar', callback_data: 'overwrite_cancel' }
+        ]
+      ]
+    }
+  });
+}
 
 function isAuthorized(userId) {
   return userId.toString() === ALLOWED_USER_ID;
@@ -99,10 +117,15 @@ async function processSingleImage(chatId, fileId, statusMsgId) {
     const res = await fetch(`${BACKEND_URL}/api/ingest/image`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imageUrl, generateImage: true })
+      body: JSON.stringify({ imageUrl })
     });
 
     const data = await res.json();
+
+    if (res.status === 409 && data.conflict) {
+      await sendConflictPrompt(chatId, data.recipe, statusMsgId);
+      return;
+    }
 
     if (!res.ok) {
       await bot.editMessageText(`❌ Error: ${data.error}`, {
@@ -144,10 +167,15 @@ async function processImageGroup(chatId, fileIds, statusMsgId) {
     const res = await fetch(`${BACKEND_URL}/api/ingest/images`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imageUrl1, imageUrl2, generateImage: true })
+      body: JSON.stringify({ imageUrl1, imageUrl2 })
     });
 
     const data = await res.json();
+
+    if (res.status === 409 && data.conflict) {
+      await sendConflictPrompt(chatId, data.recipe, statusMsgId);
+      return;
+    }
 
     if (!res.ok) {
       await bot.editMessageText(`❌ Error: ${data.error}`, {
@@ -183,10 +211,15 @@ async function processText(msg) {
     const res = await fetch(`${BACKEND_URL}/api/ingest/text`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, generateImage: true, sourceType: 'telegram', sourceReference: `telegram:${msg.message_id}` })
+      body: JSON.stringify({ text, sourceType: 'telegram' })
     });
 
     const data = await res.json();
+
+    if (res.status === 409 && data.conflict) {
+      await sendConflictPrompt(chatId, data.recipe, processingMsg.message_id);
+      return;
+    }
 
     if (!res.ok) {
       await bot.editMessageText(`❌ Error: ${data.error}`, {
@@ -286,15 +319,16 @@ async function confirmVoiceRecipe(chatId) {
     const res = await fetch(`${BACKEND_URL}/api/ingest/text`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text: textToProcess,
-        generateImage: true,
-        sourceType: 'audio',
-        sourceReference: `telegram_voice:${pending.messageId}`
-      })
+      body: JSON.stringify({ text: textToProcess, sourceType: 'audio' })
     });
 
     const data = await res.json();
+
+    if (res.status === 409 && data.conflict) {
+      await sendConflictPrompt(chatId, data.recipe, processingMsg.message_id);
+      pendingVoiceEdits.delete(chatId);
+      return;
+    }
 
     if (!res.ok) {
       await bot.editMessageText(`❌ Error: ${data.error}`, {
@@ -504,6 +538,54 @@ async function handleAction(callbackQuery) {
   }
 }
 
+async function handleOverwrite(chatId, confirmed) {
+  const pending = pendingOverwrites.get(chatId);
+  if (!pending) return;
+
+  const { recipe, statusMsgId } = pending;
+  pendingOverwrites.delete(chatId);
+
+  if (!confirmed) {
+    await bot.editMessageText('❌ Operación cancelada. La receta original se mantiene sin cambios.', {
+      chat_id: chatId,
+      message_id: statusMsgId
+    });
+    return;
+  }
+
+  try {
+    await bot.editMessageText('🔄 Actualizando receta existente...', {
+      chat_id: chatId,
+      message_id: statusMsgId
+    });
+
+    const res = await fetch(`${BACKEND_URL}/api/ingest/save`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(recipe)
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      await bot.editMessageText(`✅ *Receta actualizada correctamente*\n\n` + formatRecipeSummary(data.recipe), {
+        chat_id: chatId,
+        message_id: statusMsgId,
+        parse_mode: 'Markdown',
+        reply_markup: buildInlineKeyboard(data.recipe.slug)
+      });
+    } else {
+      await bot.editMessageText(`❌ Error al actualizar: ${data.error}`, {
+        chat_id: chatId,
+        message_id: statusMsgId
+      });
+    }
+  } catch (error) {
+    console.error('[TelegramBot] Error in handleOverwrite:', error);
+    bot.sendMessage(chatId, `❌ Error al actualizar la receta: ${error.message}`);
+  }
+}
+
 export function initializeTelegramBot() {
   if (!TOKEN || !ALLOWED_USER_ID) {
     console.warn('[TelegramBot] TELEGRAM_BOT_TOKEN or TELEGRAM_USER_ID not set. Bot disabled.');
@@ -563,6 +645,18 @@ export function initializeTelegramBot() {
           chat_id: chatId,
           message_id: messageId
         });
+        return;
+      }
+
+      if (callbackQuery.data === 'overwrite_confirm') {
+        await bot.answerCallbackQuery(callbackQuery.id);
+        await handleOverwrite(chatId, true);
+        return;
+      }
+
+      if (callbackQuery.data === 'overwrite_cancel') {
+        await bot.answerCallbackQuery(callbackQuery.id);
+        await handleOverwrite(chatId, false);
         return;
       }
 

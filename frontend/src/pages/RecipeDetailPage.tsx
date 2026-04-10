@@ -5,6 +5,7 @@ import { useFavorites } from '../hooks/useFavorites';
 import { useTranslation } from 'react-i18next';
 import { useCachedImage } from '../hooks/useCachedImage';
 import { AuthGuard } from '../components/auth/AuthGuard';
+import { useAuth } from '../AuthContext';
 
 interface RecipeDetailPageProps {
   recipe: Recipe;
@@ -13,8 +14,10 @@ interface RecipeDetailPageProps {
 
 export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
   const { t, i18n } = useTranslation();
+  const { user } = useAuth();
   const lang = i18n.language.startsWith('en') ? 'en' : 'es';
   const displayTitle = lang === 'en' && recipe.titleEn ? recipe.titleEn : recipe.title;
+  const hasAnyIntolerance = (user?.intolerances?.length || 0) > 0;
   const displayInstructions = lang === 'en' && recipe.instructionsEn?.length ? recipe.instructionsEn : recipe.instructions;
   const { toggleFavorite, isFavorited } = useFavorites();
   const favorited = isFavorited(recipe.id);
@@ -134,9 +137,11 @@ export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
                       </span>
                       {ing.isBorderlineSafe && (
                         <AuthGuard>
-                          <span className="ml-auto px-2 py-1 text-[9px] font-black bg-brand-peach/20 text-brand-forest border border-brand-peach/40 rounded-lg uppercase tracking-tight">
-                            {t('recipe.personalLimit')}
-                          </span>
+                          {hasAnyIntolerance && (
+                            <span className="ml-auto px-2 py-1 text-[9px] font-black bg-brand-peach/20 text-brand-forest border border-brand-peach/40 rounded-lg uppercase tracking-tight">
+                              {t('recipe.personalLimit')}
+                            </span>
+                          )}
                         </AuthGuard>
                       )}
                     </li>

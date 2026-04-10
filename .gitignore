@@ -32,3 +32,6 @@ nginx/certs/
 # backend
 backend/ingest_logs/
 backend/public/
+
+# Scratch scripts (ephemeral debug/diagnostic scripts, delete before committing)
+backend/scratch/

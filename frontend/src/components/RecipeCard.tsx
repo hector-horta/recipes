@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from './ui/Button';
 import { useCachedImage } from '../hooks/useCachedImage';
 import { AuthGuard } from './auth/AuthGuard';
+import { useAuth } from '../AuthContext';
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -14,8 +15,10 @@ interface RecipeCardProps {
 
 export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite }: RecipeCardProps) {
   const { t, i18n } = useTranslation();
+  const { user } = useAuth();
   const lang = i18n.language.startsWith('en') ? 'en' : 'es';
   const displayTitle = lang === 'en' && recipe.titleEn ? recipe.titleEn : recipe.title;
+  const hasAnyIntolerance = (user?.intolerances?.length || 0) > 0;
   const hasBorderlineIngredients = recipe.ingredients.some(ing => ing.isBorderlineSafe);
   const { imageSrc, loading } = useCachedImage(recipe.imageUrl);
 
@@ -52,9 +55,11 @@ export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite }:
         
         <div className="absolute top-4 left-4 flex gap-2">
           <AuthGuard>
-            <span className={`px-3 py-1.5 rounded-full text-xs font-bold shadow-sm border tracking-wide uppercase ${safetyColor}`}>
-              {safetyText}
-            </span>
+            {hasAnyIntolerance && (
+              <span className={`px-3 py-1.5 rounded-full text-xs font-bold shadow-sm border tracking-wide uppercase ${safetyColor}`}>
+                {safetyText}
+              </span>
+            )}
           </AuthGuard>
         </div>
 
@@ -93,15 +98,17 @@ export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite }:
           
           {hasBorderlineIngredients && (
             <AuthGuard>
-              <div className="group/tooltip relative shrink-0 pt-0.5">
-                <AlertCircle className="w-5 h-5 text-amber-500 cursor-help" />
-                <div className="absolute right-0 bottom-full mb-2 w-56 p-2.5 bg-slate-800 text-white text-xs rounded-lg opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-10 shadow-xl font-medium">
-                  {t('recipe.borderlineTooltip')}
-                  <svg className="absolute text-slate-800 h-2 w-full left-0 top-full translate-x-[4.5rem]" x="0px" y="0px" viewBox="0 0 255 255" xmlSpace="preserve">
-                    <polygon className="fill-current" points="0,0 127.5,127.5 255,0"/>
-                  </svg>
+              {hasAnyIntolerance && (
+                <div className="group/tooltip relative shrink-0 pt-0.5">
+                  <AlertCircle className="w-5 h-5 text-amber-500 cursor-help" />
+                  <div className="absolute right-0 bottom-full mb-2 w-56 p-2.5 bg-slate-800 text-white text-xs rounded-lg opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-10 shadow-xl font-medium">
+                    {t('recipe.borderlineTooltip')}
+                    <svg className="absolute text-slate-800 h-2 w-full left-0 top-full translate-x-[4.5rem]" x="0px" y="0px" viewBox="0 0 255 255" xmlSpace="preserve">
+                      <polygon className="fill-current" points="0,0 127.5,127.5 255,0"/>
+                    </svg>
+                  </div>
                 </div>
-              </div>
+              )}
             </AuthGuard>
           )}
         </div>

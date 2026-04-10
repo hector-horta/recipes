@@ -36,6 +36,11 @@ export const TAG_TRANSLATIONS = {
 };
 
 export function normalizeTag(tag) {
+  if (tag && typeof tag === 'object' && tag.es && tag.en) {
+    return tag;
+  }
+  if (typeof tag !== 'string') return { es: String(tag), en: String(tag) };
+  
   const key = tag.toLowerCase().replace(/\s+/g, '_');
   return TAG_TRANSLATIONS[key] || { es: tag, en: tag };
 }

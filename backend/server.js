@@ -112,22 +112,7 @@ const INTOLERANCE_CATALOG = [
   { id: 'sibo',      label: 'SIBO',               emoji: '🦠', desc: 'Dieta baja en FODMAPs' },
 ];
 
-const MEDICAL_TRIGGERS = {
-  'dairy':     ['casein', 'whey', 'lactose', 'ghee', 'lactalbumin', 'nougat', 'butter fat', 'cream', 'cheese', 'milk'],
-  'egg':       ['albumin', 'lysozyme', 'mayonnaise', 'meringue', 'ovalbumin', 'surimi'],
-  'gluten':    ['maltodextrin', 'modified food starch', 'hydrolyzed wheat protein', 'seitan', 'triticale', 'spelt', 'kamut', 'semolina', 'durum'],
-  'grain':     ['barley', 'buckwheat', 'bulgur', 'couscous', 'farro', 'millet', 'oats', 'quinoa', 'rice', 'rye', 'sorghum'],
-  'peanut':    ['arachis oil', 'groundnut', 'beer nuts', 'monkey nuts', 'peanut butter', 'peanut flour'],
-  'seafood':   ['anchovy', 'cod', 'fish sauce', 'herring', 'mackerel', 'salmon', 'sardine', 'tilapia', 'trout', 'tuna'],
-  'sesame':    ['benne seeds', 'gingelly oil', 'halvah', 'hummus', 'sesame oil', 'tahini'],
-  'shellfish': ['crab', 'crayfish', 'lobster', 'prawn', 'shrimp', 'scallop', 'clam', 'mussel', 'oyster', 'squid'],
-  'soy':       ['edamame', 'miso', 'natto', 'soy sauce', 'soy lecithin', 'soy protein', 'tempeh', 'tofu', 'soya'],
-  'sulfite':   ['sulfur dioxide', 'sodium bisulfite', 'sodium metabisulfite', 'potassium bisulfite', 'dried fruit', 'wine'],
-  'tree_nut':  ['almond', 'brazil nut', 'cashew', 'chestnut', 'hazelnut', 'macadamia', 'marzipan', 'pecan', 'pine nut', 'pistachio', 'walnut', 'praline'],
-  'wheat':     ['bread flour', 'bulgur', 'couscous', 'durum', 'einkorn', 'emmer', 'flour', 'semolina', 'spelt'],
-  'corn':      ['high fructose corn syrup', 'dextrose', 'sorbitol', 'xanthan gum', 'maize', 'cornstarch', 'corn flour'],
-  'sibo':      ['garlic', 'garlic powder', 'onion', 'onion powder', 'inulin', 'chicory root', 'agave', 'honey', 'xylitol', 'apple', 'pear', 'watermelon', 'mango', 'asparagus', 'artichoke', 'cauliflower', 'mushroom', 'wheat', 'rye', 'milk', 'yogurt', 'ice cream']
-};
+import { MEDICAL_TRIGGERS } from './config/medicalTriggers.js';
 
 // Healthcheck / Status endpoint
 app.get('/api/status', (req, res) => {
@@ -165,6 +150,20 @@ app.get('/api/recipes', optionalAuthenticateToken, recipeLimiter, async (req, re
         userId: req.user?.id || null,
         ip: req.ip,
         failedSearch: isEmpty
+      });
+    }
+
+    // ── Telemetría de filtrado por intolerancias ──────────────────────────
+    const userIntolerances = userProfile?.intolerances || [];
+    if (userIntolerances.length > 0) {
+      ActivityLogger.log('SEARCH', {
+        query: query || '(browse)',
+        filteredByIntolerances: userIntolerances,
+        resultsAfterFilter: data.length
+      }, {
+        userId: req.user?.id || null,
+        ip: req.ip,
+        failedSearch: false
       });
     }
     // ─────────────────────────────────────────────────────────────────────

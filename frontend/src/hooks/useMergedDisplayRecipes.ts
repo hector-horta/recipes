@@ -81,18 +81,14 @@ export function useMergedDisplayRecipes({
       };
     });
 
-    if (favoriteRecipes.length >= itemsPerPage) {
-      const start = (currentPage - 1) * itemsPerPage;
-      return favoriteRecipes.slice(start, start + itemsPerPage);
-    }
-
-    const needed = itemsPerPage - favoriteRecipes.length;
-    const filteredRecommendations = recipes.filter(r => !favoriteIds.has(r.id));
-    const fill = filteredRecommendations.slice(0, needed);
-    return [...favoriteRecipes, ...fill];
+    const allMerged = [...favoriteRecipes, ...recipes.filter(r => !favoriteIds.has(r.id))];
+    const start = (currentPage - 1) * itemsPerPage;
+    return allMerged.slice(start, start + itemsPerPage);
   }, [isSearchActive, recipes, favorites, currentPage, itemsPerPage, t]);
 
-  const totalPages = Math.ceil(favorites.length / itemsPerPage);
+  const favoriteIds = new Set(favorites.map((f) => f.recipe_id));
+  const totalItems = isSearchActive ? recipes.length : favorites.length + recipes.filter(r => !favoriteIds.has(r.id)).length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
 
   return { displayRecipes, totalPages };
 }

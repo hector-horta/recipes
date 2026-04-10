@@ -9,6 +9,7 @@ import { saveIngestLog } from '../middleware/recoveryLogger.js';
 import { RecipeProvider } from '../services/RecipeProvider.js';
 import { normalizeTags } from '../utils/tagTranslations.js';
 import { ActivityLogger } from '../services/ActivityLogger.js';
+import { sanitizeStructuredRecipe } from '../utils/ingestSanitizer.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,6 +30,28 @@ function generateSlug(title) {
     .slice(0, 80);
 }
 
+async function checkConflict(slug, recipeData, res) {
+  const existing = await Recipe.findOne({ where: { slug } });
+  if (existing) {
+    res.status(409).json({ 
+      error: 'Recipe already exists', 
+      conflict: true, 
+      recipe: recipeData 
+    });
+    return true;
+  }
+  return false;
+}
+
+function handleSequelizeError(error, sourceType, res) {
+  if (error.name === 'SequelizeValidationError') {
+    const errorMsg = `Error de Validación: ${error.errors.map(e => e.message).join(', ')}`;
+    res.status(400).json({ error: errorMsg, details: error.errors });
+    return true;
+  }
+  return false;
+}
+
 router.post('/image', async (req, res, next) => {
   try {
     const apiKey = getApiKey();
@@ -44,7 +67,8 @@ router.post('/image', async (req, res, next) => {
       return res.status(400).json({ error: 'No text could be extracted from the image.' });
     }
 
-    const structured = await analyzeAndStructureRecipe(rawText, apiKey);
+    const structuredRaw = await analyzeAndStructureRecipe(rawText, apiKey);
+    const structured = sanitizeStructuredRecipe(structuredRaw);
 
     const titleEs = structured.title?.es || 'Receta sin título';
     const slug = generateSlug(titleEs);
@@ -62,23 +86,25 @@ router.post('/image', async (req, res, next) => {
       title_es: titleEs,
       title_en: structured.title?.en || titleEs,
       slug,
-      prep_time_minutes: structured.prepTimeMinutes || 0,
-      cook_time_minutes: structured.cookTimeMinutes || 0,
-      servings: structured.servings || 1,
-      difficulty: structured.difficulty || 'medium',
-      ingredients: structured.ingredients || [],
-      steps: structured.steps || [],
-      tags: normalizeTags(structured.tags || []),
+      prep_time_minutes: structured.prepTimeMinutes,
+      cook_time_minutes: structured.cookTimeMinutes,
+      servings: structured.servings,
+      difficulty: structured.difficulty,
+      ingredients: structured.ingredients,
+      steps: structured.steps,
+      tags: structured.tags,
       image_url: imageResult?.url || null,
       image_filename: imageResult?.filename || null,
-      sibo_risk_level: structured.siboRiskLevel || 'safe',
-      sibo_alerts: structured.siboAlerts || [],
+      sibo_risk_level: structured.siboRiskLevel,
+      sibo_alerts: structured.siboAlerts,
       source_type: 'ocr_image',
       source_reference: imageUrl,
-      status: 'draft'
+      status: 'published'
     };
 
     saveIngestLog(recipeData);
+
+    if (await checkConflict(slug, recipeData, res)) return;
 
     const recipe = await Recipe.create(recipeData);
 
@@ -98,6 +124,7 @@ router.post('/image', async (req, res, next) => {
       tripleCheck: buildTripleCheckMenu(recipeData)
     });
   } catch (error) {
+    if (handleSequelizeError(error, 'ocr_image', res)) return;
     ActivityLogger.log('INGEST_FAIL', { source_type: 'ocr_image', error: error.message });
     ActivityLogger.alertAsync(`⚠️ *[INGEST FAIL] OCR Single Image*\n\`${error.message.slice(0, 200)}\``);
     next(error);
@@ -121,7 +148,8 @@ router.post('/images', async (req, res, next) => {
       return res.status(400).json({ error: 'No text could be extracted from the images.' });
     }
 
-    const structured = await analyzeAndStructureRecipe(rawText, apiKey);
+    const structuredRaw = await analyzeAndStructureRecipe(rawText, apiKey);
+    const structured = sanitizeStructuredRecipe(structuredRaw);
 
     const titleEs = structured.title?.es || 'Receta sin título';
     const slug = generateSlug(titleEs);
@@ -139,23 +167,25 @@ router.post('/images', async (req, res, next) => {
       title_es: titleEs,
       title_en: structured.title?.en || titleEs,
       slug,
-      prep_time_minutes: structured.prepTimeMinutes || 0,
-      cook_time_minutes: structured.cookTimeMinutes || 0,
-      servings: structured.servings || 1,
-      difficulty: structured.difficulty || 'medium',
-      ingredients: structured.ingredients || [],
-      steps: structured.steps || [],
-      tags: normalizeTags(structured.tags || []),
+      prep_time_minutes: structured.prepTimeMinutes,
+      cook_time_minutes: structured.cookTimeMinutes,
+      servings: structured.servings,
+      difficulty: structured.difficulty,
+      ingredients: structured.ingredients,
+      steps: structured.steps,
+      tags: structured.tags,
       image_url: imageResult?.url || null,
       image_filename: imageResult?.filename || null,
-      sibo_risk_level: structured.siboRiskLevel || 'safe',
-      sibo_alerts: structured.siboAlerts || [],
+      sibo_risk_level: structured.siboRiskLevel,
+      sibo_alerts: structured.siboAlerts,
       source_type: 'ocr_image',
       source_reference: `multi_image:${imageUrl1},${imageUrl2}`,
-      status: 'draft'
+      status: 'published'
     };
 
     saveIngestLog(recipeData);
+
+    if (await checkConflict(slug, recipeData, res)) return;
 
     const recipe = await Recipe.create(recipeData);
 
@@ -175,8 +205,9 @@ router.post('/images', async (req, res, next) => {
       tripleCheck: buildTripleCheckMenu(recipeData)
     });
   } catch (error) {
-    ActivityLogger.log('INGEST_FAIL', { source_type: 'ocr_image_dual', error: error.message });
-    ActivityLogger.alertAsync(`⚠️ *[INGEST FAIL] OCR Dual Image*\n\`${error.message.slice(0, 200)}\``);
+    if (handleSequelizeError(error, 'ocr_image', res)) return;
+    ActivityLogger.log('INGEST_FAIL', { source_type: 'ocr_image', error: error.message });
+    ActivityLogger.alertAsync(`⚠️ *[INGEST FAIL] OCR Double Image*\n\`${error.message.slice(0, 200)}\``);
     next(error);
   }
 });
@@ -190,7 +221,8 @@ router.post('/text', async (req, res, next) => {
       return res.status(400).json({ error: 'text is required.' });
     }
 
-    const structured = await analyzeAndStructureRecipe(text, apiKey);
+    const structuredRaw = await analyzeAndStructureRecipe(text, apiKey);
+    const structured = sanitizeStructuredRecipe(structuredRaw);
 
     const titleEs = structured.title?.es || 'Receta sin título';
     const slug = generateSlug(titleEs);
@@ -208,23 +240,25 @@ router.post('/text', async (req, res, next) => {
       title_es: titleEs,
       title_en: structured.title?.en || titleEs,
       slug,
-      prep_time_minutes: structured.prepTimeMinutes || 0,
-      cook_time_minutes: structured.cookTimeMinutes || 0,
-      servings: structured.servings || 1,
-      difficulty: structured.difficulty || 'medium',
-      ingredients: structured.ingredients || [],
-      steps: structured.steps || [],
-      tags: normalizeTags(structured.tags || []),
+      prep_time_minutes: structured.prepTimeMinutes,
+      cook_time_minutes: structured.cookTimeMinutes,
+      servings: structured.servings,
+      difficulty: structured.difficulty,
+      ingredients: structured.ingredients,
+      steps: structured.steps,
+      tags: structured.tags,
       image_url: imageResult?.url || null,
       image_filename: imageResult?.filename || null,
-      sibo_risk_level: structured.siboRiskLevel || 'safe',
-      sibo_alerts: structured.siboAlerts || [],
+      sibo_risk_level: structured.siboRiskLevel,
+      sibo_alerts: structured.siboAlerts,
       source_type: req.body.sourceType || 'manual',
       source_reference: req.body.sourceReference || null,
-      status: 'draft'
+      status: 'published'
     };
 
     saveIngestLog(recipeData);
+
+    if (await checkConflict(slug, recipeData, res)) return;
 
     const recipe = await Recipe.create(recipeData);
 
@@ -243,7 +277,8 @@ router.post('/text', async (req, res, next) => {
       tripleCheck: buildTripleCheckMenu(recipeData)
     });
   } catch (error) {
-    ActivityLogger.log('INGEST_FAIL', { source_type: 'text', error: error.message });
+    if (handleSequelizeError(error, req.body.sourceType || 'manual', res)) return;
+    ActivityLogger.log('INGEST_FAIL', { source_type: req.body.sourceType || 'manual', error: error.message });
     ActivityLogger.alertAsync(`⚠️ *[INGEST FAIL] Texto*\n\`${error.message.slice(0, 200)}\``);
     next(error);
   }
@@ -300,7 +335,8 @@ router.post('/voice', async (req, res, next) => {
     }
 
     const nvidiaKey = getApiKey();
-    const structured = await analyzeAndStructureRecipe(transcribedText, nvidiaKey);
+    const structuredRaw = await analyzeAndStructureRecipe(transcribedText, nvidiaKey);
+    const structured = sanitizeStructuredRecipe(structuredRaw);
 
     const titleEs = structured.title?.es || 'Receta sin título';
     const slug = generateSlug(titleEs);
@@ -316,23 +352,25 @@ router.post('/voice', async (req, res, next) => {
       title_es: titleEs,
       title_en: structured.title?.en || titleEs,
       slug,
-      prep_time_minutes: structured.prepTimeMinutes || 0,
-      cook_time_minutes: structured.cookTimeMinutes || 0,
-      servings: structured.servings || 1,
-      difficulty: structured.difficulty || 'medium',
-      ingredients: structured.ingredients || [],
-      steps: structured.steps || [],
-      tags: normalizeTags(structured.tags || []),
+      prep_time_minutes: structured.prepTimeMinutes,
+      cook_time_minutes: structured.cookTimeMinutes,
+      servings: structured.servings,
+      difficulty: structured.difficulty,
+      ingredients: structured.ingredients,
+      steps: structured.steps,
+      tags: structured.tags,
       image_url: imageResult?.url || null,
       image_filename: imageResult?.filename || null,
-      sibo_risk_level: structured.siboRiskLevel || 'safe',
-      sibo_alerts: structured.siboAlerts || [],
+      sibo_risk_level: structured.siboRiskLevel,
+      sibo_alerts: structured.siboAlerts,
       source_type: 'audio',
       source_reference: audioUrl,
-      status: 'draft'
+      status: 'published'
     };
 
     saveIngestLog(recipeData);
+
+    if (await checkConflict(slug, recipeData, res)) return;
 
     const recipe = await Recipe.create(recipeData);
 
@@ -345,6 +383,9 @@ router.post('/voice', async (req, res, next) => {
       tripleCheck: buildTripleCheckMenu(recipeData)
     });
   } catch (error) {
+    if (handleSequelizeError(error, 'voice', res)) return;
+    ActivityLogger.log('INGEST_FAIL', { source_type: 'voice', error: error.message });
+    ActivityLogger.alertAsync(`⚠️ *[INGEST FAIL] Voz*\n\`${error.message.slice(0, 200)}\``);
     next(error);
   }
 });
@@ -406,24 +447,46 @@ router.post('/save', async (req, res, next) => {
       return res.status(400).json({ error: 'title_es and title_en are required.' });
     }
 
-    if (recipeData.tags) {
-      recipeData.tags = normalizeTags(recipeData.tags);
-    }
-
     const slug = recipeData.slug || generateSlug(recipeData.title_es);
+
+    const sanitized = sanitizeStructuredRecipe({
+      ...recipeData,
+      title: { es: recipeData.title_es, en: recipeData.title_en }
+    });
+
+    const finalData = {
+      title_es: sanitized.title.es,
+      title_en: sanitized.title.en,
+      slug: slug,
+      prep_time_minutes: sanitized.prepTimeMinutes,
+      cook_time_minutes: sanitized.cookTimeMinutes,
+      servings: sanitized.servings,
+      difficulty: sanitized.difficulty,
+      ingredients: sanitized.ingredients,
+      steps: sanitized.steps,
+      tags: sanitized.tags,
+      image_url: recipeData.image_url,
+      image_filename: recipeData.image_filename,
+      sibo_risk_level: sanitized.siboRiskLevel,
+      sibo_alerts: sanitized.siboAlerts,
+      source_type: recipeData.source_type || 'manual',
+      source_reference: recipeData.source_reference,
+      status: 'published'
+    };
 
     const existing = await Recipe.findOne({ where: { slug } });
     if (existing) {
-      Object.assign(existing, recipeData);
+      Object.assign(existing, finalData);
       await existing.save();
       await RecipeProvider.clearCache();
       return res.json({ status: 'updated', recipe: existing });
     }
 
-    const recipe = await Recipe.create({ ...recipeData, slug });
+    const recipe = await Recipe.create(finalData);
     await RecipeProvider.clearCache();
     return res.status(201).json({ status: 'created', recipe });
   } catch (error) {
+    if (handleSequelizeError(error, 'save', res)) return;
     next(error);
   }
 });
