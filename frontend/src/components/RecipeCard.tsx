@@ -1,4 +1,4 @@
-import { AlertCircle, Clock, Heart } from 'lucide-react';
+import { Clock, Heart } from 'lucide-react';
 import { Recipe } from '../types/recipe';
 import { useTranslation } from 'react-i18next';
 import { Button } from './ui/Button';
@@ -19,7 +19,6 @@ export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite }:
   const lang = i18n.language.startsWith('en') ? 'en' : 'es';
   const displayTitle = lang === 'en' && recipe.titleEn ? recipe.titleEn : recipe.title;
   const hasAnyIntolerance = (user?.intolerances?.length || 0) > 0;
-  const hasBorderlineIngredients = recipe.ingredients.some(ing => ing.isBorderlineSafe);
   const { imageSrc, loading } = useCachedImage(recipe.imageUrl);
 
   const safetyColor = recipe.safetyLevel === 'safe' 
@@ -95,22 +94,6 @@ export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite }:
           <h3 className="text-xl font-bold text-brand-forest leading-tight line-clamp-2">
             {displayTitle}
           </h3>
-          
-          {hasBorderlineIngredients && (
-            <AuthGuard>
-              {hasAnyIntolerance && (
-                <div className="group/tooltip relative shrink-0 pt-0.5">
-                  <AlertCircle className="w-5 h-5 text-amber-500 cursor-help" />
-                  <div className="absolute right-0 bottom-full mb-2 w-56 p-2.5 bg-slate-800 text-white text-xs rounded-lg opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-10 shadow-xl font-medium">
-                    {t('recipe.borderlineTooltip')}
-                    <svg className="absolute text-slate-800 h-2 w-full left-0 top-full translate-x-[4.5rem]" x="0px" y="0px" viewBox="0 0 255 255" xmlSpace="preserve">
-                      <polygon className="fill-current" points="0,0 127.5,127.5 255,0"/>
-                    </svg>
-                  </div>
-                </div>
-              )}
-            </AuthGuard>
-          )}
         </div>
 
         <div className="flex flex-wrap gap-2 mb-2">
@@ -139,9 +122,8 @@ export function RecipeCardSkeleton() {
     <div className="flex flex-col bg-white rounded-2xl overflow-hidden border border-slate-100 animate-pulse shadow-sm animate-fade-in">
       <div className="h-56 w-full bg-slate-200/60"></div>
       <div className="p-5 flex flex-col flex-1">
-        <div className="flex justify-between gap-4 mb-4">
+        <div className="mb-4">
           <div className="h-6 bg-slate-200/80 rounded-md w-3/4"></div>
-          <div className="h-5 w-5 bg-slate-200/80 rounded-full shrink-0"></div>
         </div>
         <div className="flex gap-2 mb-6">
           <div className="h-5 bg-slate-200/60 rounded w-20"></div>
