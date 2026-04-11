@@ -7,6 +7,19 @@
 ## 🤖 Instrucciones para Agentes
 
 Al desarrollar en este repositorio:
+
+0. **🖥️ Detectar el sistema operativo ANTES de ejecutar cualquier comando de terminal.** Verifica si estás en Windows (PowerShell), macOS (zsh/bash) o Linux (bash) consultando los metadatos del usuario o ejecutando un comando de detección. Esto es **obligatorio** para evitar gastar tokens en comandos incompatibles. Referencia rápida:
+   | Acción | Bash / zsh (Linux/macOS) | PowerShell (Windows) |
+   |---|---|---|
+   | Filtrar texto en output | `comando \| grep "texto"` | `comando \| Select-String "texto"` |
+   | Encadenar comandos | `cmd1 && cmd2` | `cmd1; cmd2` |
+   | Redireccionar a nulo | `> /dev/null` | `> $null` |
+   | Variable de entorno inline | `VAR=value command` | `$env:VAR='value'; command` |
+   | Listar archivos recursivo | `find . -name "*.js"` | `Get-ChildItem -Recurse -Filter "*.js"` |
+   | Ver contenido de archivo | `cat archivo` | `Get-Content archivo` |
+   | Eliminar archivo | `rm archivo` | `Remove-Item archivo` |
+   | Consultar DB en Docker | `docker compose exec postgres psql -U user -d db -c "SQL"` | Igual (Docker CLI es cross-platform) |
+
 1. Aplica **Test Driven Development (TDD)** de forma estricta — escribe los tests primero.
 2. Sigue siempre este flujo: `Database → Backend (Model/Route) → Frontend (API/Hook/UI) → Analytics → Verification`.
 3. **No es necesario explorar la estructura de carpetas** — toda la información relevante ya está documentada aquí.
@@ -32,8 +45,7 @@ Al desarrollar en este repositorio:
 │   │   ├── config.cjs            # Sequelize CLI config (CommonJS requerido por CLI)
 │   │   ├── database.js           # Sequelize instance + connectDB()
 │   │   ├── redis.js              # Redis client + connectRedis()
-│   │   ├── medical.js            # INTOLERANCE_CATALOG (data estática)
-│   │   ├── medicalTriggers.js    # MEDICAL_TRIGGERS map (ingredientes prohibidos por intolerancia)
+│   │   ├── medical.js            # INTOLERANCE_CATALOG + MEDICAL_TRIGGERS (fuente de verdad unificada)
 │   │   └── vault.js              # HCP Vault OAuth2 client
 │   ├── models/
 │   │   ├── User.js
@@ -728,6 +740,9 @@ describe('MiComponente', () => {
 
 ## 🐳 Comandos de Desarrollo
 
+> ⚠️ **Los comandos Docker (`docker compose ...`) son cross-platform.** Los comandos de shell (filtrado, encadenamiento) varían según el OS. Ver tabla en la sección de instrucciones para agentes.
+
+### Docker (cross-platform)
 ```bash
 # Levantar todo el entorno
 docker compose up -d --build
@@ -741,15 +756,38 @@ docker compose exec backend npx sequelize-cli db:migrate:undo
 # Generar nueva migración
 docker compose exec backend npx sequelize-cli migration:generate --name descripcion-del-cambio
 
-# Tests frontend
-cd frontend && npm test
-
-# Tests backend con cobertura
-cd backend && npm run coverage
-
-# Ver logs
+# Ver logs (filtrar por servicio)
 docker compose logs -f backend
 docker compose logs -f frontend
+
+# Consultar DB
+docker compose exec postgres psql -U wati_user -d wati_db -c "SELECT ..."
+```
+
+### Bash / zsh (Linux / macOS)
+```bash
+# Tests
+cd frontend && npm test
+cd backend && npm run coverage
+
+# Filtrar logs
+docker compose logs --tail=50 backend | grep "DEBUG"
+
+# Encadenar comandos
+curl -s http://localhost:5001/api/status && echo "OK"
+```
+
+### PowerShell (Windows)
+```powershell
+# Tests
+cd frontend; npm test
+cd backend; npm run coverage
+
+# Filtrar logs
+docker compose logs --tail=50 backend | Select-String "DEBUG"
+
+# Encadenar comandos
+curl -s http://localhost:5001/api/status; Write-Host "OK"
 ```
 
 ---
