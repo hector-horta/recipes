@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Recipe } from '../types/recipe';
 import { useDebounce } from './useDebounce';
+import { useAuth } from '../AuthContext';
 
 async function fetchRecipes(query: string, token?: string | null): Promise<Recipe[]> {
   const params = new URLSearchParams();

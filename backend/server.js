@@ -129,7 +129,8 @@ app.get('/api/recipes', optionalAuthenticateToken, recipeLimiter, async (req, re
     }
 
     const { query, number } = req.query;
-    const data = await RecipeProvider.getRecipes(req.query, userProfile);
+    const plainProfile = userProfile ? userProfile.get({ plain: true }) : null;
+    const data = await RecipeProvider.getRecipes(req.query, plainProfile);
 
     // ── Telemetría de búsquedas ───────────────────────────────────────────
     const searchTerms = query?.trim() || '';
