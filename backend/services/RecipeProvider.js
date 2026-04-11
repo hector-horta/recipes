@@ -74,24 +74,50 @@ export class RecipeProvider {
 
     let results = recipes.map(r => this.normalizeRecipe(r.toJSON(), userProfile));
 
-    // Filtrado por intolerancias (Personalización)
+    // Collect unsafe metadata before filtering
+    let filteredUnsafeCount = 0;
+    const filteredAllergenSet = new Set();
+
     if (hasFilters) {
-      results = results.filter(recipe => recipe.safetyLevel !== 'unsafe');
+      const unsafeRecipes = results.filter(r => r.safetyLevel === 'unsafe');
+      filteredUnsafeCount = unsafeRecipes.length;
+
+      // Collect which allergens triggered the filtering
+      unsafeRecipes.forEach(r => {
+        if (r._matchedAllergens) {
+          r._matchedAllergens.forEach(a => filteredAllergenSet.add(a));
+        }
+      });
+
+      // Only filter if the user did NOT request to include unsafe recipes
+      const includeUnsafe = params.includeUnsafe === 'true';
+      if (!includeUnsafe) {
+        results = results.filter(recipe => recipe.safetyLevel !== 'unsafe');
+      }
     }
 
     // Aplicar límite final después del filtrado
     results = results.slice(0, requestedLimit);
 
+    // Strip internal metadata before sending to client
+    results = results.map(({ _matchedAllergens, ...rest }) => rest);
+
+    const response = {
+      recipes: results,
+      filteredUnsafeCount,
+      filteredAllergens: [...filteredAllergenSet]
+    };
+
     try {
       if (redisClient.isReady) {
-        await redisClient.setEx(cacheKey, 3600, JSON.stringify(results));
+        await redisClient.setEx(cacheKey, 3600, JSON.stringify(response));
         console.log(`[Cache] Cached query results for key: ${cacheKey} (TTL: 1h)`);
       }
     } catch (err) {
       console.warn('[Cache] Error writing to Redis:', err.message);
     }
 
-    return results;
+    return response;
   }
 
   static normalizeRecipe(recipe, userProfile) {
@@ -165,6 +191,7 @@ export class RecipeProvider {
     console.log(`[DEBUG] User Intolerances: ${JSON.stringify(userIntolerances)}`);
 
     let foundMaxSeverity = null; // 'low' or 'high'
+    const matchedAllergenIds = new Set();
 
     activeTriggers.forEach(trigger => {
       const normalizedTrigger = normalize(trigger.text);
@@ -176,7 +203,8 @@ export class RecipeProvider {
         const severity = (userSeverities[trigger.baseId] || 'severe').toLowerCase();
         const isHighSeverity = severity === 'severe' || severity === 'anaphylactic';
         console.log(`[DEBUG-MATCH] Trigger: ${trigger.text} (Base: ${trigger.baseId}), Severity: ${severity}, High: ${isHighSeverity}`);
-        
+        matchedAllergenIds.add(trigger.baseId);
+
         if (isHighSeverity) {
           foundMaxSeverity = 'high';
         } else if (foundMaxSeverity !== 'high') {
@@ -229,7 +257,8 @@ export class RecipeProvider {
       summary: '',
       safetyLevel,
       siboAllergiesTags,
-      siboAlerts: recipe.sibo_alerts || []
+      siboAlerts: recipe.sibo_alerts || [],
+      _matchedAllergens: [...matchedAllergenIds]
     };
   }
 

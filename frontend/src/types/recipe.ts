@@ -28,3 +28,9 @@ export interface Recipe {
   safetyLevel: 'safe' | 'review' | 'unsafe';
   siboAllergiesTags: (Tag | string)[];
 }
+
+export interface RecipeSearchResponse {
+  recipes: Recipe[];
+  filteredUnsafeCount: number;
+  filteredAllergens: string[];
+}
