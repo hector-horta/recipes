@@ -106,7 +106,7 @@ router.get('/me', authenticateToken, async (req, res) => {
       updatedAt: user.updatedAt
     });
   } catch (error) {
-    console.error('[Auth] Error obteniendo perfil.');
+    console.error('[DEBUG-AUTH-ERROR] Error obteniendo perfil:', error);
     res.status(500).json({ error: 'Error interno del servidor.' });
   }
 });
@@ -127,11 +127,12 @@ router.put('/profile', authenticateToken, async (req, res) => {
     if (updates.daily_calories !== undefined) profile.daily_calories = updates.daily_calories;
     if (updates.onboarding_completed !== undefined) profile.onboarding_completed = updates.onboarding_completed;
     if (updates.language !== undefined) profile.language = updates.language;
+    if (updates.severities !== undefined) profile.severities = updates.severities;
 
     await profile.save();
     res.json(profile);
   } catch (error) {
-    console.error('[Auth] Error al actualizar perfil.');
+    console.error('[Auth] Error al actualizar perfil:', error);
     res.status(500).json({ error: 'Error interno del servidor.' });
   }
 });

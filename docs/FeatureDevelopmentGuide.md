@@ -457,9 +457,10 @@ Si existe, responde `409 { error, conflict: true, recipe }`. El Telegram Bot usa
 2. **Evaluación de Riesgo Dinámico**:
    - Si el usuario tiene **SIBO**, se respetan los niveles curados (`sibo_risk_level`) de la base de datos.
    - Si NO tiene SIBO, los riesgos de SIBO se ignoran (la receta se marca como `safe` a menos que contenga un trigger de otra alergia activa).
-3. **Activadores Médicos (Triggers)**: Cruza los ingredientes con `MEDICAL_TRIGGERS` (de `config/medicalTriggers.js`) para cada intolerancia activa. Cualquier coincidencia marca la receta como `unsafe`.
+3. **Activadores Médicos (Triggers)**: Cruza los ingredientes con `MEDICAL_TRIGGERS` (de `config/medicalTriggers.js`) para cada intolerancia activa.
+   - **Búsqueda Robusta**: Se utiliza RexExp con límites de palabra (`(?:^|\s)trigger(?:s|es)?(?:\s|$|[.,;])`) para evitar falsos positivos (como "tuna" disparando "aceitunas") mientras se soporta pluralidad básica (huevo/huevos, atún/atunes).
 4. **Tags Personalizados**: Las etiquetas relacionadas con SIBO (ej: "Bajo en Fructanos", "SIBO: Safe") se filtran y ocultan si el usuario no tiene SIBO en su perfil.
-5. **Ingredientes Limitados**: Los ingredientes marcados como `isBorderlineSafe` (que requieren revisión) solo muestran su advertencia si el usuario tiene la intolerancia correspondiente (principalmente SIBO).
+5. **Ingredientes Limitados**: Los ingredientes marcados como `isBorderlineSafe` (que requieren revisión) solo muestran su advertencia si el usuario tiene la intolerancia correspondiente (SIBO).
 6. **Límite final**: Se aplica el `requestedLimit` sobre el set filtrado y personalizado.
 
 Las intolerancias se incluyen en el hash de cache de Redis para asegurar que la personalización sea consistente y eficiente.

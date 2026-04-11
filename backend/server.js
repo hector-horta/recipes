@@ -95,24 +95,8 @@ app.use('/admin', adminRoutes);
 app.use('/api/suggestions', suggestionRoutes);
 
 // Data previously hardcoded in frontend
-const INTOLERANCE_CATALOG = [
-  { id: 'dairy',     label: 'Lácteos',            emoji: '🥛', desc: 'Leche, queso, mantequilla' },
-  { id: 'egg',       label: 'Huevo',              emoji: '🥚', desc: 'Huevo y derivados' },
-  { id: 'gluten',    label: 'Gluten',             emoji: '🌾', desc: 'Trigo, cebada, centeno' },
-  { id: 'grain',     label: 'Grano',              emoji: '🌿', desc: 'Avena, arroz, quinoa' },
-  { id: 'peanut',    label: 'Maní',               emoji: '🥜', desc: 'Maní y derivados' },
-  { id: 'seafood',   label: 'Pescado',            emoji: '🐟', desc: 'Salmón, atún, anchoas' },
-  { id: 'sesame',    label: 'Sésamo',             emoji: '🫘', desc: 'Semillas y aceite de sésamo' },
-  { id: 'shellfish', label: 'Mariscos',           emoji: '🦐', desc: 'Camarón, langosta, cangrejo' },
-  { id: 'soy',       label: 'Soja',               emoji: '🫛', desc: 'Tofu, salsa de soja, tempeh' },
-  { id: 'sulfite',   label: 'Sulfitos',           emoji: '🍷', desc: 'Vino, frutos secos, conservas' },
-  { id: 'tree_nut',  label: 'Frutos Secos',       emoji: '🌰', desc: 'Almendras, nueces, avellanas' },
-  { id: 'wheat',     label: 'Trigo',              emoji: '🍞', desc: 'Harina, pan, sémola' },
-  { id: 'corn',      label: 'Maíz',               emoji: '🌽', desc: 'Jarabe de maíz, dextrosa' },
-  { id: 'sibo',      label: 'SIBO',               emoji: '🦠', desc: 'Dieta baja en FODMAPs' },
-];
 
-import { MEDICAL_TRIGGERS } from './config/medicalTriggers.js';
+import { MEDICAL_TRIGGERS, INTOLERANCE_CATALOG } from './config/medical.js';
 
 // Healthcheck / Status endpoint
 app.get('/api/status', (req, res) => {
@@ -137,16 +121,22 @@ app.get('/api/recipes', optionalAuthenticateToken, recipeLimiter, async (req, re
     let userProfile = null;
     if (req.user) {
       userProfile = await Profile.findOne({ where: { user_id: req.user.id } });
+      if (userProfile) {
+         console.log(`[DEBUG-PROFILE] User: ${req.user.id}, Intolerances: ${JSON.stringify(userProfile.intolerances)}, Severities: ${JSON.stringify(userProfile.severities)}`);
+      } else {
+         console.log(`[DEBUG-PROFILE] No profile found for ${req.user.id}`);
+      }
     }
 
+    const { query, number } = req.query;
     const data = await RecipeProvider.getRecipes(req.query, userProfile);
 
     // ── Telemetría de búsquedas ───────────────────────────────────────────
-    const query = req.query.query?.trim() || '';
+    const searchTerms = query?.trim() || '';
     const isEmpty = !data || data.length === 0;
 
-    if (query.length >= 3) {
-      ActivityLogger.log('SEARCH', { query }, {
+    if (searchTerms.length >= 3) {
+      ActivityLogger.log('SEARCH', { query: searchTerms }, {
         userId: req.user?.id || null,
         ip: req.ip,
         failedSearch: isEmpty

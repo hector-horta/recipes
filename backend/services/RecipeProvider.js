@@ -1,7 +1,7 @@
 import { Op, where, cast, col } from 'sequelize';
 import { Recipe } from '../models/Recipe.js';
 import { redisClient } from '../config/redis.js';
-import { MEDICAL_TRIGGERS } from '../config/medicalTriggers.js';
+import { MEDICAL_TRIGGERS } from '../config/medical.js';
 import crypto from 'crypto';
 
 const CACHE_TTL_SECONDS = 3600; // 1 hour
@@ -14,11 +14,21 @@ export class RecipeProvider {
 
     if (query && query.trim()) {
       const q = query.trim();
-      whereClause[Op.or] = [
-        { title_es: { [Op.iLike]: `%${q}%` } },
-        { title_en: { [Op.iLike]: `%${q}%` } },
-        where(cast(col('tags'), 'text'), { [Op.iLike]: `%${q}%` })
-      ];
+      // Handle simple Spanish plurals for the search query (rough approximation)
+      const baseQ = q.toLowerCase().endsWith('es') ? q.slice(0, -2) : (q.toLowerCase().endsWith('s') ? q.slice(0, -1) : q);
+      
+      const searchTerms = [q];
+      if (baseQ !== q && baseQ.length > 2) searchTerms.push(baseQ);
+
+      const orConditions = [];
+      searchTerms.forEach(term => {
+        orConditions.push({ title_es: { [Op.iLike]: `%${term}%` } });
+        orConditions.push({ title_en: { [Op.iLike]: `%${term}%` } });
+        orConditions.push(where(cast(col('tags'), 'text'), { [Op.iLike]: `%${term}%` }));
+        orConditions.push(where(cast(col('ingredients'), 'text'), { [Op.iLike]: `%${term}%` }));
+      });
+
+      whereClause[Op.or] = orConditions;
     }
 
     const userIntolerances = userProfile?.intolerances || [];
@@ -27,27 +37,33 @@ export class RecipeProvider {
     const cachePayload = {
       q: query || '',
       n: number,
-      intolerances: userIntolerances.sort()
+      intolerances: userIntolerances.sort(),
+      severities: userProfile?.severities || {}
     };
     const cacheHash = crypto.createHash('md5').update(JSON.stringify(cachePayload)).digest('hex');
     const cacheKey = `recipes:${cacheHash}`;
 
-    try {
-      if (redisClient.isReady) {
-        const cached = await redisClient.get(cacheKey);
-        if (cached) {
-          console.log(`[Cache] Redis Hit para clave: ${cacheKey}`);
-          return JSON.parse(cached);
+    /*
+      try {
+        if (redisClient.isReady) {
+          const cached = await redisClient.get(cacheKey);
+          if (cached) {
+            console.log(`[Cache] Redis Hit para clave: ${cacheKey}`);
+            return JSON.parse(cached);
+          }
         }
+      } catch (err) {
+        console.warn('[Cache] Error leyendo de Redis:', err.message);
       }
-    } catch (err) {
-      console.warn('[Cache] Error leyendo de Redis:', err.message);
-    }
+    */
 
     const requestedLimit = parseInt(number, 10) || 10;
     
     // Identificar si necesitamos un buffer para el filtrado post-DB
     const hasFilters = userIntolerances.length > 0;
+
+    console.log(`[DEBUG-SEARCH] Params: ${JSON.stringify(params)}`);
+    console.log(`[DEBUG-SEARCH] Final whereClause: ${JSON.stringify(whereClause)}`);
 
     // Buscamos candidatos
     const recipes = await Recipe.findAll({
@@ -56,7 +72,7 @@ export class RecipeProvider {
       limit: hasFilters ? requestedLimit * 5 : requestedLimit
     });
 
-    let results = recipes.map(r => this.normalizeRecipe(r.toJSON(), userIntolerances));
+    let results = recipes.map(r => this.normalizeRecipe(r.toJSON(), userProfile));
 
     // Filtrado por intolerancias (Personalización)
     if (hasFilters) {
@@ -78,7 +94,10 @@ export class RecipeProvider {
     return results;
   }
 
-  static normalizeRecipe(recipe, userIntolerances = []) {
+  static normalizeRecipe(recipe, userProfile) {
+    const profile = userProfile || {};
+    const userIntolerances = profile.intolerances || [];
+    const userSeverities = profile.severities || {};
     const hasSibo = userIntolerances.some(i => i.toLowerCase() === 'sibo');
     
     const ingredients = (recipe.ingredients || []).map(i => {
@@ -119,26 +138,59 @@ export class RecipeProvider {
     // Identificar activadores médicos para las intolerancias del usuario
     const activeTriggers = [];
     userIntolerances.forEach(intolerance => {
-      const lowerIntolerance = intolerance.toLowerCase();
-      // Si la receta ya tiene una curación SIBO (avoid/caution), no re-evaluamos triggers de SIBO 
-      // para evitar que un 'caution' de miel sea sobreescrito por un 'avoid' genérico de la lista de triggers.
-      if (lowerIntolerance === 'sibo' && siboCurated) return;
+      const lowerIntolerance = (intolerance || '').toLowerCase();
+      // Extraer ID base (ej: 'egg_anafilaxis' -> 'egg')
+      const baseId = lowerIntolerance.split('_')[0].split('-')[0];
       
-      const triggers = MEDICAL_TRIGGERS[lowerIntolerance];
-      if (triggers) activeTriggers.push(...triggers);
+      // Si la receta ya tiene una curación SIBO (avoid/caution), no re-evaluamos triggers de SIBO 
+      if (baseId === 'sibo' && siboCurated) return;
+      
+      const triggers = MEDICAL_TRIGGERS[baseId];
+      if (triggers) {
+        // Almacenamos triggers mapeados a su baseId para evaluar severidad después
+        triggers.forEach(t => activeTriggers.push({ text: t, baseId }));
+      }
     });
 
+    // Función para normalizar texto (quitar acentos)
+    const normalize = (text) => 
+      (text || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
     const ingredientsString = ingredients
-      .map(ing => (ing.name || '').toLowerCase())
+      .map(ing => normalize(ing.name))
       .join(' ');
 
-    const hasForbiddenIngredient = activeTriggers.some(trigger => 
-      ingredientsString.includes(trigger.toLowerCase())
-    );
+    console.log(`[DEBUG] Normalizing Recipe: ${recipe.title_es || recipe.title_en}`);
+    console.log(`[DEBUG] Ingredients String: "${ingredientsString}"`);
+    console.log(`[DEBUG] User Intolerances: ${JSON.stringify(userIntolerances)}`);
 
-    // Los triggers siempre marcan como 'unsafe' (Evitar)
-    if (hasForbiddenIngredient) {
+    let foundMaxSeverity = null; // 'low' or 'high'
+
+    activeTriggers.forEach(trigger => {
+      const normalizedTrigger = normalize(trigger.text);
+      const escapedTrigger = normalizedTrigger.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
+      const regex = new RegExp(`(?:^|\\s)${escapedTrigger}(?:s|es)?(?:\\s|$|[.,;])`, 'i');
+      
+      const isMatch = regex.test(ingredientsString);
+      if (isMatch) {
+        const severity = (userSeverities[trigger.baseId] || 'severe').toLowerCase();
+        const isHighSeverity = severity === 'severe' || severity === 'anaphylactic';
+        console.log(`[DEBUG-MATCH] Trigger: ${trigger.text} (Base: ${trigger.baseId}), Severity: ${severity}, High: ${isHighSeverity}`);
+        
+        if (isHighSeverity) {
+          foundMaxSeverity = 'high';
+        } else if (foundMaxSeverity !== 'high') {
+          foundMaxSeverity = 'low';
+        }
+      }
+    });
+
+    console.log(`[DEBUG-RESULT] Final foundMaxSeverity: ${foundMaxSeverity}`);
+
+    if (foundMaxSeverity === 'high') {
       safetyLevel = 'unsafe';
+    } else if (foundMaxSeverity === 'low') {
+      safetyLevel = 'review';
     }
 
     const instructions = (recipe.steps || [])

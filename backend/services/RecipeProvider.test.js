@@ -142,7 +142,7 @@ describe('RecipeProvider', () => {
         ingredients: [{ name: 'miel' }]
       };
       
-      const result = RecipeProvider.normalizeRecipe(recipe, ['egg']); // Only egg allergy
+      const result = RecipeProvider.normalizeRecipe(recipe, { intolerances: ['egg'] }); // Only egg allergy
       expect(result.safetyLevel).toBe('safe');
     });
 
@@ -154,11 +154,11 @@ describe('RecipeProvider', () => {
         ingredients: [{ name: 'miel' }]
       };
       
-      const result = RecipeProvider.normalizeRecipe(recipe, ['sibo']);
+      const result = RecipeProvider.normalizeRecipe(recipe, { intolerances: ['sibo'] });
       expect(result.safetyLevel).toBe('review');
     });
 
-    it('should show "unsafe" for recipe containing allergens for the user', () => {
+    it('should show "unsafe" for recipe containing allergens for the user by default (severe)', () => {
       const recipe = {
         id: '1',
         title_es: 'Omelette',
@@ -166,7 +166,7 @@ describe('RecipeProvider', () => {
         ingredients: [{ name: 'huevo' }]
       };
       
-      const result = RecipeProvider.normalizeRecipe(recipe, ['egg']);
+      const result = RecipeProvider.normalizeRecipe(recipe, { intolerances: ['egg'] });
       expect(result.safetyLevel).toBe('unsafe');
     });
 
@@ -178,7 +178,18 @@ describe('RecipeProvider', () => {
         ingredients: [{ name: 'miel' }]
       };
       
-      const result = RecipeProvider.normalizeRecipe(recipe, []);
+      const result = RecipeProvider.normalizeRecipe(recipe, { intolerances: [] });
+      expect(result.safetyLevel).toBe('safe');
+    });
+
+    it('should handle null userProfile safely (guest case)', () => {
+      const recipe = {
+        id: '1',
+        title_es: 'Test',
+        ingredients: [{ name: 'huevo' }]
+      };
+      
+      const result = RecipeProvider.normalizeRecipe(recipe, null);
       expect(result.safetyLevel).toBe('safe');
     });
 
@@ -189,7 +200,7 @@ describe('RecipeProvider', () => {
         tags: ['SIBO: Bajo en Fructanos', 'Saludable', 'Bajo en Fodmap']
       };
       
-      const result = RecipeProvider.normalizeRecipe(recipe, ['egg']);
+      const result = RecipeProvider.normalizeRecipe(recipe, { intolerances: ['egg'] });
       const tags = result.siboAllergiesTags.map(t => t.es);
       expect(tags).toContain('Saludable');
       expect(tags).not.toContain('SIBO: Bajo en Fructanos');
@@ -203,10 +214,106 @@ describe('RecipeProvider', () => {
         tags: ['SIBO: Bajo en Fructanos', 'Saludable']
       };
       
-      const result = RecipeProvider.normalizeRecipe(recipe, ['sibo']);
+      const result = RecipeProvider.normalizeRecipe(recipe, { intolerances: ['sibo'] });
       const tags = result.siboAllergiesTags.map(t => t.es);
       expect(tags).toContain('Saludable');
       expect(tags).toContain('SIBO: Bajo en Fructanos');
+    });
+
+    it('should not trigger false positives with substring matches (e.g., "tuna" in "aceitunas")', () => {
+      const recipe = {
+        id: '1',
+        title_es: 'Ensalada de aceitunas',
+        ingredients: [{ name: 'aceitunas' }]
+      };
+      
+      // 'seafood' allergy has 'tuna' as a trigger. 
+      // 'aceitunas' should NOT trigger a 'seafood' warning.
+      const result = RecipeProvider.normalizeRecipe(recipe, { intolerances: ['seafood'] });
+      expect(result.safetyLevel).toBe('safe');
+    });
+
+    it('should correctly identify plural forms of triggers (e.g., "huevos" for "huevo")', () => {
+      const recipe = {
+        id: '1',
+        title_es: 'Omelette',
+        ingredients: [{ name: 'Huevos frescos' }]
+      };
+      
+      const result = RecipeProvider.normalizeRecipe(recipe, { intolerances: ['egg'] });
+      expect(result.safetyLevel).toBe('unsafe');
+    });
+
+    it('should correctly identify plural forms with "es" (e.g., "atunes" for "atun")', () => {
+      const recipe = {
+        id: '1',
+        title_es: 'Ensalada',
+        ingredients: [{ name: 'Lata de atunes' }]
+      };
+      
+      const result = RecipeProvider.normalizeRecipe(recipe, { intolerances: ['seafood'] });
+      expect(result.safetyLevel).toBe('unsafe');
+    });
+
+    it('should be accent-insensitive (e.g., "atún" matches trigger "atun")', () => {
+      const recipe = {
+        id: '1',
+        title_es: 'Ensalada de Atún',
+        ingredients: [{ name: 'atún' }]
+      };
+      
+      const result = RecipeProvider.normalizeRecipe(recipe, { intolerances: ['seafood'] });
+      expect(result.safetyLevel).toBe('unsafe');
+    });
+
+    it('should handle intolerance IDs with suffixes (e.g., "egg_anafilaxis" should map to "egg")', () => {
+      const recipe = {
+        id: '1',
+        title_es: 'Omelette',
+        ingredients: [{ name: 'huevos' }]
+      };
+      
+      const result = RecipeProvider.normalizeRecipe(recipe, { intolerances: ['egg_anafilaxis'] });
+      expect(result.safetyLevel).toBe('unsafe');
+    });
+
+    it('should still support simple whole-word matching at start of string', () => {
+      const recipe = {
+        id: '1',
+        title_es: 'Huevo frito',
+        ingredients: [{ name: 'Huevo' }]
+      };
+      
+      const result = RecipeProvider.normalizeRecipe(recipe, { intolerances: ['egg'] });
+      expect(result.safetyLevel).toBe('unsafe');
+    });
+
+    it('should show "review" for mild severity level', () => {
+      const recipe = {
+        id: '1',
+        title_es: 'Omelette',
+        ingredients: [{ name: 'huevo' }]
+      };
+      
+      const result = RecipeProvider.normalizeRecipe(recipe, { 
+        intolerances: ['egg'],
+        severities: { egg: 'mild' }
+      });
+      expect(result.safetyLevel).toBe('review');
+    });
+
+    it('should show "unsafe" for severe severity level', () => {
+      const recipe = {
+        id: '1',
+        title_es: 'Omelette',
+        ingredients: [{ name: 'huevo' }]
+      };
+      
+      const result = RecipeProvider.normalizeRecipe(recipe, { 
+        intolerances: ['egg'],
+        severities: { egg: 'severe' }
+      });
+      expect(result.safetyLevel).toBe('unsafe');
     });
   });
 });

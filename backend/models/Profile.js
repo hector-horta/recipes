@@ -47,6 +47,11 @@ export const Profile = sequelize.define('Profile', {
     type: DataTypes.STRING(5),
     allowNull: false,
     defaultValue: 'en'
+  },
+  severities: {
+    type: DataTypes.JSONB,
+    allowNull: false,
+    defaultValue: {}
   }
 }, {
   tableName: 'profiles',
