@@ -8,6 +8,7 @@ import { RecipeGrid } from '../components/recipe/RecipeGrid';
 import { Pagination } from '../components/recipe/Pagination';
 import { PageLayout } from '../components/recipe/PageLayout';
 import { SearchFeedback } from '../components/recipe/SearchFeedback';
+import { AllergenSafetyGate } from '../components/recipe/AllergenSafetyGate';
 
 interface RecipePageProps {
   onSelectRecipe: (recipe: Recipe) => void;
@@ -21,6 +22,9 @@ interface RecipePageProps {
   isSearching: boolean;
   isQuotaExhausted: boolean;
   refresh: () => void;
+  filteredUnsafeCount?: number;
+  filteredAllergens?: string[];
+  setIncludeUnsafe?: (val: boolean) => void;
 }
 
 export function RecipePage({
@@ -34,7 +38,10 @@ export function RecipePage({
   isPending,
   isSearching,
   isQuotaExhausted,
-  refresh
+  refresh,
+  filteredUnsafeCount = 0,
+  filteredAllergens = [],
+  setIncludeUnsafe
 }: RecipePageProps) {
   const { favorites, toggleFavorite, isFavorited, isLoading: favsLoading } = useFavorites();
   const [currentPage, setCurrentPage] = useState(1);
@@ -51,7 +58,10 @@ export function RecipePage({
 
   const isLoading = (hookLoading || favsLoading || isPending) && displayRecipes.length === 0;
   const isRefreshing = (hookLoading || isPending) && displayRecipes.length > 0;
-  const showSearchFeedback = isSearchActive && !isLoading && !isRefreshing && displayRecipes.length === 0;
+  
+  const isListEmpty = !isLoading && !isRefreshing && displayRecipes.length === 0;
+  const showSafetyGate = isSearchActive && isListEmpty && filteredUnsafeCount > 0;
+  const showSearchFeedback = isSearchActive && isListEmpty && !showSafetyGate;
 
   return (
     <>
@@ -70,7 +80,7 @@ export function RecipePage({
           onOpenLogin={onOpenLogin}
         />
 
-        {!showSearchFeedback && (
+        {!isListEmpty && (
           <RecipeGrid
             recipes={displayRecipes}
             isLoading={isLoading}
@@ -81,13 +91,23 @@ export function RecipePage({
           />
         )}
 
+        {showSafetyGate && (
+          <AllergenSafetyGate 
+            searchTerm={searchQuery}
+            filteredCount={filteredUnsafeCount}
+            allergens={filteredAllergens}
+            onOverride={() => setIncludeUnsafe?.(true)}
+            onDismiss={() => setSearchQuery('')}
+          />
+        )}
+
         {showSearchFeedback && <SearchFeedback searchTerm={searchQuery} onGoHome={() => setSearchQuery('')} />}
 
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={setCurrentPage}
-          hidden={isSearchActive}
+          hidden={isSearchActive || isListEmpty}
         />
       </PageLayout>
     </>
