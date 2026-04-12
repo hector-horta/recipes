@@ -31,6 +31,8 @@ async function fetchRecipes(
   return data as RecipeSearchResponse;
 }
 
+import { trackEvent } from '../utils/analytics';
+
 export function useWatiSearch() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -58,19 +60,18 @@ export function useWatiSearch() {
   const filteredUnsafeCount = data?.filteredUnsafeCount ?? 0;
   const filteredAllergens = data?.filteredAllergens ?? [];
 
-  // Umami Event Tracking: search_success / search_failed
+  // Event Tracking: search_success / search_failed
   useEffect(() => {
     const trimmedQuery = debouncedQuery.trim();
     if (trimmedQuery.length < 3) return;
-    if (typeof window === 'undefined' || !(window as any).umami) return;
 
     if (results.length > 0) {
-      (window as any).umami.track('search_success', {
+      trackEvent('search_success', {
         query: trimmedQuery,
         resultsCount: results.length
       });
     } else {
-      (window as any).umami.track('search_failed', {
+      trackEvent('search_failed', {
         query: trimmedQuery,
         resultsCount: 0
       });

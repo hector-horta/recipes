@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { trackEvent } from '../utils/analytics';
 
 export function useSearchFeedback() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -24,10 +25,7 @@ export function useSearchFeedback() {
       }
 
       setSubmitted(true);
-
-      if (typeof window !== 'undefined' && (window as any).umami) {
-        (window as any).umami.track('suggest_to_chef', { term: term.trim() });
-      }
+      trackEvent('suggest_to_chef', { term: term.trim() });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {

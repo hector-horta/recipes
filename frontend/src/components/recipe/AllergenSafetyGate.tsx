@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ShieldAlert, ShieldOff, Search } from 'lucide-react';
+import { trackEvent } from '../../utils/analytics';
 
 interface AllergenSafetyGateProps {
   searchTerm: string;
@@ -21,34 +22,28 @@ export function AllergenSafetyGate({
 
   // Analytics: track gate shown
   useEffect(() => {
-    if (typeof window !== 'undefined' && (window as any).umami) {
-      (window as any).umami.track('safety_gate_shown', {
-        query: searchTerm,
-        filteredCount,
-        allergens: allergens.join(',')
-      });
-    }
+    trackEvent('safety_gate_shown', {
+      query: searchTerm,
+      filteredCount,
+      allergens: allergens.join(',')
+    });
   }, [searchTerm, filteredCount, allergens]);
 
   const handleOverride = () => {
-    if (typeof window !== 'undefined' && (window as any).umami) {
-      (window as any).umami.track('safety_gate_override', {
-        query: searchTerm,
-        filteredCount,
-        allergens: allergens.join(',')
-      });
-    }
+    trackEvent('safety_gate_override', {
+      query: searchTerm,
+      filteredCount,
+      allergens: allergens.join(',')
+    });
     onOverride();
   };
 
   const handleDismiss = () => {
-    if (typeof window !== 'undefined' && (window as any).umami) {
-      (window as any).umami.track('safety_gate_dismissed', {
-        query: searchTerm,
-        filteredCount,
-        allergens: allergens.join(',')
-      });
-    }
+    trackEvent('safety_gate_dismissed', {
+      query: searchTerm,
+      filteredCount,
+      allergens: allergens.join(',')
+    });
     onDismiss();
   };
 

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../AuthContext';
+import { trackEvent } from '../utils/analytics';
 
 export interface FavoriteItem {
   id: string;
@@ -50,19 +51,17 @@ export function useFavorites() {
       return res.json();
     },
     onSuccess: (data, recipe) => {
-      // Umami Event Tracking
-      if (typeof window !== 'undefined' && (window as any).umami) {
-        if (data?.favorited) {
-          (window as any).umami.track('recipe_favorited', {
-            title: recipe.title,
-            id: recipe.id
-          });
-        } else {
-          (window as any).umami.track('recipe_unfavorited', {
-            title: recipe.title,
-            id: recipe.id
-          });
-        }
+      // Event Tracking
+      if (data?.favorited) {
+        trackEvent('recipe_favorited', {
+          title: recipe.title,
+          id: recipe.id
+        });
+      } else {
+        trackEvent('recipe_unfavorited', {
+          title: recipe.title,
+          id: recipe.id
+        });
       }
     },
     onMutate: async (recipe) => {

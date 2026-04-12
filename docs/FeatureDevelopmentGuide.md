@@ -663,14 +663,19 @@ Todas las brand colors están como `brand-sage`, `brand-forest`, `brand-mint`, `
 
 ---
 
-## 📊 Analytics (Umami)
+## 📊 Analytics
 
-### Frontend (Browser)
+### Frontend (Browser) - Abstracción Agnóstica
+Para evitar un acoplamiento fuerte con proveedores de analytics específicos (como Umami, PostHog, o Google Analytics), Wati utiliza un **patrón Facade**.
+**Nunca llames a la API del proveedor directamente** en los componentes (por ejemplo, nunca uses `window.umami.track`). En su lugar, siempre importa y utiliza la abstracción global `trackEvent`:
+
 ```typescript
-if (typeof window !== 'undefined' && (window as any).umami) {
-  (window as any).umami.track('event_name', { key: 'value' });
-}
+import { trackEvent } from '../utils/analytics';
+
+// Uso
+trackEvent('event_name', { key: 'value' });
 ```
+> Si deseas agregar o cambiar el proveedor de analytics, sólo debes modificar la función en `frontend/src/utils/analytics.ts`.
 
 ### Eventos Existentes
 | Evento | Cuándo | Payload |
@@ -680,6 +685,9 @@ if (typeof window !== 'undefined' && (window as any).umami) {
 | `recipe_favorited` | Marcar como favorita | `{ title, id }` |
 | `recipe_unfavorited` | Quitar de favoritos | `{ title, id }` |
 | `suggest_to_chef` | Sugerir receta al chef | `{ term }` |
+| `safety_gate_shown` | Se muestra un cerrojo por severidad | `{ query, filteredCount, allergens }` |
+| `safety_gate_override` | El usuario decide "ver riesgo" | `{ query, filteredCount, allergens }` |
+| `safety_gate_dismissed` | El usuario rechaza continuar | `{ query, filteredCount, allergens }` |
 
 > **Regla**: Todo feature nuevo debe incluir al menos un evento de tracking.
 

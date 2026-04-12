@@ -45,7 +45,9 @@ El proyecto se divide en diferentes servicios orquestados por Docker Compose:
 - **NVIDIA NIM**: OCDRNet (OCR), Llama 4 Maverick (NLP), SDXL (Generación de Imágenes).
 - **Groq API**: Whisper (Transcripción de audio de alta velocidad).
 
-## 📊 Eventos de Analytics (Umami)
+## 📊 Eventos de Analytics (Agnóstico)
+
+El tracking de analíticas en el frontend utiliza una **abstracción (Facade Pattern)** en `frontend/src/utils/analytics.ts` para desacoplar la aplicación de un proveedor específico (actualmente Umami). Esto permite cambiar a otras herramientas sin modificar la lógica de los componentes.
 
 | Evento | Cuándo se dispara | Payload |
 |---|---|---|
@@ -54,8 +56,11 @@ El proyecto se divide en diferentes servicios orquestados por Docker Compose:
 | `recipe_favorited` | Al marcar receta como favorita | `{ title, id }` |
 | `recipe_unfavorited` | Al quitar receta de favoritos | `{ title, id }` |
 | `suggest_to_chef` | Al sugerir receta al chef | `{ term }` |
+| `safety_gate_shown` | Se muestra un cerrojo por severidad alta | `{ query, filteredCount, allergens }` |
+| `safety_gate_override`| El usuario presiona "Ver Riesgo" | `{ query, filteredCount, allergens }` |
+| `safety_gate_dismissed`| El usuario presiona "Entendido" | `{ query, filteredCount, allergens }` |
 
-**Dashboard de Umami**: `http://analytics.localhost` (requiere entrada en `/etc/hosts` o DNS local).
+**Dashboard de Umami** (Implementación actual): `http://analytics.localhost` (requiere entrada en `/etc/hosts` o DNS local).
 
 ## 🚀 Instalación y Uso (Docker Compose)
 

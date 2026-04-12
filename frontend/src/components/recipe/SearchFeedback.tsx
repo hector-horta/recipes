@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { ChefHat, CheckCircle, Loader2, Home } from 'lucide-react';
 import { useSearchFeedback } from '../../hooks/useSearchFeedback';
 import { useAuth } from '../../AuthContext';
+import { trackEvent } from '../../utils/analytics';
 
 interface SearchFeedbackProps {
   searchTerm: string;
@@ -14,16 +15,12 @@ export function SearchFeedback({ searchTerm, onGoHome }: SearchFeedbackProps) {
   const { isSubmitting, submitted, error, suggestToChef } = useSearchFeedback();
 
   const handleGoHome = () => {
-    if (typeof window !== 'undefined' && (window as any).umami) {
-      (window as any).umami.track('suggest_back_to_home', { term: searchTerm });
-    }
+    trackEvent('suggest_back_to_home', { term: searchTerm });
     onGoHome();
   };
 
   const handleDismiss = () => {
-    if (typeof window !== 'undefined' && (window as any).umami) {
-      (window as any).umami.track('suggest_dismiss', { term: searchTerm });
-    }
+    trackEvent('suggest_dismiss', { term: searchTerm });
     onGoHome();
   };
 
