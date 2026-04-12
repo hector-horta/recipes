@@ -1,0 +1,8 @@
+# Agent Directives for Wati Monorepo
+
+You are an AI assistant/agent helping with the Wati project.
+CRITICAL: Before proposing any architecture, modifying backend or frontend flows, or starting the development of a new feature, you MUST read the main architecture guide silently:
+
+`docs/FeatureDevelopmentGuide.md`
+
+Do not break the established conventions for TypeScript, React, Express 5, Zod validations, Docker Compose, and the architectural rules described in that document.
