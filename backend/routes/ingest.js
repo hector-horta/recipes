@@ -16,8 +16,10 @@ const __dirname = path.dirname(__filename);
 
 const router = Router();
 
+import { config } from '../config/env.js';
+
 function getApiKey() {
-  const key = process.env.NVIDIA_API_KEY;
+  const key = config.NVIDIA_API_KEY;
   if (!key) throw new Error('NVIDIA_API_KEY not configured');
   return key;
 }
@@ -285,7 +287,7 @@ router.post('/text', async (req, res, next) => {
 });
 
 function getGroqKey() {
-  const key = process.env.GROQ_API_KEY;
+  const key = config.GROQ_API_KEY;
   if (!key) throw new Error('GROQ_API_KEY not configured');
   return key;
 }
@@ -574,7 +576,7 @@ function buildCSVRow(recipe) {
 }
 
 function buildCurlCommand(recipe) {
-  const apiUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const apiUrl = config.FRONTEND_URL || 'http://localhost:5173';
   return `curl -X POST ${apiUrl}/api/ingest/save \\\n  -H "Content-Type: application/json" \\\n  -d '${JSON.stringify(recipe, null, 2)}'`;
 }
 

@@ -1,8 +1,9 @@
 import { ActivityLog } from '../models/ActivityLog.js';
 import { SearchLog } from '../models/SearchLog.js';
+import { config } from '../config/env.js';
 
-const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const TELEGRAM_USER_ID = process.env.TELEGRAM_USER_ID;
+const TELEGRAM_TOKEN = config.TELEGRAM_BOT_TOKEN;
+const TELEGRAM_USER_ID = config.TELEGRAM_USER_ID;
 
 /**
  * ActivityLogger — Telemetría asíncrona y alertas Telegram

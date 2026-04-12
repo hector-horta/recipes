@@ -1,22 +1,19 @@
-// server.js
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 
-dotenv.config({ path: '../.env' });
-dotenv.config(); // Fallback to local .env if exists
+import { config } from './config/env.js';
 
 const app = express();
-const port = process.env.PORT || 5001;
+const port = config.PORT;
 
 // Enable CORS for frontend origins (localhost + local network)
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow localhost, local network IPs, and undefined (mobile apps, direct requests)
     const allowedHosts = [
-      process.env.FRONTEND_URL || 'http://localhost:5173',
+      config.FRONTEND_URL,
       'http://localhost:5173',
       'http://localhost',
       'http://127.0.0.1:5173'
@@ -200,6 +197,15 @@ app.use((err, req, res, next) => {
   // ─────────────────────────────────────────────────────────────────────────
 
   res.status(status).json({ error: message });
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[Unhandled Rejection]', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('[Uncaught Exception]', error);
+  process.exit(1);
 });
 
 app.listen(port, () => {

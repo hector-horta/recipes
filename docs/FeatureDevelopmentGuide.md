@@ -35,6 +35,7 @@ Al desarrollar en este repositorio:
 ```
 /
 ├── .env                          # Variables de entorno globales (Docker Compose las inyecta)
+├── SECURITY.md                   # Políticas de seguridad, Auth y prevención (i.e. CSRF)
 ├── docker-compose.yml
 ├── backend/
 │   ├── server.js                 # Entry point — Express 5 app, routes, rate limiting, CORS
@@ -42,6 +43,7 @@ Al desarrollar en este repositorio:
 │   ├── vitest.config.ts          # Test: environment: 'node'
 │   ├── .sequelizerc              # Sequelize CLI paths
 │   ├── config/
+│   │   ├── env.js                # Validación estricta con Zod. FUENTE ÚNICA de process.env
 │   │   ├── config.cjs            # Sequelize CLI config (CommonJS requerido por CLI)
 │   │   ├── database.js           # Sequelize instance + connectDB()
 │   │   ├── redis.js              # Redis client + connectRedis()

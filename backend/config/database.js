@@ -24,15 +24,13 @@ import { Sequelize } from 'sequelize';
 import dotenv from 'dotenv';
 import path from 'path';
 
-const envPath = path.resolve(process.cwd(), '../.env');
-dotenv.config({ path: envPath });
-dotenv.config();
+import { config } from './env.js';
 
 /**
  * Determines if running in production mode
  * Used to select appropriate database host
  */
-const isProduction = process.env.NODE_ENV === 'production';
+const isProduction = config.NODE_ENV === 'production';
 
 /**
  * Gets the database host based on environment
@@ -42,8 +40,8 @@ const isProduction = process.env.NODE_ENV === 'production';
  * @returns {string} Database hostname
  */
 function getDbHost() {
-  if (process.env.POSTGRES_HOST) {
-    return process.env.POSTGRES_HOST;
+  if (config.POSTGRES_HOST) {
+    return config.POSTGRES_HOST;
   }
   return isProduction ? 'postgres' : 'localhost';
 }
@@ -59,19 +57,19 @@ function getDbHost() {
  * @throws {Error} If POSTGRES_PASSWORD is not set
  */
 function getConnectionString() {
-  if (process.env.DATABASE_URL) {
-    return process.env.DATABASE_URL;
+  if (config.DATABASE_URL) {
+    return config.DATABASE_URL;
   }
 
-  const password = process.env.POSTGRES_PASSWORD;
+  const password = config.POSTGRES_PASSWORD;
 
   if (!password) {
     throw new Error('[Database] No password available. Set POSTGRES_PASSWORD environment variable.');
   }
 
-  const dbUser = process.env.POSTGRES_USER || 'wati_user';
+  const dbUser = config.POSTGRES_USER || 'wati_user';
   const dbHost = getDbHost();
-  const dbName = process.env.POSTGRES_DB || 'wati_db';
+  const dbName = config.POSTGRES_DB || 'wati_db';
   
   return `postgres://${dbUser}:${password}@${dbHost}:5432/${dbName}`;
 }

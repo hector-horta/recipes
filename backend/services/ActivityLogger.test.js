@@ -18,11 +18,16 @@ vi.mock('../models/SearchLog.js', () => ({
   }
 }));
 
+vi.mock('../config/env.js', () => ({
+  config: {
+    TELEGRAM_BOT_TOKEN: '',
+    TELEGRAM_USER_ID: ''
+  }
+}));
+
 describe('ActivityLogger', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.TELEGRAM_BOT_TOKEN = '';
-    process.env.TELEGRAM_USER_ID = '';
   });
 
   describe('log', () => {

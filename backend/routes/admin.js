@@ -5,12 +5,14 @@ import { FavoriteRecipe } from '../models/FavoriteRecipe.js';
 
 const router = express.Router();
 
+import { config } from '../config/env.js';
+
 /**
  * Middleware: verifica la ADMIN_API_KEY en el header x-admin-key.
  */
 function requireAdminKey(req, res, next) {
   const key = req.headers['x-admin-key'];
-  const expected = process.env.ADMIN_API_KEY;
+  const expected = config.ADMIN_API_KEY;
 
   if (!expected) {
     console.error('[Admin] ADMIN_API_KEY not configured in environment.');
