@@ -102,6 +102,7 @@ cd backend && npm install && npm run coverage
 | [FeatureDevelopmentGuide.md](./docs/FeatureDevelopmentGuide.md) | Manual para desarrollar nuevos features: DB, Backend, Frontend, Seguridad y Analytics. |
 | [ProductionChecklist.md](./docs/ProductionChecklist.md) | Checklist paso a paso para poner la aplicación en producción. |
 | [HCP_VAULT_SETUP.md](./docs/HCP_VAULT_SETUP.md) | Guía de configuración para HCP Vault Secrets y Terraform. |
+| [SECURITY.md](./SECURITY.md) | Políticas de seguridad, declaraciones arquitectónicas y prevención de vulnerabilidades (Auth, CSRF). |
 
 ---
 **Wati** — *Seguridad alimentaria impulsada por IA, ahora multicapa.*
