@@ -21,9 +21,8 @@ export function TopNav({ onOpenLogin, onOpenOnboarding }: TopNavProps) {
     <nav className="sticky top-0 z-40 bg-white/70 backdrop-blur-xl border-b border-brand-sage/10 shadow-sm/5">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Logo */}
-        <div className="flex items-center gap-2.5">
-          <WatiLogo size={32} />
-          <span className="text-xl font-extrabold text-brand-forest tracking-tight">Wati</span>
+        <div className="flex items-center">
+          <WatiLogo size={140} />
         </div>
 
         {/* Desktop: Language Selector + Auth Actions */}

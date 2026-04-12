@@ -134,7 +134,7 @@ app.get('/api/recipes', optionalAuthenticateToken, recipeLimiter, async (req, re
 
     // ── Telemetría de búsquedas ───────────────────────────────────────────
     const searchTerms = query?.trim() || '';
-    const isEmpty = !data || data.length === 0;
+    const isEmpty = !data.recipes || data.recipes.length === 0;
 
     if (searchTerms.length >= 3) {
       ActivityLogger.log('SEARCH', { query: searchTerms }, {
@@ -150,7 +150,8 @@ app.get('/api/recipes', optionalAuthenticateToken, recipeLimiter, async (req, re
       ActivityLogger.log('SEARCH', {
         query: query || '(browse)',
         filteredByIntolerances: userIntolerances,
-        resultsAfterFilter: data.length
+        resultsAfterFilter: data.recipes.length,
+        filteredUnsafeCount: data.filteredUnsafeCount
       }, {
         userId: req.user?.id || null,
         ip: req.ip,

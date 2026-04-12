@@ -53,7 +53,7 @@ describe('RecipeProvider', () => {
       const result = await RecipeProvider.getRecipes({ query: '' });
 
       expect(Recipe.findAll).toHaveBeenCalled();
-      expect(result).toHaveLength(1);
+      expect(result.recipes).toHaveLength(1);
     });
 
     it('should return empty array when no recipes', async () => {
@@ -61,7 +61,7 @@ describe('RecipeProvider', () => {
 
       const result = await RecipeProvider.getRecipes({ query: '' });
 
-      expect(result).toHaveLength(0);
+      expect(result.recipes).toHaveLength(0);
     });
 
     it('should use limit from number parameter', async () => {
@@ -314,6 +314,23 @@ describe('RecipeProvider', () => {
         severities: { egg: 'severe' }
       });
       expect(result.safetyLevel).toBe('unsafe');
+      // ingrediente también debería marcarse con isBorderlineSafe
+      expect(result.ingredients[0].isBorderlineSafe).toBe(true);
+    });
+
+    it('should set isBorderlineSafe to true for ingredients matching a mild intolerance', () => {
+      const recipe = {
+        id: '1',
+        title_es: 'Omelette',
+        ingredients: [{ name: 'huevo' }]
+      };
+      
+      const result = RecipeProvider.normalizeRecipe(recipe, { 
+        intolerances: ['egg'],
+        severities: { egg: 'mild' }
+      });
+      expect(result.safetyLevel).toBe('review');
+      expect(result.ingredients[0].isBorderlineSafe).toBe(true);
     });
   });
 });

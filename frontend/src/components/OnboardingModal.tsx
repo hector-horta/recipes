@@ -111,7 +111,7 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
         {/* Header */}
         <div className="pt-8 pb-4 px-8 text-center shrink-0">
           <div className="inline-flex items-center justify-center mb-2">
-            <WatiLogo size={48} />
+            <WatiLogo size={180} variant="white" />
           </div>
           <h2 className="text-2xl font-black text-white tracking-tight">
             {step === 'select' ? t('onboarding.whatToProtect') : t('onboarding.sensitivityLevel')}

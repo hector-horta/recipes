@@ -1,13 +1,18 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Recipe } from '../types/recipe';
+import { Recipe, RecipeSearchResponse } from '../types/recipe';
 import { useDebounce } from './useDebounce';
 import { useAuth } from '../AuthContext';
 
-async function fetchRecipes(query: string, token?: string | null): Promise<Recipe[]> {
+async function fetchRecipes(
+  query: string,
+  token?: string | null,
+  includeUnsafe?: boolean
+): Promise<RecipeSearchResponse> {
   const params = new URLSearchParams();
   if (query?.trim()) params.set('query', query.trim());
   params.set('number', '20');
+  if (includeUnsafe) params.set('includeUnsafe', 'true');
 
   const headers: Record<string, string> = {};
   if (token) {
@@ -16,25 +21,42 @@ async function fetchRecipes(query: string, token?: string | null): Promise<Recip
 
   const res = await fetch(`/api/recipes?${params.toString()}`, { headers });
   if (!res.ok) throw new Error(`Failed to fetch recipes: ${res.status}`);
-  return res.json();
+  const data = await res.json();
+
+  // Backwards-compatible: if the backend returns a plain array (no auth), wrap it
+  if (Array.isArray(data)) {
+    return { recipes: data, filteredUnsafeCount: 0, filteredAllergens: [] };
+  }
+
+  return data as RecipeSearchResponse;
 }
 
 export function useWatiSearch() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [query, setQuery] = useState('');
+  const [includeUnsafe, setIncludeUnsafe] = useState(false);
   const debouncedQuery = useDebounce(query, 500);
+
+  // Reset override when search query changes
+  useEffect(() => {
+    setIncludeUnsafe(false);
+  }, [debouncedQuery]);
 
   const shouldSearch = debouncedQuery.trim().length === 0 || debouncedQuery.trim().length >= 3;
 
-  const { data: results = [], isLoading, isFetching } = useQuery({
-    queryKey: ['recipes', debouncedQuery, user?.id],
-    queryFn: () => fetchRecipes(debouncedQuery, localStorage.getItem('wati_jwt')),
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: ['recipes', debouncedQuery, user?.id, user?.intolerances, user?.severities, includeUnsafe],
+    queryFn: () => fetchRecipes(debouncedQuery, localStorage.getItem('wati_jwt'), includeUnsafe),
     enabled: shouldSearch,
     staleTime: 1000 * 30,
     refetchOnWindowFocus: true,
     retry: 1,
   });
+
+  const results = data?.recipes ?? [];
+  const filteredUnsafeCount = data?.filteredUnsafeCount ?? 0;
+  const filteredAllergens = data?.filteredAllergens ?? [];
 
   // Umami Event Tracking: search_success / search_failed
   useEffect(() => {
@@ -71,6 +93,10 @@ export function useWatiSearch() {
     isPending,
     error: null,
     isQuotaExhausted: false,
-    refresh
+    refresh,
+    filteredUnsafeCount,
+    filteredAllergens,
+    includeUnsafe,
+    setIncludeUnsafe
   };
 }

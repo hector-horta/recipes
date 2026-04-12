@@ -9,6 +9,12 @@
     "searching": "Searching...",
     "min": "min"
   },
+  "safetyGate": {
+    "title": "Recipes hidden for your safety",
+    "desc": "We have hidden {{count}} recipe(s) because they contain {{allergens}}, which you marked as a severe or anaphylactic allergy.",
+    "overrideButton": "I know the risk, show recipes",
+    "dismissButton": "Understood, clear search"
+  },
   "nav": {
     "login": "Sign In / Register",
     "allergies": "Allergies",

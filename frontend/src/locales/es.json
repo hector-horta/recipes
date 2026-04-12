@@ -9,6 +9,12 @@
     "searching": "Buscando...",
     "min": "min"
   },
+  "safetyGate": {
+    "title": "Recetas ocultas por tu seguridad",
+    "desc": "Hemos ocultado {{count}} receta(s) porque contienen {{allergens}}, los cuales marcaste como alergia severa o anafilaxia.",
+    "overrideButton": "Conozco el riesgo, mostrar recetas",
+    "dismissButton": "Entendido, limpiar búsqueda"
+  },
   "nav": {
     "login": "Entrar / Registrarse",
     "allergies": "Alergias",
