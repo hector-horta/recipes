@@ -46,7 +46,7 @@ export function useWatiSearch() {
   const shouldSearch = debouncedQuery.trim().length === 0 || debouncedQuery.trim().length >= 3;
 
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['recipes', debouncedQuery, user?.id, includeUnsafe],
+    queryKey: ['recipes', debouncedQuery, user?.id, user?.intolerances, user?.severities, includeUnsafe],
     queryFn: () => fetchRecipes(debouncedQuery, localStorage.getItem('wati_jwt'), includeUnsafe),
     enabled: shouldSearch,
     staleTime: 1000 * 30,

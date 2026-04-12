@@ -24,7 +24,7 @@ interface WatiLogoProps {
 
 export const WatiLogo: React.FC<WatiLogoProps> = ({ width, size, className = '', variant = 'default' }) => {
   const finalWidth = size || width || 160;
-  const textFill = variant === 'white' ? '#FFFFFF' : '#232e28';
+  const textFill = variant === 'white' ? '#fdfcf8' : '#232e28';
   return (
     <div className={`wati-logo-container ${className}`}>
       <title id="watiLogoTitle">Wati - Nutrición Inteligente</title>

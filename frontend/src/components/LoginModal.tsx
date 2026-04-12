@@ -73,7 +73,7 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
         {/* Header */}
         <div className="text-center mb-6">
           <div className="inline-flex items-center justify-center mb-3">
-            <WatiLogo size={120} variant="white" />
+            <WatiLogo size={180} variant="white" />
           </div>
           <h2 className="text-xl font-extrabold text-white tracking-tight">
             {isRegister ? t('auth.createAccount') : t('auth.signIn')}

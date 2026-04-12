@@ -20,7 +20,7 @@ export function useFavorites() {
   const queryClient = useQueryClient();
 
   const { data: favorites = [], isLoading } = useQuery({
-    queryKey: ['favorites', user?.id],
+    queryKey: ['favorites', user?.id, user?.intolerances, user?.severities],
     queryFn: async () => {
       if (!user) return [];
       const res = await fetch(`/api/favorites`, {
@@ -66,11 +66,11 @@ export function useFavorites() {
       }
     },
     onMutate: async (recipe) => {
-      await queryClient.cancelQueries({ queryKey: ['favorites', user?.id] });
-      const previous = queryClient.getQueryData<FavoriteItem[]>(['favorites', user?.id]) ?? [];
+      await queryClient.cancelQueries({ queryKey: ['favorites', user?.id, user?.intolerances, user?.severities] });
+      const previous = queryClient.getQueryData<FavoriteItem[]>(['favorites', user?.id, user?.intolerances, user?.severities]) ?? [];
       const exists = previous.some(f => f.recipe_id === recipe.id);
 
-      queryClient.setQueryData<FavoriteItem[]>(['favorites', user?.id], prev => {
+      queryClient.setQueryData<FavoriteItem[]>(['favorites', user?.id, user?.intolerances, user?.severities], prev => {
         if (!prev) return [];
         if (exists) {
           return prev.filter(f => f.recipe_id !== recipe.id);
@@ -88,7 +88,7 @@ export function useFavorites() {
     },
     onError: (_err, _recipe, context) => {
       if (context?.previous !== undefined) {
-        queryClient.setQueryData(['favorites', user?.id], context.previous);
+        queryClient.setQueryData(['favorites', user?.id, user?.intolerances, user?.severities], context.previous);
       }
     },
     onSettled: () => {
