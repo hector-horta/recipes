@@ -21,9 +21,11 @@
  * - https://developer.hashicorp.com/hcp/api-docs/vault-secrets
  */
 
-const HCP_CLIENT_ID = process.env.HCP_CLIENT_ID;
-const HCP_CLIENT_SECRET = process.env.HCP_CLIENT_SECRET;
-const HCP_PROJECT_ID = process.env.HCP_PROJECT_ID;
+import { config } from './env.js';
+
+const HCP_CLIENT_ID = config.HCP_CLIENT_ID;
+const HCP_CLIENT_SECRET = config.HCP_CLIENT_SECRET;
+const HCP_PROJECT_ID = config.HCP_PROJECT_ID;
 const APP_NAME = 'wati-backend';
 
 let accessToken = null;

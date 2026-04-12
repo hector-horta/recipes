@@ -12,9 +12,8 @@ const BACKEND_URL = process.env.BACKEND_URL || 'http://backend:5001';
 
 let bot = null;
 const pendingVoiceEdits = new Map();
-const pendingImageGroups = new Map();
+const pendingImages = new Map();
 const pendingOverwrites = new Map();
-const IMAGE_GROUP_TIMEOUT = 2000;
 
 async function sendConflictPrompt(chatId, recipe, statusMsgId) {
   pendingOverwrites.set(chatId, { recipe, statusMsgId });
@@ -68,36 +67,37 @@ function formatRecipeSummary(recipe) {
 
 async function processImage(msg) {
   const chatId = msg.chat.id;
-
-  if (!pendingImageGroups.has(chatId)) {
-    pendingImageGroups.set(chatId, { images: [], timer: null });
-  }
-
-  const group = pendingImageGroups.get(chatId);
   const fileId = msg.photo[msg.photo.length - 1].file_id;
-  group.images.push(fileId);
 
-  if (group.timer) clearTimeout(group.timer);
-
-  if (group.images.length === 1) {
-    const statusMsg = await bot.sendMessage(chatId, '📸 Recibida imagen 1. Esperando 2s por una segunda imagen...');
-    group.statusMsg = statusMsg;
+  if (pendingImages.has(chatId)) {
+    const group = pendingImages.get(chatId);
+    group.images.push(fileId);
+    
+    if (group.images.length === 2) {
+      pendingImages.delete(chatId);
+      processImageGroup(chatId, group.images, group.statusMsgId);
+    }
+    return;
   }
 
-  group.timer = setTimeout(async () => {
-    const currentGroup = pendingImageGroups.get(chatId);
-    if (!currentGroup) return;
-    pendingImageGroups.delete(chatId);
+  const group = { images: [fileId], statusMsgId: null };
+  pendingImages.set(chatId, group);
 
-    if (currentGroup.images.length === 1) {
-      processSingleImage(chatId, currentGroup.images[0], currentGroup.statusMsg?.message_id);
-    } else if (currentGroup.images.length === 2) {
-      processImageGroup(chatId, currentGroup.images, currentGroup.statusMsg?.message_id);
-    } else if (currentGroup.images.length > 2) {
-      const lastTwo = currentGroup.images.slice(-2);
-      processImageGroup(chatId, lastTwo, currentGroup.statusMsg?.message_id);
+  const statusMsg = await bot.sendMessage(chatId, '📸 Imagen recibida (1/2).\n\nSi es la única foto, procesala ya. Si falta la preparación, envía la segunda foto.', {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: '🔍 Procesar sola esta foto', callback_data: 'process_single_image' }],
+        [{ text: '❌ Cancelar', callback_data: 'cancel_image_process' }]
+      ]
     }
-  }, IMAGE_GROUP_TIMEOUT);
+  });
+
+  if (pendingImages.has(chatId) && pendingImages.get(chatId) === group) {
+    group.statusMsgId = statusMsg.message_id;
+  } else {
+    // Si la segunda imagen ya llegó y limpió el map, borramos este mensaje intermedio
+    bot.deleteMessage(chatId, statusMsg.message_id).catch(() => {});
+  }
 }
 
 async function processSingleImage(chatId, fileId, statusMsgId) {
@@ -657,6 +657,26 @@ export function initializeTelegramBot() {
       if (callbackQuery.data === 'overwrite_cancel') {
         try { await bot.answerCallbackQuery(callbackQuery.id); } catch(e) {}
         handleOverwrite(chatId, false).catch(err => console.error('[TelegramBot] Error in handleOverwrite:', err));
+        return;
+      }
+
+      if (callbackQuery.data === 'process_single_image') {
+        try { await bot.answerCallbackQuery(callbackQuery.id); } catch(e) {}
+        const group = pendingImages.get(chatId);
+        if (group && group.images.length >= 1) {
+          pendingImages.delete(chatId);
+          processSingleImage(chatId, group.images[0], messageId);
+        }
+        return;
+      }
+
+      if (callbackQuery.data === 'cancel_image_process') {
+        try { await bot.answerCallbackQuery(callbackQuery.id); } catch(e) {}
+        pendingImages.delete(chatId);
+        await bot.editMessageText('❌ Operación cancelada.', {
+          chat_id: chatId,
+          message_id: messageId
+        });
         return;
       }
 

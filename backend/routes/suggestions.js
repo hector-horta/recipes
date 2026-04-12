@@ -5,8 +5,10 @@ import { User } from '../models/User.js';
 
 const router = Router();
 
-const TELEGRAM_USER_ID = process.env.TELEGRAM_USER_ID;
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+import { config } from '../config/env.js';
+
+const TELEGRAM_USER_ID = config.TELEGRAM_USER_ID;
+const TELEGRAM_BOT_TOKEN = config.TELEGRAM_BOT_TOKEN;
 
 async function sendTelegramSuggestion(term, userId) {
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_USER_ID) {

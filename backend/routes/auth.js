@@ -7,12 +7,10 @@ import { User } from '../models/User.js';
 import { Profile } from '../models/Profile.js';
 import { authenticateToken } from '../middleware/auth.js';
 
-const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET;
+import { config } from '../config/env.js';
 
-if (!JWT_SECRET) {
-  console.warn('[Auth] WARNING: JWT_SECRET is not defined in environment variables.');
-}
+const router = express.Router();
+const JWT_SECRET = config.JWT_SECRET;
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes

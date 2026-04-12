@@ -2,11 +2,9 @@ import { createClient } from 'redis';
 import dotenv from 'dotenv';
 import path from 'path';
 
-const envPath = path.resolve(process.cwd(), '../.env');
-dotenv.config({ path: envPath });
-dotenv.config();
+import { config } from './env.js';
 
-const REDIS_URL = process.env.REDIS_URL || 'redis://redis:6379';
+const REDIS_URL = config.REDIS_URL || 'redis://redis:6379';
 
 export const redisClient = createClient({ url: REDIS_URL });
 
