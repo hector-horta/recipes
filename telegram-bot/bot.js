@@ -499,7 +499,7 @@ async function handleAction(callbackQuery) {
             parse_mode: 'Markdown'
           });
 
-          fs.unlinkSync(tempPath);
+          fs.promises.unlink(tempPath).catch(err => console.error('Error deleted CSV:', err));
         } else {
           await bot.editMessageText(`❌ Error generando CSV.`, {
             chat_id: chatId,
@@ -603,16 +603,16 @@ export function initializeTelegramBot() {
 
       const pending = pendingVoiceEdits.get(msg.chat.id);
       if (pending?.awaitingEdit && msg.text && !msg.text.startsWith('/')) {
-        handleEditedVoiceText(msg);
+        handleEditedVoiceText(msg).catch(err => console.error('[TelegramBot] Error in handleEditedVoiceText:', err));
         return;
       }
 
       if (msg.photo) {
-        processImage(msg);
+        processImage(msg).catch(err => console.error('[TelegramBot] Error in processImage:', err));
       } else if (msg.voice) {
-        processVoice(msg);
+        processVoice(msg).catch(err => console.error('[TelegramBot] Error in processVoice:', err));
       } else if (msg.text) {
-        processText(msg);
+        processText(msg).catch(err => console.error('[TelegramBot] Error in processText:', err));
       }
     });
 
@@ -649,18 +649,18 @@ export function initializeTelegramBot() {
       }
 
       if (callbackQuery.data === 'overwrite_confirm') {
-        await bot.answerCallbackQuery(callbackQuery.id);
-        await handleOverwrite(chatId, true);
+        try { await bot.answerCallbackQuery(callbackQuery.id); } catch(e) {}
+        handleOverwrite(chatId, true).catch(err => console.error('[TelegramBot] Error in handleOverwrite:', err));
         return;
       }
 
       if (callbackQuery.data === 'overwrite_cancel') {
-        await bot.answerCallbackQuery(callbackQuery.id);
-        await handleOverwrite(chatId, false);
+        try { await bot.answerCallbackQuery(callbackQuery.id); } catch(e) {}
+        handleOverwrite(chatId, false).catch(err => console.error('[TelegramBot] Error in handleOverwrite:', err));
         return;
       }
 
-      handleAction(callbackQuery);
+      handleAction(callbackQuery).catch(err => console.error('[TelegramBot] Error in handleAction:', err));
     });
 
     bot.onText(/\/start/, (msg) => {

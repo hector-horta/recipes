@@ -1,6 +1,8 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { z } from 'zod';
+import rateLimit from 'express-rate-limit';
 import { User } from '../models/User.js';
 import { Profile } from '../models/Profile.js';
 import { authenticateToken } from '../middleware/auth.js';
@@ -8,14 +10,38 @@ import { authenticateToken } from '../middleware/auth.js';
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
 
+if (!JWT_SECRET) {
+  console.warn('[Auth] WARNING: JWT_SECRET is not defined in environment variables.');
+}
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 login requests per windowMs
+  message: { error: 'Demasiados intentos de inicio de sesión, intenta nuevamente en 15 minutos.' }
+});
+
+const registerSchema = z.object({
+  email: z.string().email('Debe ser un email válido'),
+  password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres'),
+  displayName: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
+  acceptedTerms: z.boolean().refine(val => val === true, { message: 'Debe aceptar los términos' }),
+  language: z.string().optional()
+});
+
+const loginSchema = z.object({
+  email: z.string().email('Debe ser un email válido'),
+  password: z.string()
+});
+
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, displayName, acceptedTerms, language } = req.body;
-
-    if (!email || !password || !displayName || !acceptedTerms) {
-      return res.status(400).json({ error: 'Faltan campos obligatorios o no se aceptaron los términos.' });
+    const parseResult = registerSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ error: 'Datos inválidos', details: parseResult.error.errors });
     }
+    
+    const { email, password, displayName, acceptedTerms, language } = parseResult.data;
 
     const existingUser = await User.findOne({ where: { email: email.toLowerCase() } });
     if (existingUser) {
@@ -51,13 +77,14 @@ router.post('/register', async (req, res) => {
 });
 
 // POST /api/auth/login
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Faltan campos obligatorios.' });
+    const parseResult = loginSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ error: 'Datos inválidos', details: parseResult.error.errors });
     }
+    
+    const { email, password } = parseResult.data;
 
     const user = await User.findOne({ where: { email: email.toLowerCase() } });
     if (!user || (!user.is_active)) {
