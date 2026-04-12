@@ -171,8 +171,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       return { previous };
     },
-    onError: () => {
+    onError: (err, newProfile, context: any) => {
+      if (context?.previous) {
+        setUser(context.previous);
+        queryClient.setQueryData(['auth', 'session'], context.previous);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['auth', 'session'] });
+      queryClient.invalidateQueries({ queryKey: ['recipes'] });
     },
   });
 
