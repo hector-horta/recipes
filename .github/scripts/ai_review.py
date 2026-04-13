@@ -1,6 +1,7 @@
 import os
 import json
 import sys
+import subprocess
 import requests
 import time # Importante para la pausa
 from groq import Groq
