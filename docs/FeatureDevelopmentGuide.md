@@ -30,6 +30,21 @@ Al desarrollar en este repositorio:
 
 ---
 
+## 🏗️ Arquitectura y Calidad de Código
+
+Para combatir la deuda técnica y mantener el codebase profesional:
+
+1. **Modularización Extrema**: `server.js` es solo un orquestador.
+   - Las rutas de API deben vivir en `backend/routes/`.
+   - La lógica de negocio pesada o integraciones debe vivir en `backend/services/`.
+   - El CORS y la configuración compleja deben estar en `backend/config/`.
+2. **Frontend API Client**: Prohibido usar `fetch` directo. Usar `frontend/src/lib/api.ts`.
+   - Esto garantiza que `credentials: 'include'` y los headers de i18n/auth sean consistentes.
+3. **Manejo de Errores**: Nunca usar `console.log` o `console.error` directamente. Usar los métodos estáticos de `ActivityLogger` para logs estructurados y telemetría.
+4. **Validación Zod**: Todo input externo (req.body, req.query, env vars) DEBE ser validado con Zod antes de tocar la lógica.
+
+---
+
 ## 📁 Estructura Completa del Proyecto
 
 ```
@@ -47,6 +62,7 @@ Al desarrollar en este repositorio:
 │   │   ├── config.cjs            # Sequelize CLI config (CommonJS requerido por CLI)
 │   │   ├── database.js           # Sequelize instance + connectDB()
 │   │   ├── redis.js              # Redis client + connectRedis()
+│   │   ├── cors.js               # CORS config (localhost, local network, credentials)
 │   │   ├── medical.js            # INTOLERANCE_CATALOG + MEDICAL_TRIGGERS (fuente de verdad unificada)
 │   │   └── vault.js              # HCP Vault OAuth2 client
 │   ├── models/
@@ -64,6 +80,7 @@ Al desarrollar en este repositorio:
 │   ├── routes/
 │   │   ├── auth.js               # /api/auth/*
 │   │   ├── favorites.js          # /api/favorites/*
+│   │   ├── recipes.js            # /api/recipes/*
 │   │   ├── ingest.js             # /api/ingest/* (Telegram Bot ingestion)
 │   │   ├── suggestions.js        # /api/suggestions/*
 │   │   └── admin.js              # /admin/*
@@ -96,6 +113,8 @@ Al desarrollar en este repositorio:
 │       ├── main.tsx              # ReactDOM root: Providers → AuthProvider → App
 │       ├── App.tsx               # Router manual: RecipePage ↔ RecipeDetailPage + Modals
 │       ├── AuthContext.tsx        # AuthProvider, useAuth(), UserProfile interface
+│       ├── lib/
+│       │   └── api.ts            # Centralized API client (fetch wrapper)
 │       ├── i18n.ts               # i18next config (es/en, localStorage: wati_language)
 │       ├── index.css             # CSS variables + Tailwind utilities (glassmorphism, etc.)
 │       ├── api/
