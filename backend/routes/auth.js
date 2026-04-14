@@ -65,7 +65,6 @@ router.post('/register', async (req, res) => {
         diet: null,
         intolerances: [],
         severities: {},
-        conditions: []
       }
     });
   } catch (error) {
@@ -183,7 +182,6 @@ router.put('/profile', authenticateToken, async (req, res) => {
     if (updates.onboarding_completed !== undefined) profile.onboarding_completed = updates.onboarding_completed;
     if (updates.language !== undefined) profile.language = updates.language;
     if (updates.severities !== undefined) profile.severities = updates.severities;
-    if (updates.conditions !== undefined) profile.conditions = updates.conditions;
 
     await profile.save();
     res.json(profile);

@@ -74,13 +74,11 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
     setError(null);
     setIsSaving(true);
     try {
-      const conditions = user?.conditions || [];
       const intolerances = selectedIds;
       
       await updateProfile({
         intolerances,
         severities,
-        conditions,
         onboarding_completed: true
       });
       onClose();
