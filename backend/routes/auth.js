@@ -59,7 +59,13 @@ router.post('/register', async (req, res) => {
       user: {
         id: newUser.id,
         email: newUser.email,
-        displayName: newUser.display_name
+        displayName: newUser.display_name,
+        onboarding_completed: false,
+        language: language || 'en',
+        diet: null,
+        intolerances: [],
+        severities: {},
+        conditions: []
       }
     });
   } catch (error) {
@@ -97,12 +103,17 @@ router.post('/login', loginLimiter, async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000 
     });
 
+    const userWithProfile = await User.findByPk(user.id, {
+      include: [{ model: Profile, as: 'profile' }]
+    });
+
     res.json({
       token,
       user: {
         id: user.id,
         email: user.email,
-        displayName: user.display_name
+        displayName: user.display_name,
+        ...(userWithProfile.profile ? userWithProfile.profile.get({ plain: true }) : {})
       }
     });
   } catch (error) {
@@ -133,7 +144,7 @@ router.get('/me', authenticateToken, async (req, res) => {
       id: user.id,
       email: user.email,
       displayName: user.display_name,
-      profile: user.profile,
+      ...(user.profile ? user.profile.get({ plain: true }) : {}),
       createdAt: user.createdAt,
       updatedAt: user.updatedAt
     });

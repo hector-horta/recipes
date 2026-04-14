@@ -33,11 +33,20 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
       let userData = null;
       if (isRegister) {
         if (!displayName.trim()) { setError(t('auth.nameRequired')); setIsSubmitting(false); return; }
-        if (password.length < 6) { setError(t('auth.minChars')); setIsSubmitting(false); return; }
+        if (password.length < 8) { setError(t('auth.minChars') || 'La contraseña debe tener al menos 8 caracteres'); setIsSubmitting(false); return; }
         if (!acceptedTerms) { setError(t('auth.termsRequired')); setIsSubmitting(false); return; }
-        userData = await register(email.trim().toLowerCase(), password, displayName.trim(), acceptedTerms);
+        userData = await register({ 
+          email: email.trim().toLowerCase(), 
+          password, 
+          displayName: displayName.trim(), 
+          acceptedTerms,
+          language: 'es' // Default language
+        });
       } else {
-        userData = await login(email.trim().toLowerCase(), password);
+        userData = await login({ 
+          email: email.trim().toLowerCase(), 
+          password 
+        });
       }
       
       setTimeout(() => {

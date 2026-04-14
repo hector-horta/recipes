@@ -20,8 +20,8 @@ interface AuthContextType {
   user: UserProfile | null;
   loading: boolean;
   error: string | null;
-  login: (credentials: any) => Promise<void>;
-  register: (data: any) => Promise<void>;
+  login: (credentials: any) => Promise<UserProfile>;
+  register: (data: any) => Promise<UserProfile>;
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
 }
@@ -53,6 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setError(null);
       const data = await api.post<{ user: UserProfile }>('/auth/login', credentials);
       setUser(data.user);
+      return data.user;
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Error al iniciar sesión';
       setError(msg);
@@ -65,6 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setError(null);
       const response = await api.post<{ user: UserProfile }>('/auth/register', data);
       setUser(response.user);
+      return response.user;
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Error al registrarse';
       setError(msg);

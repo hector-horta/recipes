@@ -1,44 +1,53 @@
 import { validateExternalUrl } from '../utils/urlValidator.js';
 import { ActivityLogger } from './ActivityLogger.js';
+import { withRetry } from '../utils/retry.js';
 
 const NVIDIA_API_BASE = 'https://integrate.api.nvidia.com/v1';
 const NVIDIA_GENAI_BASE = 'https://ai.api.nvidia.com/v1/genai';
 
 async function nvidiaChatRequest(body, apiKey) {
-  const res = await fetch(`${NVIDIA_API_BASE}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
-    body: JSON.stringify(body)
-  });
+  return withRetry(async () => {
+    const res = await fetch(`${NVIDIA_API_BASE}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(body)
+    });
 
-  if (!res.ok) {
-    const errText = await res.text().catch(() => '');
-    throw new Error(`NVIDIA NIM error (${res.status}): ${errText}`);
-  }
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      const error = new Error(`NVIDIA NIM error (${res.status}): ${errText}`);
+      error.status = res.status;
+      throw error;
+    }
 
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content || '';
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content || '';
+  }, { serviceName: 'NVIDIA Chat' });
 }
 
 async function nvidiaImageRequest(body, apiKey) {
-  const res = await fetch(`${NVIDIA_GENAI_BASE}/stabilityai/stable-diffusion-xl`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
-    body: JSON.stringify(body)
-  });
+  return withRetry(async () => {
+    const res = await fetch(`${NVIDIA_GENAI_BASE}/stabilityai/stable-diffusion-xl`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(body)
+    });
 
-  if (!res.ok) {
-    const errText = await res.text().catch(() => '');
-    throw new Error(`NVIDIA SDXL error (${res.status}): ${errText}`);
-  }
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      const error = new Error(`NVIDIA SDXL error (${res.status}): ${errText}`);
+      error.status = res.status;
+      throw error;
+    }
 
-  return res.json();
+    return res.json();
+  }, { serviceName: 'NVIDIA Image' });
 }
 
 async function downloadImageAsBase64(imageUrl) {
@@ -121,36 +130,34 @@ export async function analyzeAndStructureRecipe(rawText, apiKey) {
 
 {
   "title": { "es": "...", "en": "..." },
-  "prepTimeMinutes": number (calculate realistically by analyzing cooking verbs: passive verbs like "marinar", "reposar", "fermentar" add waiting time; active verbs like "hornear", "saltear", "hervir" add active cooking time),
+  "prepTimeMinutes": number,
   "cookTimeMinutes": number,
   "servings": number,
   "ingredients": [
     {
       "name": { "es": "...", "en": "..." },
       "quantity": string,
-      "unit": { "es": "...", "en": "..." } (translate units: "taza"/"tazas"→"cup"/"cups", "cucharada"→"tablespoon", "cucharadita"→"teaspoon", "trozo"→"piece", "pizca"→"pinch", "al gusto"→"to taste", "diente"→"clove", "ramita"→"sprig", "rodaja"→"slice", "pocillo"→"small cup", "vaso"→"glass", "litro"→"liter", "ml"→"ml", "gr"/"g"→"g", "kg"→"kg", "lb"→"lb", "onza"→"ounce", "unidad"→"" (omit for "unidad"), "unidades"→"" (omit for "unidades")),
-      "siboAlert": boolean (true if ingredient is a known high-FODMAP food)
+      "unit": { "es": "...", "en": "..." },
+      "siboAlert": boolean
     }
   ],
   "steps": [
     {
       "order": number,
       "instruction": { "es": "...", "en": "..." },
-      "type": "active" | "passive" (based on verb analysis),
-      "durationMinutes": number (estimated from context)
+      "type": "active" | "passive",
+      "durationMinutes": number
     }
   ],
   "tags": string[],
   "difficulty": "easy" | "medium" | "hard",
-  "siboRiskLevel": "safe" | "caution" | "avoid" (based on ingredient analysis),
-  "siboAlerts": string[] (list of specific high-FODMAP ingredients found)
+  "siboRiskLevel": "safe" | "caution" | "avoid",
+  "siboAlerts": string[]
 }
 
 CRITICAL RULES:
 - Dual translation: ALL text fields must have both _es and _en versions
-- Verb analysis: Identify passive vs active cooking verbs to calculate realistic prep_time
-- SIBO filter: Cross-reference ingredients against known FODMAPs (garlic/ajo, onion/cebolla, leek/puerro, wheat/trigo, dairy/lácteos, legumes/legumbres, etc.)
-- If prep time cannot be determined, estimate based on recipe type
+- SIBO filter: Cross-reference ingredients against known FODMAPs
 - Return ONLY the JSON object, no markdown code blocks, no extra text`;
 
   const content = await nvidiaChatRequest({
@@ -168,57 +175,57 @@ CRITICAL RULES:
 
   const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
-    ActivityLogger.info('[NvidiaNIM] Raw Llama 4 response:', content);
-    throw new Error('Failed to parse Llama 4 response as JSON. Raw response: ' + content.slice(0, 200));
+    throw new Error('Failed to parse Llama 4 response as JSON');
   }
 
   try {
     return JSON.parse(jsonMatch[0]);
   } catch {
-    ActivityLogger.info('[NvidiaNIM] JSON parse failed for:', jsonMatch[0].slice(0, 500));
     throw new Error('Failed to parse Llama 4 response as JSON');
   }
 }
 
 export async function generateRecipeImage(prompt, apiKey) {
-  const decoratedPrompt = `Professional editorial food photography of ${prompt}, 8k, macro lens, soft natural lighting, high-end restaurant plating, vibrant colors, shallow depth of field`;
+  return withRetry(async () => {
+    const decoratedPrompt = `Professional editorial food photography of ${prompt}, 8k, macro lens, soft natural lighting, high-end restaurant plating, vibrant colors, shallow depth of field`;
 
-  const response = await nvidiaImageRequest({
-    text_prompts: [{ text: decoratedPrompt }],
-    height: 1024,
-    width: 1024,
-    cfg_scale: 7,
-    steps: 30
-  }, apiKey);
+    const response = await nvidiaImageRequest({
+      text_prompts: [{ text: decoratedPrompt }],
+      height: 1024,
+      width: 1024,
+      cfg_scale: 7,
+      steps: 30
+    }, apiKey);
 
-  const imageData = response.artifacts?.[0]?.base64;
-  if (!imageData) {
-    throw new Error('No image data returned from SDXL');
-  }
+    const imageData = response.artifacts?.[0]?.base64;
+    if (!imageData) {
+      throw new Error('No image data returned from SDXL');
+    }
 
-  const fs = await import('fs');
-  const path = await import('path');
-  const { fileURLToPath } = await import('url');
+    const fs = await import('fs');
+    const path = await import('path');
+    const { fileURLToPath } = await import('url');
 
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = path.dirname(__filename);
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
 
-  const recipesDir = path.join(__dirname, '..', 'public', 'recipes');
-  if (!fs.existsSync(recipesDir)) {
-    fs.mkdirSync(recipesDir, { recursive: true });
-  }
+    const recipesDir = path.join(__dirname, '..', 'public', 'recipes');
+    if (!fs.existsSync(recipesDir)) {
+      fs.mkdirSync(recipesDir, { recursive: true });
+    }
 
-  const filename = `${Date.now()}.jpg`;
-  const filepath = path.join(recipesDir, filename);
+    const filename = `${Date.now()}.jpg`;
+    const filepath = path.join(recipesDir, filename);
 
-  const buffer = Buffer.from(imageData, 'base64');
-  fs.writeFileSync(filepath, buffer);
+    const buffer = Buffer.from(imageData, 'base64');
+    fs.writeFileSync(filepath, buffer);
 
-  ActivityLogger.info('SDXL Image saved', { filename, prompt: prompt.slice(0, 50) });
+    ActivityLogger.info('SDXL Image saved', { filename, prompt: prompt.slice(0, 50) });
 
-  return {
-    filename,
-    url: `/public/recipes/${filename}`,
-    filepath
-  };
+    return {
+      filename,
+      url: `/public/recipes/${filename}`,
+      filepath
+    };
+  }, { serviceName: 'NVIDIA Image (Full)' });
 }

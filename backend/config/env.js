@@ -14,8 +14,8 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   FRONTEND_URL: z.string().default('http://localhost:5173'),
   JWT_SECRET: z.string().min(1, 'JWT_SECRET is required'),
-  DATABASE_URL: z.string().default('postgresql://wati_user:wati_password@localhost:5432/wati_db'),
-  REDIS_URL: z.string().default('redis://localhost:6379'),
+  DATABASE_URL: z.string().optional(),
+  REDIS_URL: z.string().optional(),
 
   // External APIs
   API_KEY: z.string().optional(),

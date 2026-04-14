@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { api } from '../lib/api';
 import { useAuth } from '../AuthContext';
 import { WatiLogo } from './WatiLogo';
 import { Button } from './ui/Button';
@@ -20,7 +21,7 @@ interface OnboardingModalProps {
 
 export function OnboardingModal({ onClose }: OnboardingModalProps) {
   const { t } = useTranslation();
-  const { user, updateUserProfile } = useAuth();
+  const { user, updateProfile } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
   const SEVERITY_OPTIONS: { value: 'mild' | 'moderate' | 'severe' | 'anaphylactic'; label: string; activeClasses: string }[] = [
@@ -33,19 +34,12 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
   const { data: catalog = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['medical', 'catalog'],
     queryFn: async () => {
-      try {
-        const response = await fetch(`${CONFIG.API_URL}/api/medical/catalog`);
-        if (!response.ok) throw new Error('Failed to fetch catalog');
-        const data: IntoleranceItem[] = await response.json();
-        return data.map(item => ({
-          ...item,
-          label: t(`intolerances.${item.id}`, { defaultValue: item.label }),
-          desc: t(`intolerances.${item.id}Desc`, { defaultValue: item.desc })
-        }));
-      } catch (err) {
-        console.error('[Onboarding] Catalog fetch error:', err);
-        throw err;
-      }
+      const data = await api.get<IntoleranceItem[]>('/medical/catalog');
+      return data.map(item => ({
+        ...item,
+        label: t(`intolerances.${item.id}`, { defaultValue: item.label }),
+        desc: t(`intolerances.${item.id}Desc`, { defaultValue: item.desc })
+      }));
     },
     staleTime: 1000 * 60 * 30,
     retry: 2,
@@ -83,11 +77,11 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
       const conditions = user?.conditions || [];
       const intolerances = selectedIds;
       
-      await updateUserProfile({
+      await updateProfile({
         intolerances,
         severities,
         conditions,
-        onboardingComplete: true
+        onboarding_completed: true
       });
       onClose();
     } catch (err) {

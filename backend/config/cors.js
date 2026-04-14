@@ -4,6 +4,8 @@ export const corsOptions = {
   origin: function (origin, callback) {
     const allowedHosts = [
       config.FRONTEND_URL,
+      'http://localhost',
+      'https://localhost',
       'http://localhost:5173',
       'http://127.0.0.1:5173'
     ];
