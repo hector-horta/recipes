@@ -16,10 +16,11 @@ The application implements defenses against CSRF by:
 - **Whitelist Enforcement**: Only trusted domains (e.g., Google APIs, NVIDIA/Groq endpoints, Telegram file servers) are reachable from the backend.
 - **URL Validation**: All external URLs provided by users or sub-services are validated against specific schemas before execution.
 
-## Input Validation & Sanitization
-- **Strict Schema Enforcement (Zod)**: EVERY entry point (API routes, Telegram Bot handlers, environment variables) is validated using Zod schemas.
-- **Layered Validation**: Validation occurs at the Bot level and is re-validated at the Backend level to ensure data integrity even if one layer is bypassed.
-- **SQL Injection Prevention**: Using Sequelize ORM for all database operations with parameterization.
+### Frontend XSS & Sanitization
+- **Strict Content Sanitization (DOMPurify)**: All HTML content from external sources (e.g., recipe summaries) is sanitized using `DOMPurify` with a strict whitelist of allowed tags (`b`, `i`, `strong`, `p`, etc.) and no allowed attributes.
+- **Input Validation**: Search queries and user-controllable strings are sanitized at the hook level (`useWatiSearch`) to remove potentially dangerous characters and enforce length limits.
+- **Image Proxy & Validation**: External images are validated against a whitelist of trusted domains (`ALLOWED_IMAGE_DOMAINS`) before being cached or displayed.
+- **Content Security Policy (CSP)**: The application is designed to be compatible with strict CSP headers (though enforcement depends on the hosting environment).
 
 ## Inter-Service Communication
 - **Shared Secrets**: Communication between the Telegram Bot and the Backend is secured using a shared API Key (`x-api-key`) to prevent unauthorized recipe ingestion.

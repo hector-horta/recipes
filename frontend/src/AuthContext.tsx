@@ -38,14 +38,14 @@ const authHeaders = (): Record<string, string> => {
   return {};
 };
 
-function mapProfileData(data: any): UserProfile {
+function mapProfileData(data: { id: string; email: string; displayName: string; avatarUrl?: string; profile?: Record<string, any> }): UserProfile {
   const { id: _profileId, ...profileWithoutId } = data.profile || {};
   return {
     id: data.id,
     email: data.email,
     displayName: data.displayName,
     avatarUrl: data.avatarUrl,
-    ...profileWithoutId,
+    ...(profileWithoutId as any),
     onboardingComplete: data.profile?.onboarding_completed || false
   };
 }
@@ -136,7 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateProfileMutation = useMutation({
     mutationFn: async (updates: Partial<UserProfile>) => {
-      const backendUpdates: any = { ...updates };
+      const backendUpdates: Record<string, unknown> = { ...updates };
       if (updates.onboardingComplete !== undefined) {
         backendUpdates.onboarding_completed = updates.onboardingComplete;
         delete backendUpdates.onboardingComplete;

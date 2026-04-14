@@ -16,14 +16,17 @@ export function useFavorites() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: favorites = [], isLoading } = useQuery({
+  const { data: favorites = [], isLoading, error } = useQuery({
     queryKey: ['favorites', user?.id, user?.intolerances, user?.severities],
     queryFn: async () => {
       if (!user) return [];
       const res = await fetch(`/api/favorites`, {
         credentials: 'include'
       });
-      if (!res.ok) return [];
+      if (!res.ok) {
+        if (res.status === 401) return []; // Not logged in, handled gracefully
+        throw new Error(`Failed to fetch favorites: ${res.status}`);
+      }
       return res.json() as Promise<FavoriteItem[]>;
     },
     enabled: !!user,
@@ -98,6 +101,7 @@ export function useFavorites() {
   return {
     favorites,
     isLoading,
+    error,
     toggleFavorite: toggleMutation.mutateAsync,
     isFavorited,
     refresh: () => queryClient.invalidateQueries({ queryKey: ['favorites', user?.id] })

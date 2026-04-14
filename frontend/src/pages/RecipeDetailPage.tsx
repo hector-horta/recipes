@@ -110,7 +110,12 @@ export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
             {recipe.summary && (
               <div 
                 className="text-lg text-brand-text-muted mb-12 prose prose-brand leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(recipe.summary) }}
+                dangerouslySetInnerHTML={{ 
+                  __html: DOMPurify.sanitize(recipe.summary, { 
+                    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'p', 'br', 'ul', 'li'],
+                    ALLOWED_ATTR: [] 
+                  }) 
+                }}
               />
             )}
 

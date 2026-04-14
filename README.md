@@ -19,8 +19,9 @@ El proyecto se divide en diferentes servicios orquestados por Docker Compose:
 - **Privacidad y Cumplimiento GDPR**: Perfiles de salud encriptados. Flujo legal de aceptación de términos y borrado en cascada de datos (`DELETE /api/auth/me`).
 - **Autenticación Segura (JWT & Bcrypt)**: Cuentas individuales identificadas por **UUID v4**.
 - **Ingesta Inteligente (IA & OCR)**: El **Telegram Bot** utiliza **NVIDIA NIM (OCDRNet)** para extraer ingredientes de fotos y **Groq Whisper** para transcribir recetas dictadas por voz.
-- **Proxy Inteligente con Resiliencia e IA**: El backend protege las API Keys, implementa seguridad contra **SSRF** mediante whitelists y gestiona reintentos automáticos (**Exponential Backoff**) para APIs externas. Utiliza **Llama 4 Maverick** para aplicar filtros SIBO/FODMAP automáticos.
-- **Sistema de Caché Optimizada (Redis & IndexedDB)**: TTL inteligente para APIs externas y motor de búsqueda instantáneo en el frontend mediante **Dexie**.
+- **Proxy Inteligente con Resiliencia e IA**: El backend protege las API Keys, implementa seguridad contra **SSRF** mediante whitelists y gestiona reintentos automáticos (**Exponential Backoff** para APIs de LLM). Utiliza **Llama 4 Maverick** para aplicar filtros SIBO/FODMAP automáticos.
+- **Frontend Seguro y Tipado**: Implementación de sanitización estricta mediante **DOMPurify** (whitelist-based), validación de entradas de búsqueda y eliminación de tipos `any` para garantizar la integridad de datos y prevenir ataques XSS.
+- **Sistema de Caché Optimizada (Redis & IndexedDB)**: TTL inteligente para APIs externas y motor de almacenamiento local para imágenes mediante **Dexie**, con validación de dominios de confianza.
 - **Gestión de Secretos y Comunicación Segura**: Integración nativa con **HCP Vault** y comunicación Bot-Backend protegida mediante **API Keys compartidas**.
 - **Analytics en Tiempo Real (Umami)**: Tracking de eventos como recetas favoritas, búsquedas exitosas/fallidas, sugerencias al chef. Dashboard de popularidad de recetas y tasa de éxito del motor de búsqueda.
 - **Navegación Responsive**: Menú hamburguesa en móviles, historial del navegador sincronizado (back/forward), y CORS habilitado para acceso desde red local.
