@@ -53,7 +53,13 @@ export function PageHeader({
         <AuthGuard fallback={null}>
           {/* Search Bar */}
           <div className="relative max-w-md w-full mt-6 group">
+            <label htmlFor="search-input" className="sr-only">
+              {t('home.searchPlaceholder')}
+            </label>
             <Input 
+              id="search-input"
+              className="search-input"
+              aria-label={t('home.searchPlaceholder')}
               variant="light"
               type="text"
               placeholder={t('home.searchPlaceholder')}

@@ -47,11 +47,19 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
 
   const [selectedIds, setSelectedIds] = useState<string[]>(user?.intolerances || []);
   const [severities, setSeverities] = useState<Record<string, 'mild' | 'moderate' | 'severe' | 'anaphylactic'>>(user?.severities || {});
+  const [conditions, setConditions] = useState<string[]>(user?.conditions || []);
   const [step, setStep] = useState<'select' | 'severity'>('select');
   const [isSaving, setIsSaving] = useState(false);
 
   const toggleIntolerance = (id: string) => {
     setError(null);
+    // Validation: ensure ID exists in catalog and avoid duplicates
+    const isValid = catalog.some(item => item.id === id);
+    if (!isValid) {
+      console.warn(`[Onboarding] Attempted to toggle invalid intolerance: ${id}`);
+      return;
+    }
+
     setSelectedIds(prev =>
       prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     );
@@ -76,14 +84,25 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
     try {
       const intolerances = selectedIds;
       
+      // Sync conditions: if 'sibo' is in intolerances, it must also be in conditions for the security engine
+      const updatedConditions = [...conditions];
+      if (intolerances.includes('sibo') && !updatedConditions.includes('SIBO')) {
+        updatedConditions.push('SIBO');
+      } else if (!intolerances.includes('sibo')) {
+        const index = updatedConditions.indexOf('SIBO');
+        if (index > -1) updatedConditions.splice(index, 1);
+      }
+
       await updateProfile({
         intolerances,
         severities,
+        conditions: updatedConditions,
         onboarding_completed: true
       });
       onClose();
     } catch (err) {
-      console.error('[Onboarding] Save error:', err);
+      console.error('[Onboarding] Error al guardar el perfil:', err);
+      // Detailed error representation for security-relevant persistence failures
       setError(t('common.errorPersistence'));
     } finally {
       setIsSaving(false);

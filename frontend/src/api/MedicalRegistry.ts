@@ -1,6 +1,5 @@
+import { api } from '../lib/api';
 import { db } from '../db/db';
-
-const API_URL = '';
 
 export const MedicalRegistry = {
     async syncTriggers(): Promise<Record<string, string[]>> {
@@ -19,10 +18,7 @@ export const MedicalRegistry = {
 
             console.log('[MedicalRegistry] Nueva versión detectada. Sincronizando desde backend...');
             
-            const response = await fetch(`${API_URL}/api/medical/triggers`);
-            if (!response.ok) throw new Error('Failed to fetch triggers from backend');
-            
-            const updatedTriggers = await response.json();
+            const updatedTriggers = await api.get<Record<string, string[]>>('/medical/triggers');
 
             await db.medicalMetadata.put({
                 id: 'triggers',

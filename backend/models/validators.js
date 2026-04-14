@@ -32,4 +32,5 @@ export const profileUpdateSchema = z.object({
   onboarding_completed: z.boolean().optional(),
   language: z.string().length(2).optional(),
   severities: z.record(z.string()).optional(),
+  conditions: z.array(z.string()).optional(),
 });

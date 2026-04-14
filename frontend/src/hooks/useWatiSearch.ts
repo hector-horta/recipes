@@ -28,9 +28,24 @@ async function fetchRecipes(
 export function useWatiSearch() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('q') || '';
+  });
   const [includeUnsafe, setIncludeUnsafe] = useState(false);
   const debouncedQuery = useDebounce(query, 500);
+
+  // Sync URL with query results when they change significantly
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (query.trim()) {
+      params.set('q', query.trim());
+    } else {
+      params.delete('q');
+    }
+    const newUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`;
+    window.history.replaceState({ ...window.history.state }, '', newUrl);
+  }, [debouncedQuery]);
 
   // Reset override when search query changes
   useEffect(() => {
@@ -45,7 +60,7 @@ export function useWatiSearch() {
     queryKey: ['recipes', sanitizedQuery, user?.id, user?.intolerances, user?.severities, includeUnsafe],
     queryFn: () => fetchRecipes(sanitizedQuery, includeUnsafe),
     enabled: shouldSearch,
-    staleTime: 1000 * 30,
+    staleTime: 1000 * 60 * 5, // Improved performance: 5 mins cache for recipes
     gcTime: 1000 * 60 * 10,
     refetchOnWindowFocus: true,
     retry: (failureCount, error) => {

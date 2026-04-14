@@ -12,6 +12,7 @@ export interface UserProfile {
   onboarding_completed: boolean;
   language: string;
   severities?: Record<string, string>;
+  conditions?: string[];
   createdAt?: string;
 }
 
