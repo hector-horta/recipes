@@ -26,11 +26,10 @@ The application implements defenses against CSRF by:
 - **Shared Secrets**: Communication between the Telegram Bot and the Backend is secured using a shared API Key (`x-api-key`) to prevent unauthorized recipe ingestion.
 - **Authorized User IDs**: The Telegram Bot strictly filters messages by `TELEGRAM_USER_ID` at the polling level.
 
-## Information Leakage & Error Handling
-To prevent the leakage of internal system details (paths, database structure, library versions):
-- **Stack Traces**: Full stack traces are restricted to Development environments and are NEVER sent to the client in Production.
-- **Generic Errors**: Internal server errors (5xx) are masked with user-friendly, generic messages.
-- **Structured Logging**: All errors are logged internally with full context for debugging, but this data is kept secure on the server.
+## Resilience & Reliability
+- **Centralized Configuration**: Environment-specific settings are managed via a centralized configuration (`frontend/src/config.ts`) to avoid hardcoded URLs and ensure consistent endpoint behavior across environments.
+- **Robust Error Handling**: Critical operations like profile updates and recipe searches incorporate persistence error handling and retry mechanisms (`react-query` with exponential backoff).
+- **Graceful Failovers**: Components are designed with refined loading and error states to maintain a usable interface even during partial API failures or high latency.
 
 ## Vulnerability Reporting
 If you believe you have found a security vulnerability in this project, please report it to the maintainer rather than opening a public issue. Our team is committed to addressing security concerns promptly.

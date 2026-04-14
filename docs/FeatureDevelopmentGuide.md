@@ -34,14 +34,14 @@ Al desarrollar en este repositorio:
 
 Para combatir la deuda técnica y mantener el codebase profesional:
 
-1. **Modularización Extrema**: `server.js` es solo un orquestador.
-   - Las rutas de API deben vivir en `backend/routes/`.
-   - La lógica de negocio pesada o integraciones debe vivir en `backend/services/`.
-   - El CORS y la configuración compleja deben estar en `backend/config/`.
+### Principios Críticos de Diseño
+1. **SSRF Protection**: Toda integración externa (Spoonacular, Groq, NVIDIA) debe pasar por el Proxy del Backend (`ingest.js` o `NvidiaNIM.js`). Nunca llames APIs de terceros desde el frontend.
 2. **Frontend API Client**: Prohibido usar `fetch` directo. Usar `frontend/src/lib/api.ts`.
    - Esto garantiza que `credentials: 'include'` y los headers de i18n/auth sean consistentes.
 3. **Manejo de Errores**: Nunca usar `console.log` o `console.error` directamente. Usar los métodos estáticos de `ActivityLogger` para logs estructurados y telemetría.
-4. **Validación Zod**: Todo input externo (req.body, req.query, env vars) DEBE ser validado con Zod antes de tocar la lógica.
+4. **Validación Zod**: Todo input externo (req.body, req.query, env vars) DEBE ser validado con Zod antes de tocar la lógica. **Usa `backend/models/validators.js`** como repositorio central de esquemas para asegurar consistencia entre rutas.
+5. **No Static URLs**: Prohibido usar URLs de API hardcodeadas en el frontend. Usar el wrapper `api` de `frontend/src/lib/api.ts` que inyecta automáticamente el `CONFIG.API_URL`.
+6. **Resiliencia Frontend**: Usa reintentos (`retry`) en hooks de búsqueda y gestión de estados de error amigables para el usuario.
 
 ---
 
@@ -114,6 +114,7 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 │       ├── main.tsx              # ReactDOM root: Providers → AuthProvider → App
 │       ├── App.tsx               # Router manual: RecipePage ↔ RecipeDetailPage + Modals
 │       ├── AuthContext.tsx        # AuthProvider, useAuth(), UserProfile interface
+│       ├── config.ts              # INFRAESTRUCTURA DE CONFIGURACIÓN CENTRALIZADA (API_URL, etc)
 │       ├── lib/
 │       │   └── api.ts            # Centralized API client (fetch wrapper)
 │       ├── i18n.ts               # i18next config (es/en, localStorage: wati_language)
@@ -570,7 +571,12 @@ const mutation = useMutation({
 
 #### Headers y Credenciales
 - **`credentials: 'include'`**: Todas las peticiones `fetch` deben incluir esta opción para enviar/recibir cookies `HttpOnly`.
-- **Tokens**: No es necesario leer el token de `localStorage` para las peticiones API; el navegador lo incluye automáticamente en las cookies.
+- **`CONFIG.API_URL`**: Siempre usar `CONFIG.API_URL` de `src/config.ts` para construir URLs de API. Esto permite que la app sea agnóstica al entorno (local vs cloud).
+
+#### Resiliencia y Estados de Error
+- **Graceful Failures**: No permitas que un fallo de API rompa la UI. Usa `try/catch` en hooks y provee estados de error amigables.
+- **Persistent Error Messages**: Asegúrate de que los errores se limpien cuando el usuario inicia una nueva acción (ej: resetear error al cambiar search query).
+- **Loading States**: Siempre implementa skeletons o spinners durante transiciones asíncronas.
 
 #### AuthContext — Interface `UserProfile`
 ```typescript
@@ -789,6 +795,8 @@ describe('MiComponente', () => {
 - [ ] ¿El hook encapsula toda la lógica de fetch/estado?
 - [ ] ¿Se implementaron optimistic updates en las mutaciones?
 - [ ] ¿Los nuevos valores de ENUM se agregaron tanto en la migración como en el modelo?
+- [ ] **Resiliencia**: ¿Se manejaron adecuadamente los estados de carga y error persistente?
+- [ ] **Config**: ¿Se usó `CONFIG.API_URL` en lugar de strings hardcodeados?
 
 ---
 

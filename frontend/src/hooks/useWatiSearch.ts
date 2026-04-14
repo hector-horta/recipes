@@ -1,8 +1,10 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Recipe, RecipeSearchResponse } from '../types/recipe';
+import { RecipeSearchResponse } from '../types/recipe';
 import { useDebounce } from './useDebounce';
 import { useAuth } from '../AuthContext';
+import { api, ApiError } from '../lib/api';
+import { trackEvent } from '../utils/analytics';
 
 async function fetchRecipes(
   query: string,
@@ -13,11 +15,7 @@ async function fetchRecipes(
   params.set('number', '20');
   if (includeUnsafe) params.set('includeUnsafe', 'true');
 
-  const res = await fetch(`/api/recipes?${params.toString()}`, { 
-    credentials: 'include' 
-  });
-  if (!res.ok) throw new Error(`Failed to fetch recipes: ${res.status}`);
-  const data = await res.json();
+  const data = await api.get<RecipeSearchResponse | any[]>(`/recipes?${params.toString()}`);
 
   // Backwards-compatible: if the backend returns a plain array (no auth), wrap it
   if (Array.isArray(data)) {
@@ -26,8 +24,6 @@ async function fetchRecipes(
 
   return data as RecipeSearchResponse;
 }
-
-import { trackEvent } from '../utils/analytics';
 
 export function useWatiSearch() {
   const queryClient = useQueryClient();
@@ -50,8 +46,13 @@ export function useWatiSearch() {
     queryFn: () => fetchRecipes(sanitizedQuery, includeUnsafe),
     enabled: shouldSearch,
     staleTime: 1000 * 30,
+    gcTime: 1000 * 60 * 10,
     refetchOnWindowFocus: true,
-    retry: 1,
+    retry: (failureCount, error) => {
+      // Don't retry on 401 or 403
+      if (error instanceof ApiError && (error.status === 401 || error.status === 403)) return false;
+      return failureCount < 2;
+    },
   });
 
   const results = data?.recipes ?? [];
@@ -68,13 +69,13 @@ export function useWatiSearch() {
         query: trimmedQuery,
         resultsCount: results.length
       });
-    } else if (!isLoading && !isFetching) {
+    } else if (!isLoading && !isFetching && !error) {
       trackEvent('search_failed', {
         query: trimmedQuery,
         resultsCount: 0
       });
     }
-  }, [results.length, sanitizedQuery, isLoading, isFetching]);
+  }, [results.length, sanitizedQuery, isLoading, isFetching, !!error]);
 
   const isSearching = isFetching && query !== debouncedQuery;
   const isPending = isFetching && results.length === 0 && !isSearching;
@@ -90,8 +91,8 @@ export function useWatiSearch() {
     isLoading,
     isSearching,
     isPending,
-    error: error instanceof Error ? error.message : null,
-    isQuotaExhausted: false,
+    error: error instanceof ApiError ? error.message : (error instanceof Error ? error.message : null),
+    isQuotaExhausted: error instanceof ApiError && error.status === 402,
     refresh,
     filteredUnsafeCount,
     filteredAllergens,

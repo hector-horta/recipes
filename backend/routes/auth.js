@@ -1,44 +1,21 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { z } from 'zod';
 import rateLimit from 'express-rate-limit';
 import { User } from '../models/User.js';
 import { Profile } from '../models/Profile.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { config } from '../config/env.js';
 import { ActivityLogger } from '../services/ActivityLogger.js';
+import { registerSchema, loginSchema, profileUpdateSchema } from '../models/validators.js';
 
 const router = express.Router();
 const JWT_SECRET = config.JWT_SECRET;
 
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 login requests per windowMs
+  windowMs: 15 * 60 * 1000, 
+  max: 5, 
   message: { error: 'Demasiados intentos de inicio de sesión, intenta nuevamente en 15 minutos.' }
-});
-
-const registerSchema = z.object({
-  email: z.string().email('Debe ser un email válido'),
-  password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres'),
-  displayName: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
-  acceptedTerms: z.boolean().refine(val => val === true, { message: 'Debe aceptar los términos' }),
-  language: z.string().optional()
-});
-
-const loginSchema = z.object({
-  email: z.string().email('Debe ser un email válido'),
-  password: z.string()
-});
-
-const profileUpdateSchema = z.object({
-  diet: z.string().optional(),
-  intolerances: z.array(z.string()).optional(),
-  excluded_ingredients: z.array(z.string()).optional(),
-  daily_calories: z.number().optional(),
-  onboarding_completed: z.boolean().optional(),
-  language: z.string().length(2).optional(),
-  severities: z.record(z.string()).optional()
 });
 
 // POST /api/auth/register
@@ -49,7 +26,7 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Datos inválidos', details: parseResult.error.errors });
     }
     
-    const { email, password, displayName, acceptedTerms, language } = parseResult.data;
+    const { email, password, displayName, language } = parseResult.data;
 
     const existingUser = await User.findOne({ where: { email: email.toLowerCase() } });
     if (existingUser) {
@@ -74,7 +51,7 @@ router.post('/register', async (req, res) => {
       httpOnly: true,
       secure: config.NODE_ENV === 'production',
       sameSite: 'Lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      maxAge: 7 * 24 * 60 * 60 * 1000 
     });
 
     res.status(201).json({
@@ -86,7 +63,7 @@ router.post('/register', async (req, res) => {
       }
     });
   } catch (error) {
-    ActivityLogger.error('Registration failed', { error: error.message, email: req.body.email });
+    ActivityLogger.error('Registration failed', error, { email: req.body?.email });
     res.status(500).json({ error: 'Error interno del servidor durante el registro.' });
   }
 });
@@ -117,7 +94,7 @@ router.post('/login', loginLimiter, async (req, res) => {
       httpOnly: true,
       secure: config.NODE_ENV === 'production',
       sameSite: 'Lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      maxAge: 7 * 24 * 60 * 60 * 1000 
     });
 
     res.json({
@@ -129,7 +106,7 @@ router.post('/login', loginLimiter, async (req, res) => {
       }
     });
   } catch (error) {
-    ActivityLogger.error('Login failed', { error: error.message, email: req.body.email });
+    ActivityLogger.error('Login failed', error, { email: req.body?.email });
     res.status(500).json({ error: 'Error interno del servidor durante el inicio de sesión.' });
   }
 });
@@ -161,7 +138,7 @@ router.get('/me', authenticateToken, async (req, res) => {
       updatedAt: user.updatedAt
     });
   } catch (error) {
-    ActivityLogger.error('Fetching self (me) profile failed', { error: error.message, userId: req.user?.id });
+    ActivityLogger.error('Fetching self (me) profile failed', error, { userId: req.user?.id });
     res.status(500).json({ error: 'Error al obtener su perfil.' });
   }
 });
@@ -183,16 +160,24 @@ router.put('/profile', authenticateToken, async (req, res) => {
 
     if (updates.diet !== undefined) profile.diet = updates.diet;
     if (updates.intolerances !== undefined) profile.intolerances = updates.intolerances;
-    if (updates.excluded_ingredients !== undefined) profile.excluded_ingredients = updates.excluded_ingredients;
+    
+    // Convert array to string for excluded_ingredients if necessary
+    if (updates.excluded_ingredients !== undefined) {
+       profile.excluded_ingredients = Array.isArray(updates.excluded_ingredients) 
+        ? updates.excluded_ingredients.join(', ') 
+        : updates.excluded_ingredients;
+    }
+
     if (updates.daily_calories !== undefined) profile.daily_calories = updates.daily_calories;
     if (updates.onboarding_completed !== undefined) profile.onboarding_completed = updates.onboarding_completed;
     if (updates.language !== undefined) profile.language = updates.language;
     if (updates.severities !== undefined) profile.severities = updates.severities;
+    if (updates.conditions !== undefined) profile.conditions = updates.conditions;
 
     await profile.save();
     res.json(profile);
   } catch (error) {
-    ActivityLogger.error('Profile update failed', { error: error.message, userId: req.user?.id });
+    ActivityLogger.error('Profile update failed', error, { userId: req.user?.id });
     res.status(500).json({ error: 'Error al actualizar sus preferencias.' });
   }
 });
@@ -205,11 +190,10 @@ router.delete('/me', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Usuario no encontrado.' });
     }
 
-    // ON DELETE CASCADE automatically sweeps Profile and FavoriteRecipes
     await user.destroy();
     res.json({ message: 'Sus datos han sido eliminados de manera permanente exitosamente.' });
   } catch (error) {
-    ActivityLogger.error('GDPR user deletion failed', { error: error.message, userId: req.user?.id });
+    ActivityLogger.error('GDPR user deletion failed', error, { userId: req.user?.id });
     res.status(500).json({ error: 'Error al intentar procesar su solicitud de borrado.' });
   }
 });
