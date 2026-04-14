@@ -212,6 +212,7 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 | `user_id` | UUID | FK → users(id), ON DELETE CASCADE |
 | `diet` | ENUM('None','Vegan','Vegetarian','Keto','Paleo','SIBO') | default: 'None' |
 | `intolerances` | JSONB | default: [] |
+| `conditions` | JSONB | default: [] (Sincronizado con intolerancias, ej: 'SIBO') |
 | `excluded_ingredients` | TEXT | nullable, default: '' |
 | `daily_calories` | INTEGER | nullable, default: 2000 |
 | `onboarding_completed` | BOOLEAN | default: false |
@@ -514,9 +515,9 @@ Si existe, responde `409 { error, conflict: true, recipe }`. El Telegram Bot usa
 `RecipeProvider.getRecipes()` y `normalizeRecipe()` personalizan los resultados según el perfil del usuario:
 1. **Buffer de candidatos**: Consulta un buffer de `requestedLimit × 5` recetas de la DB para compensar el filtrado posterior.
 2. **Evaluación de Riesgo Dinámico**:
-   - Si el usuario tiene **SIBO**, se respetan los niveles curados (`sibo_risk_level`) de la base de datos.
+   - Si el usuario tiene **SIBO** (detectado via `profile.conditions`), se respetan los niveles curados (`sibo_risk_level`) de la base de datos.
    - Si NO tiene SIBO, los riesgos de SIBO se ignoran (la receta se marca como `safe` a menos que contenga un trigger de otra alergia activa).
-3. **Activadores Médicos (Triggers)**: Cruza los ingredientes con `MEDICAL_TRIGGERS` (de `config/medicalTriggers.js`) para cada intolerancia activa.
+3. **Motor de Seguridad (SecurityScrubber)**: Cruza los ingredientes con `MEDICAL_TRIGGERS` (de `config/medicalTriggers.js`) para cada intolerancia activa y condición clínica.
    - **Búsqueda Robusta**: Se utiliza RexExp con límites de palabra (`(?:^|\s)trigger(?:s|es)?(?:\s|$|[.,;])`) para evitar falsos positivos (como "tuna" disparando "aceitunas") mientras se soporta pluralidad básica (huevo/huevos, atún/atunes).
 4. **Tags Personalizados**: Las etiquetas relacionadas con SIBO (ej: "Bajo en Fructanos", "SIBO: Safe") se filtran y ocultan si el usuario no tiene SIBO en su perfil.
 5. **Ingredientes Limitados**: Los ingredientes marcados como `isBorderlineSafe` (que requieren revisión) solo muestran su advertencia si el usuario tiene la intolerancia correspondiente (SIBO).

@@ -22,6 +22,11 @@ The application implements defenses against CSRF by:
 - **Image Proxy & Validation**: External images are validated against a whitelist of trusted domains (`ALLOWED_IMAGE_DOMAINS`) before being cached or displayed.
 - **Content Security Policy (CSP)**: The application is designed to be compatible with strict CSP headers (though enforcement depends on the hosting environment).
 
+## Medical Data Security & Privacy
+- **AES-256 Client-Side Encryption**: Medical profiles (intolerances, severities, and clinical conditions) are encrypted using AES-256 before being cached in `localStorage` via the **SecureVault** system.
+- **Security Scrubber Engine**: A dedicated component (`SecurityScrubber.ts`) performs ingredient analysis on the client side. This ensures that sensitive medical triggers are matched against recipes without exposing the entire medical profile to unauthenticated third-party sub-services.
+- **Diagnostics Synchronization**: The system automatically synchronizes clinical conditions (e.g., SIBO) with food intolerances to ensure that security badges remain accurate across the entire application without requiring user re-configuration.
+
 ## Inter-Service Communication
 - **Shared Secrets**: Communication between the Telegram Bot and the Backend is secured using a shared API Key (`x-api-key`) to prevent unauthorized recipe ingestion.
 - **Authorized User IDs**: The Telegram Bot strictly filters messages by `TELEGRAM_USER_ID` at the polling level.

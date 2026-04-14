@@ -17,11 +17,12 @@ El proyecto se divide en diferentes servicios orquestados por Docker Compose:
 ## 🌟 Características Principales
 
 - **Privacidad y Cumplimiento GDPR**: Perfiles de salud encriptados. Flujo legal de aceptación de términos y borrado en cascada de datos (`DELETE /api/auth/me`).
+- **Gestión de Condiciones Médicas**: Soporte para diagnósticos complejos (como **SIBO**) mediante un motor de sincronización que vincula intolerancias alimentarias con estados clínicos, permitiendo alertas de seguridad personalizadas.
 - **Autenticación Segura (JWT & Bcrypt)**: Cuentas individuales identificadas por **UUID v4**.
 - **Ingesta Inteligente (IA & OCR)**: El **Telegram Bot** utiliza **NVIDIA NIM (OCDRNet)** para extraer ingredientes de fotos y **Groq Whisper** para transcribir recetas dictadas por voz.
 - **Proxy Inteligente con Resiliencia e IA**: El backend protege las API Keys, implementa seguridad contra **SSRF** mediante whitelists y gestiona reintentos automáticos (**Exponential Backoff** para APIs de LLM). Utiliza **Llama 4 Maverick** para aplicar filtros SIBO/FODMAP automáticos.
 - **Frontend Seguro y Resiliente**: Implementación de sanitización estricta mediante **DOMPurify**, validación de tipos e **infraestructura de configuración centralizada**. Gestión robusta de estados de carga, errores persistentes y reintentos en APIs críticas (`react-query` + `Exponential Backoff`).
-- **Arquitectura Modular e Inyección**: Backend altamente desacoplado con **validadores Zod centralizados** y servicios especializados (`ActivityLogger`, `RecipeProvider`). Cliente frontend unificado que garantiza consistencia en seguridad (cookies) y endpoints.
+- **Arquitectura Modular e Inyección**: Backend altamente desacoplado con **validadores Zod centralizados** y servicios especializados (`ActivityLogger`, `RecipeProvider`, `SecurityScrubber`). Cliente frontend unificado que garantiza consistencia en seguridad (cookies) y endpoints.
 - **Sistema de Caché Optimizada (Redis & IndexedDB)**: TTL inteligente para APIs externas y motor de almacenamiento local para imágenes mediante **Dexie**, con validación de dominios de confianza.
 - **Gestión de Secretos y Comunicación Segura**: Integración nativa con **HCP Vault** y comunicación Bot-Backend protegida mediante **API Keys compartidas**.
 - **Analytics en Tiempo Real (Umami)**: Tracking de eventos como recetas favoritas, búsquedas exitosas/fallidas, sugerencias al chef. Dashboard de popularidad de recetas y tasa de éxito del motor de búsqueda.
