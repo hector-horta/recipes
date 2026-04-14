@@ -59,6 +59,7 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 │   ├── .sequelizerc              # Sequelize CLI paths
 │   ├── config/
 │   │   ├── env.js                # Validación estricta con Zod. FUENTE ÚNICA de process.env
+│   │   ├── resiliency.js         # Fetch con whitelist (SSRF protection) y reintentos (Exponential Backoff)
 │   │   ├── config.cjs            # Sequelize CLI config (CommonJS requerido por CLI)
 │   │   ├── database.js           # Sequelize instance + connectDB()
 │   │   ├── redis.js              # Redis client + connectRedis()
@@ -171,6 +172,14 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 │           └── setup.ts         # Import @testing-library/jest-dom
 │
 ├── telegram-bot/                 # Bot de ingesta de recetas
+│   ├── src/
+│   │   ├── index.js              # Entry point — Polling, Auth y Router de eventos
+│   │   ├── config.js             # Validación de env vars del bot
+│   │   ├── handlers/             # Lógica de mensajes, voz, imágenes y callbacks
+│   │   ├── services/             # backendStore.js (Cliente API con x-api-key)
+│   │   └── utils/                # logger.js estructurado, SessionManager, Formatter
+│   ├── package.json              # Scripts: start, dev (node --watch)
+│   └── Dockerfile                # Configuración multi-etapa para producción
 ├── nginx/                        # Reverse proxy OQS (TLS post-cuántico)
 └── terraform/                    # IaC para HCP Vault Secrets
 ```
@@ -772,6 +781,8 @@ describe('MiComponente', () => {
 - [ ] ¿Se están exponiendo secretos en los logs o respuestas? (Nunca lo hagas)
 - [ ] ¿El componente de React es responsivo (mobile-first)?
 - [ ] ¿Se agregó el evento de tracking en Umami?
+- [ ] ¿Se validaron las URLs externas contra la whitelist de `config/resiliency.js` (SSRF protection)?
+- [ ] ¿Se implementaron reintentos con exponencial backoff para peticiones externas críticas?
 - [ ] ¿Se creó la migración de base de datos si aplica?
 - [ ] ¿Se agregaron las traducciones i18n en ambos archivos (en.json, es.json)?
 - [ ] ¿Se escribieron tests unitarios (TDD)?

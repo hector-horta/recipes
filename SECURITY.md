@@ -11,6 +11,20 @@ The application implements defenses against CSRF by:
 - Enforcing strict **CORS** policies that only allow trusted origins to make state-changing requests.
 - Requiring custom headers for sensitive administrative actions (`X-Admin-Key`).
 
+## SSRF (Server-Side Request Forgery) Protection
+- **Restricted Fetching**: All external requests (OCR, Audio, Image generation) pass through a dedicated proxy or a restricted direct fetch with a whitelist.
+- **Whitelist Enforcement**: Only trusted domains (e.g., Google APIs, NVIDIA/Groq endpoints, Telegram file servers) are reachable from the backend.
+- **URL Validation**: All external URLs provided by users or sub-services are validated against specific schemas before execution.
+
+## Input Validation & Sanitization
+- **Strict Schema Enforcement (Zod)**: EVERY entry point (API routes, Telegram Bot handlers, environment variables) is validated using Zod schemas.
+- **Layered Validation**: Validation occurs at the Bot level and is re-validated at the Backend level to ensure data integrity even if one layer is bypassed.
+- **SQL Injection Prevention**: Using Sequelize ORM for all database operations with parameterization.
+
+## Inter-Service Communication
+- **Shared Secrets**: Communication between the Telegram Bot and the Backend is secured using a shared API Key (`x-api-key`) to prevent unauthorized recipe ingestion.
+- **Authorized User IDs**: The Telegram Bot strictly filters messages by `TELEGRAM_USER_ID` at the polling level.
+
 ## Information Leakage & Error Handling
 To prevent the leakage of internal system details (paths, database structure, library versions):
 - **Stack Traces**: Full stack traces are restricted to Development environments and are NEVER sent to the client in Production.

@@ -17,6 +17,14 @@
 
 ---
 
+## 🛡️ Resiliencia y Validación
+
+- **Capa de Resiliencia**: Se utiliza un wrapper centralizado para peticiones `fetch` externas que implementa protección contra **SSRF** mediante una whitelist de dominios y reintentos con **Exponential Backoff** para mitigar fallos intermitentes de APIs de LLMs (NVIDIA NIM, Groq).
+- **Validación Multicapa**: Tanto el Bot de Telegram como el Backend validan los datos de entrada con **Zod**. En el backend, las rutas utilizan `req.validatedBody` para garantizar que solo datos limpios y tipados lleguen a la lógica de negocio.
+- **Comunicación entre Servicios**: El Bot se comunica con el Backend mediante una API Key compartida en los headers, asegurando que solo el bot autorizado pueda ingestar recetas automáticamente.
+
+---
+
 ## 🔐 TLS Post-Cuántico (Nginx)
 
 La aplicación incluye un reverse proxy Nginx construido sobre la imagen [Open Quantum Safe](https://openquantumsafe.org/), que soporta el intercambio de clave híbrido **X25519 + ML-KEM-768 (FIPS 203)** — protegiendo las comunicaciones contra ataques *harvest-now-decrypt-later*.
