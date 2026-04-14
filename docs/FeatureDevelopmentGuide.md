@@ -443,6 +443,20 @@ ActivityLogger.alertAsync('🔴 *Mensaje de alerta*');
 - Errores graves (5xx, NVIDIA, Groq) generan alertas Telegram automáticas.
 - Para errores custom, `throw` un error con `.status`: `const err = new Error('msg'); err.status = 400; throw err;`
 
+#### 🚨 Manejo de Errores y Logging
+Wati utiliza un sistema de logging estructurado a través de `ActivityLogger`.
+
+**Niveles de Log:**
+- `ActivityLogger.info(msg, context)`: Eventos informativos del sistema.
+- `ActivityLogger.warn(msg, context)`: Situaciones inesperadas pero no críticas.
+- `ActivityLogger.error(msg, error, context)`: Errores que requieren atención. En desarrollo muestra el stack trace; en producción lo oculta del cliente pero lo persiste en logs internos.
+
+**Reglas de Oro:**
+1. **Nunca usar `console.log` o `console.error` directamente** — usar los métodos de `ActivityLogger`.
+2. **Propagación**: Siempre usar `try { ... } catch (e) { next(e); }` en las rutas para que el Global Error Handler capture el error.
+3. **Privacidad**: Nunca loguear passwords, tokens o info sensible del usuario (PII) en los mensajes de log.
+4. **Respuesta al Cliente**: El error handler enmascara errores 5xx con un mensaje genérico. Los errores 4xx deben tener mensajes descriptivos para el usuario.
+
 #### Sanitización de Ingesta (LLM → DB)
 Cuando el LLM (NvidiaNIM) estructura una receta, los valores pueden no coincidir con los ENUMs de la DB (ej: `"Fácil"` en vez de `"easy"`). El módulo `utils/ingestSanitizer.js` normaliza:
 - **`difficulty`**: mapea español/sinónimos → `'easy'|'medium'|'hard'`

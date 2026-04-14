@@ -11,5 +11,11 @@ The application implements defenses against CSRF by:
 - Enforcing strict **CORS** policies that only allow trusted origins to make state-changing requests.
 - Requiring custom headers for sensitive administrative actions (`X-Admin-Key`).
 
+## Information Leakage & Error Handling
+To prevent the leakage of internal system details (paths, database structure, library versions):
+- **Stack Traces**: Full stack traces are restricted to Development environments and are NEVER sent to the client in Production.
+- **Generic Errors**: Internal server errors (5xx) are masked with user-friendly, generic messages.
+- **Structured Logging**: All errors are logged internally with full context for debugging, but this data is kept secure on the server.
+
 ## Vulnerability Reporting
 If you believe you have found a security vulnerability in this project, please report it to the maintainer rather than opening a public issue. Our team is committed to addressing security concerns promptly.

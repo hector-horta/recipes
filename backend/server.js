@@ -121,9 +121,10 @@ app.get('/api/recipes', optionalAuthenticateToken, recipeLimiter, async (req, re
     if (req.user) {
       userProfile = await Profile.findOne({ where: { user_id: req.user.id } });
       if (userProfile) {
-         console.log(`[DEBUG-PROFILE] User: ${req.user.id}, Intolerances: ${JSON.stringify(userProfile.intolerances)}, Severities: ${JSON.stringify(userProfile.severities)}`);
-      } else {
-         console.log(`[DEBUG-PROFILE] No profile found for ${req.user.id}`);
+         ActivityLogger.info(`Profile loaded for user ${req.user.id}`, { 
+           intolerances: userProfile.intolerances, 
+           severities: userProfile.severities 
+         });
       }
     }
 
@@ -167,49 +168,53 @@ app.get('/api/recipes', optionalAuthenticateToken, recipeLimiter, async (req, re
 
 // Global Error Handler
 app.use((err, req, res, next) => {
-  console.error('[Global Error Guard]', err.message);
-
   const status = err.status || 500;
-  let message = 'Vaya, ocurrió un problema inesperado. Inténtalo más tarde.';
+  const isFatal = status >= 500;
+  
+  // Log structured error
+  ActivityLogger.error(`Request Failed: ${req.method} ${req.url}`, err, {
+    status,
+    ip: req.ip,
+    userId: req.user?.id
+  });
 
-  if (status === 402) {
-    message = 'Se ha agotado la cuota de la API externa para hoy. Por favor, vuelve mañana.';
-  } else if (status === 504) {
-    message = 'La búsqueda tardó más de lo esperado en responder. Inténtalo de nuevo.';
-  } else if (status === 400 && err.error === 'Petición malformada.') {
-    return res.status(status).json(err);
-  }
-
-  // ── Alertas Telegram para errores graves ─────────────────────────────────
+  // Alert on critical failures
   const isNvidiaError = err.message?.includes('NVIDIA') || err.message?.includes('SDXL');
-  const isGroqError   = err.message?.includes('GROQ') || err.message?.includes('Whisper') || err.message?.includes('Groq');
-  const isFatal       = status >= 500;
+  const isGroqError = err.message?.includes('GROQ') || err.message?.includes('Whisper');
 
   if (isNvidiaError || isGroqError || isFatal) {
-    const service  = isNvidiaError ? 'NVIDIA API' : isGroqError ? 'Groq API' : 'Backend';
-    const shortMsg = (err.message || 'Unknown error').slice(0, 200);
-    const fullUrl  = req.originalUrl || req.url;
-    
+    const service = isNvidiaError ? 'NVIDIA API' : isGroqError ? 'Groq API' : 'Backend';
     ActivityLogger.alertAsync(
       `🔴 *[ERROR ${status}] ${service}*\n\n` +
-      `\`${shortMsg}\`\n\n` +
-      `📍 ${req.method} ${fullUrl}`
+      `\`${(err.message || 'Unknown error').slice(0, 200)}\`\n\n` +
+      `📍 ${req.method} ${req.originalUrl || req.url}`
     );
   }
-  // ─────────────────────────────────────────────────────────────────────────
 
-  res.status(status).json({ error: message });
+  // Response Masking
+  let message = 'Vaya, ocurrió un problema inesperado. Inténtalo más tarde.';
+  if (status === 402) message = 'Se ha agotado la cuota de la API externa para hoy.';
+  if (status === 504) message = 'La búsqueda tardó demasiado. Inténtalo de nuevo.';
+  if (status < 500) message = err.message; // User-facing errors (4xx) can show actual message
+
+  res.status(status).json({ 
+    error: message,
+    code: err.code || 'INTERNAL_ERROR',
+    // Include stack only in development
+    stack: config.NODE_ENV === 'development' ? err.stack : undefined
+  });
 });
 
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('[Unhandled Rejection]', reason);
+process.on('unhandledRejection', (reason) => {
+  ActivityLogger.error('Unhandled Rejection', reason);
 });
 
 process.on('uncaughtException', (error) => {
-  console.error('[Uncaught Exception]', error);
-  process.exit(1);
+  ActivityLogger.error('Uncaught Exception', error);
+  // Give some time to log before exiting
+  setTimeout(() => process.exit(1), 1000);
 });
 
 app.listen(port, () => {
-  console.log(`Backend server listening at http://localhost:${port}`);
+  ActivityLogger.info(`Backend server listening at http://localhost:${port}`);
 });
