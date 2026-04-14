@@ -2,8 +2,17 @@ import { Router } from 'express';
 import { SearchLog } from '../models/SearchLog.js';
 import { ActivityLogger } from '../services/ActivityLogger.js';
 import { User } from '../models/User.js';
+import rateLimit from 'express-rate-limit';
+import { requireAdminKey } from '../middleware/auth.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
 
 const router = Router();
+
+const suggestionLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3, // Limit each IP to 3 suggestions per hour
+  message: { error: 'Demasiadas sugerencias. Intenta de nuevo más tarde.' }
+});
 
 import { config } from '../config/env.js';
 
@@ -12,7 +21,7 @@ const TELEGRAM_BOT_TOKEN = config.TELEGRAM_BOT_TOKEN;
 
 async function sendTelegramSuggestion(term, userId) {
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_USER_ID) {
-    console.warn('[Suggestions] Telegram not configured, skipping notification.');
+    ActivityLogger.warn('[Suggestions] Telegram not configured, skipping notification.');
     return;
   }
 
@@ -24,7 +33,7 @@ async function sendTelegramSuggestion(term, userId) {
         userInfo = `${user.display_name} (${user.email})`;
       }
     } catch (err) {
-      console.error('[Suggestions] Failed to fetch user info:', err.message);
+      ActivityLogger.error('[Suggestions] Failed to fetch user info', err);
     }
   }
 
@@ -49,85 +58,77 @@ async function sendTelegramSuggestion(term, userId) {
 
     if (!res.ok) {
       const err = await res.text().catch(() => '');
-      console.error(`[Suggestions] Telegram API error (${res.status}):`, err);
+      ActivityLogger.error(`[Suggestions] Telegram API error (${res.status})`, err);
     }
   } catch (err) {
-    console.error('[Suggestions] Telegram fetch failed:', err.message);
+    ActivityLogger.error('[Suggestions] Telegram fetch failed', err);
   }
 }
 
-router.post('/', async (req, res) => {
-  try {
-    const { term, userId } = req.body;
+import { z } from 'zod';
 
-    if (!term || typeof term !== 'string' || term.trim().length < 2) {
-      return res.status(400).json({ error: 'term is required (min 2 characters)' });
+const suggestionSchema = z.object({
+  term: z.string().trim().min(2, 'term is required (min 2 characters)'),
+  userId: z.string().uuid().optional().nullable()
+});
+
+router.post('/', suggestionLimiter, asyncHandler(async (req, res) => {
+  const { term: cleanTerm, userId } = suggestionSchema.parse(req.body);
+  const validUserId = userId || null;
+
+  const searchLog = await SearchLog.create({
+    term: cleanTerm,
+    status: 'suggested',
+    conversion: true,
+    user_id: validUserId,
+    ip: req.ip
+  });
+
+  ActivityLogger.log('SUGGEST_TO_CHEF', { term: cleanTerm }, {
+    userId: validUserId,
+    ip: req.ip
+  });
+
+  // Background task, don't await to avoid blocking response
+  sendTelegramSuggestion(cleanTerm, validUserId).catch(err => {
+    ActivityLogger.error('[Suggestions] Telegram background task failed', err);
+  });
+
+  res.status(201).json({
+    message: 'Suggestion recorded',
+    searchLog: {
+      id: searchLog.id,
+      term: searchLog.term,
+      status: searchLog.status,
+      conversion: searchLog.conversion
     }
+  });
+}));
 
-    const cleanTerm = term.trim();
-    const validUserId = userId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)
-      ? userId
-      : null;
+router.get('/stats', requireAdminKey, asyncHandler(async (req, res) => {
+  const { Op } = await import('sequelize');
+  const totalFailed = await SearchLog.count({ where: { status: 'failed' } });
+  const totalSuggested = await SearchLog.count({ where: { status: 'suggested' } });
+  const conversionRate = totalFailed > 0
+    ? ((totalSuggested / (totalFailed + totalSuggested)) * 100).toFixed(1)
+    : 0;
 
-    const searchLog = await SearchLog.create({
-      term: cleanTerm,
-      status: 'suggested',
-      conversion: true,
-      user_id: validUserId,
-      ip: req.ip
-    });
+  const recentTerms = await SearchLog.findAll({
+    where: { status: 'failed' },
+    order: [['created_at', 'DESC']],
+    limit: 20,
+    attributes: ['term', 'created_at']
+  });
 
-    ActivityLogger.log('SUGGEST_TO_CHEF', { term: cleanTerm }, {
-      userId: validUserId,
-      ip: req.ip
-    });
-
-    sendTelegramSuggestion(cleanTerm, validUserId);
-
-    res.status(201).json({
-      message: 'Suggestion recorded',
-      searchLog: {
-        id: searchLog.id,
-        term: searchLog.term,
-        status: searchLog.status,
-        conversion: searchLog.conversion
-      }
-    });
-  } catch (error) {
-    console.error('[Suggestions] Error:', error.message);
-    res.status(500).json({ error: 'Failed to record suggestion' });
-  }
-});
-
-router.get('/stats', async (req, res) => {
-  try {
-    const { Op } = await import('sequelize');
-    const totalFailed = await SearchLog.count({ where: { status: 'failed' } });
-    const totalSuggested = await SearchLog.count({ where: { status: 'suggested' } });
-    const conversionRate = totalFailed > 0
-      ? ((totalSuggested / (totalFailed + totalSuggested)) * 100).toFixed(1)
-      : 0;
-
-    const recentTerms = await SearchLog.findAll({
-      where: { status: 'failed' },
-      order: [['created_at', 'DESC']],
-      limit: 20,
-      attributes: ['term', 'created_at']
-    });
-
-    res.json({
-      totalFailed,
-      totalSuggested,
-      conversionRate: `${conversionRate}%`,
-      recentFailedTerms: recentTerms.map(r => ({
-        term: r.term,
-        date: r.created_at
-      }))
-    });
-  } catch (error) {
-    console.error('[Suggestions Stats] Error:', error.message);
-    res.status(500).json({ error: 'Failed to fetch stats' });
-  }
-});
+  res.json({
+    totalFailed,
+    totalSuggested,
+    conversionRate: `${conversionRate}%`,
+    recentFailedTerms: recentTerms.map(r => ({
+      term: r.term,
+      date: r.created_at
+    }))
+  });
+}));
 
 export default router;

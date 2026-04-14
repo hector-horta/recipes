@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { api } from '../lib/api';
 import { useAuth } from '../AuthContext';
 import { WatiLogo } from './WatiLogo';
 import { Button } from './ui/Button';
 import { X, ChevronRight, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-
-const API_URL = '';
+import { CONFIG } from '../config';
 
 interface IntoleranceItem {
   id: string;
@@ -21,7 +21,8 @@ interface OnboardingModalProps {
 
 export function OnboardingModal({ onClose }: OnboardingModalProps) {
   const { t } = useTranslation();
-  const { user, updateUserProfile } = useAuth();
+  const { user, updateProfile } = useAuth();
+  const [error, setError] = useState<string | null>(null);
 
   const SEVERITY_OPTIONS: { value: 'mild' | 'moderate' | 'severe' | 'anaphylactic'; label: string; activeClasses: string }[] = [
     { value: 'mild',         label: t('onboarding.mild'),        activeClasses: '!bg-[#74C6E6] !text-white border-[#74C6E6]' },
@@ -30,12 +31,10 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
     { value: 'anaphylactic', label: t('onboarding.anaphylactic'),activeClasses: '!bg-red-600 !text-white border-red-600' },
   ];
 
-  const { data: catalog = [], isLoading } = useQuery({
+  const { data: catalog = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['medical', 'catalog'],
     queryFn: async () => {
-      const response = await fetch(`${API_URL}/api/medical/catalog`);
-      if (!response.ok) throw new Error('Failed to fetch catalog');
-      const data: IntoleranceItem[] = await response.json();
+      const data = await api.get<IntoleranceItem[]>('/medical/catalog');
       return data.map(item => ({
         ...item,
         label: t(`intolerances.${item.id}`, { defaultValue: item.label }),
@@ -43,14 +42,24 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
       }));
     },
     staleTime: 1000 * 60 * 30,
+    retry: 2,
   });
 
   const [selectedIds, setSelectedIds] = useState<string[]>(user?.intolerances || []);
   const [severities, setSeverities] = useState<Record<string, 'mild' | 'moderate' | 'severe' | 'anaphylactic'>>(user?.severities || {});
+  const [conditions, setConditions] = useState<string[]>(user?.conditions || []);
   const [step, setStep] = useState<'select' | 'severity'>('select');
   const [isSaving, setIsSaving] = useState(false);
 
   const toggleIntolerance = (id: string) => {
+    setError(null);
+    // Validation: ensure ID exists in catalog and avoid duplicates
+    const isValid = catalog.some(item => item.id === id);
+    if (!isValid) {
+      console.warn(`[Onboarding] Attempted to toggle invalid intolerance: ${id}`);
+      return;
+    }
+
     setSelectedIds(prev =>
       prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     );
@@ -70,19 +79,31 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
   };
 
   const handleSave = async () => {
+    setError(null);
     setIsSaving(true);
     try {
-      const conditions: string[] = [];
       const intolerances = selectedIds;
-      await updateUserProfile({
+      
+      // Sync conditions: if 'sibo' is in intolerances, it must also be in conditions for the security engine
+      const updatedConditions = [...conditions];
+      if (intolerances.includes('sibo') && !updatedConditions.includes('SIBO')) {
+        updatedConditions.push('SIBO');
+      } else if (!intolerances.includes('sibo')) {
+        const index = updatedConditions.indexOf('SIBO');
+        if (index > -1) updatedConditions.splice(index, 1);
+      }
+
+      await updateProfile({
         intolerances,
         severities,
-        conditions,
-        onboardingComplete: true
+        conditions: updatedConditions,
+        onboarding_completed: true
       });
       onClose();
     } catch (err) {
-      console.error('[Onboarding] Save error:', err);
+      console.error('[Onboarding] Error al guardar el perfil:', err);
+      // Detailed error representation for security-relevant persistence failures
+      setError(t('common.errorPersistence'));
     } finally {
       setIsSaving(false);
     }
@@ -129,6 +150,13 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
             <div className="flex flex-col items-center justify-center py-20 gap-4">
               <div className="w-8 h-8 border-4 border-brand-mint/30 border-t-brand-mint rounded-full animate-spin" />
               <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest">{t('onboarding.loadingCatalog')}</p>
+            </div>
+          ) : isError ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
+              <p className="text-red-400 text-xs font-bold">{t('common.error')}</p>
+              <Button variant="ghost" size="sm" onClick={() => refetch()} className="text-white/60">
+                {t('common.retry')}
+              </Button>
             </div>
           ) : step === 'select' ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -200,11 +228,16 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
               })}
             </div>
           )}
+          {error && (
+            <p className="text-red-400 text-[10px] font-bold text-center mt-4">
+              {error}
+            </p>
+          )}
         </div>
 
         {/* Footer */}
         <div className="px-8 pb-8 pt-4 flex gap-3 shrink-0 border-t border-white/5">
-          {step === 'select' && (
+          {step === 'severity' && (
             <Button
               variant="ghost"
               size="lg"
@@ -220,7 +253,7 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
             className="flex-1"
             onClick={step === 'select' ? handleNext : handleSave}
             isLoading={isSaving}
-            disabled={isLoading}
+            disabled={isLoading || isError}
             rightIcon={!isSaving && <ChevronRight className="w-4 h-4" />}
           >
             {step === 'select'

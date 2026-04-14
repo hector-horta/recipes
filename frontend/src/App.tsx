@@ -67,7 +67,7 @@ function App() {
   };
 
   const handleLoginSuccess = (userData?: any) => {
-    const needsOnboarding = userData ? !userData.onboardingComplete : !user?.onboardingComplete;
+    const needsOnboarding = userData ? !userData.onboarding_completed : !user?.onboarding_completed;
     
     if (needsOnboarding) {
       setActiveModal('onboarding');

@@ -1,7 +1,21 @@
 import { db } from '../db/db';
+import { Recipe } from '../types/recipe';
+
+const ALLOWED_IMAGE_DOMAINS = ['localhost', 'res.cloudinary.com', 'images.unsplash.com', 'spoonacular.com'];
+
+function isValidImageUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    // Allow local data/blob URLs or specific trusted domains
+    if (parsed.protocol === 'data:' || parsed.protocol === 'blob:') return true;
+    return ALLOWED_IMAGE_DOMAINS.some(domain => parsed.hostname.endsWith(domain));
+  } catch {
+    return false;
+  }
+}
 
 export async function cacheImage(url: string): Promise<string | null> {
-  if (!url) return null;
+  if (!url || !isValidImageUrl(url)) return null;
 
   try {
     const cached = await db.cachedImages.get(url);
@@ -9,7 +23,7 @@ export async function cacheImage(url: string): Promise<string | null> {
       return cached.base64;
     }
 
-    const response = await fetch(url);
+    const response = await fetch(url, { mode: 'cors' });
     if (!response.ok) return null;
 
     const blob = await response.blob();
@@ -24,7 +38,7 @@ export async function cacheImage(url: string): Promise<string | null> {
 }
 
 export async function getCachedImage(url: string): Promise<string | null> {
-  if (!url) return null;
+  if (!url || !isValidImageUrl(url)) return null;
 
   try {
     const cached = await db.cachedImages.get(url);
@@ -37,6 +51,7 @@ export async function getCachedImage(url: string): Promise<string | null> {
 
 export async function getImageSource(url: string): Promise<string> {
   if (!url) return '';
+  if (!isValidImageUrl(url)) return url; // Fallback to raw URL if invalid for caching
 
   const cached = await getCachedImage(url);
   if (cached) return cached;
@@ -51,13 +66,13 @@ export async function getImageSource(url: string): Promise<string> {
   return url;
 }
 
-export async function cacheRecipeImages(recipes: any[]): Promise<void> {
+export async function cacheRecipeImages(recipes: Recipe[]): Promise<void> {
   const imageUrls = recipes
     .map(r => r.imageUrl)
     .filter(Boolean)
-    .filter((url, i, arr) => arr.indexOf(url) === i);
+    .filter((url, i, arr) => url && arr.indexOf(url) === i);
 
-  await Promise.allSettled(imageUrls.map(url => cacheImage(url)));
+  await Promise.allSettled(imageUrls.map(url => cacheImage(url!)));
 }
 
 function blobToBase64(blob: Blob): Promise<string> {

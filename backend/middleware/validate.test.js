@@ -22,23 +22,17 @@ describe('validate middleware', () => {
       expect(req.validatedQuery).toEqual({ query: 'pasta', number: '5' });
     });
 
-    it('should return 400 on validation error', () => {
+    it('should pass ZodError to next on validation error', () => {
       const req = { query: { number: 'invalid' } };
-      const res = {
-        status: vi.fn().mockReturnThis(),
-        json: vi.fn()
-      };
+      const res = {};
       const next = vi.fn();
 
       const middleware = validateQuery(testSchema);
       middleware(req, res, next);
 
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({
-        error: 'Petición malformada.',
-        details: expect.arrayContaining([expect.any(String)])
-      });
-      expect(next).not.toHaveBeenCalled();
+      expect(next).toHaveBeenCalledWith(expect.any(Error));
+      const error = next.mock.calls[0][0];
+      expect(error.name).toBe('ZodError');
     });
 
     it('should pass non-Zod errors to next', () => {
@@ -90,20 +84,21 @@ describe('validate middleware', () => {
       });
     });
 
-    it('should reject strings that are too long', () => {
+    it('should reject strings that are too long by passing error to next', () => {
       const schema = z.object({
         query: z.string().max(5)
       });
       
       const req = { query: { query: 'verylongquery' } };
-      const res = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const res = {};
       const next = vi.fn();
 
       const middleware = validateQuery(schema);
       middleware(req, res, next);
 
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalled();
+      expect(next).toHaveBeenCalledWith(expect.any(Error));
+      const error = next.mock.calls[0][0];
+      expect(error.name).toBe('ZodError');
     });
   });
 });

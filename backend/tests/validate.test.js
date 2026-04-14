@@ -23,20 +23,17 @@ describe('Validation Middleware & Schemas', () => {
     expect(result.success).toBe(false);
   });
 
-  it('validateQuery middleware returns 400 on bad data', () => {
+  it('validateQuery middleware passes ZodError to next() on bad data', () => {
     const req = { query: { number: 'invalid' } };
-    const res = {
-      status: vi.fn().mockReturnThis(),
-      json: vi.fn()
-    };
+    const res = {};
     const next = vi.fn();
 
     const middleware = validateQuery(recipeQuerySchema);
     middleware(req, res, next);
 
-    expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalled();
-    expect(next).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledWith(expect.any(Error));
+    const error = next.mock.calls[0][0];
+    expect(error.name).toBe('ZodError');
   });
 
   it('validateQuery middleware calls next on good data', () => {

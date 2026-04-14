@@ -2,18 +2,23 @@ import { Op, where, cast, col } from 'sequelize';
 import { Recipe } from '../models/Recipe.js';
 import { redisClient } from '../config/redis.js';
 import { MEDICAL_TRIGGERS } from '../config/medical.js';
+import { ActivityLogger } from './ActivityLogger.js';
 import crypto from 'crypto';
 
 const CACHE_TTL_SECONDS = 3600; // 1 hour
 
 export class RecipeProvider {
   static async getRecipes(params, userProfile) {
-    const { query, number = 10 } = params;
+    let { query, number = 10 } = params;
+    
+    // Security: Ensure query is a string and reasonable length
+    if (typeof query !== 'string') query = '';
+    query = query.trim().slice(0, 200);
 
     const whereClause = { status: 'published' };
 
-    if (query && query.trim()) {
-      const q = query.trim();
+    if (query) {
+      const q = query;
       // Handle simple Spanish plurals for the search query (rough approximation)
       const baseQ = q.toLowerCase().endsWith('es') ? q.slice(0, -2) : (q.toLowerCase().endsWith('s') ? q.slice(0, -1) : q);
       
@@ -43,27 +48,24 @@ export class RecipeProvider {
     const cacheHash = crypto.createHash('md5').update(JSON.stringify(cachePayload)).digest('hex');
     const cacheKey = `recipes:${cacheHash}`;
 
-    /*
-      try {
-        if (redisClient.isReady) {
-          const cached = await redisClient.get(cacheKey);
-          if (cached) {
-            console.log(`[Cache] Redis Hit para clave: ${cacheKey}`);
-            return JSON.parse(cached);
-          }
+    try {
+      if (redisClient.isReady) {
+        const cached = await redisClient.get(cacheKey);
+        if (cached) {
+          ActivityLogger.info('Redis cache hit', { cacheKey });
+          return JSON.parse(cached);
         }
-      } catch (err) {
-        console.warn('[Cache] Error leyendo de Redis:', err.message);
       }
-    */
+    } catch (err) {
+      ActivityLogger.warn('Redis cache read error', { error: err.message, cacheKey });
+    }
 
-    const requestedLimit = parseInt(number, 10) || 10;
+    const requestedLimit = Math.min(Math.max(parseInt(number, 10) || 10, 1), 50);
     
     // Identificar si necesitamos un buffer para el filtrado post-DB
     const hasFilters = userIntolerances.length > 0;
 
-    console.log(`[DEBUG-SEARCH] Params: ${JSON.stringify(params)}`);
-    console.log(`[DEBUG-SEARCH] Final whereClause: ${JSON.stringify(whereClause)}`);
+    ActivityLogger.info('Recipe search initiated', { query, number: requestedLimit, hasFilters });
 
     // Buscamos candidatos
     const recipes = await Recipe.findAll({
@@ -110,11 +112,11 @@ export class RecipeProvider {
 
     try {
       if (redisClient.isReady) {
-        await redisClient.setEx(cacheKey, 3600, JSON.stringify(response));
-        console.log(`[Cache] Cached query results for key: ${cacheKey} (TTL: 1h)`);
+        await redisClient.setEx(cacheKey, CACHE_TTL_SECONDS, JSON.stringify(response));
+        ActivityLogger.info('Cached search results', { cacheKey, ttl: CACHE_TTL_SECONDS });
       }
     } catch (err) {
-      console.warn('[Cache] Error writing to Redis:', err.message);
+      ActivityLogger.warn('Redis cache write error', { error: err.message, cacheKey });
     }
 
     return response;
@@ -190,10 +192,8 @@ export class RecipeProvider {
           const severity = (userSeverities[trigger.baseId] || 'severe').toLowerCase();
           const isHighSeverity = severity === 'severe' || severity === 'anaphylactic';
           
-          console.log(`[DEBUG-MATCH] Ingredient: ${ingNameEs} - Trigger: ${trigger.text} (Base: ${trigger.baseId}), Severity: ${severity}, High: ${isHighSeverity}`);
+          // Logic to handle matching ingredients for intolerances
           matchedAllergenIds.add(trigger.baseId);
-
-          // Si el ingrediente dispara una alerta de intolerancia, lo marcamos como 'Límite Personal'
           isBorderlineSafe = true;
 
           if (isHighSeverity) {
@@ -215,9 +215,7 @@ export class RecipeProvider {
       };
     });
 
-    console.log(`[DEBUG] Normalizing Recipe: ${recipe.title_es || recipe.title_en}`);
-    console.log(`[DEBUG] User Intolerances: ${JSON.stringify(userIntolerances)}`);
-    console.log(`[DEBUG-RESULT] Final foundMaxSeverity: ${foundMaxSeverity}`);
+    // Trace completed normalization (removed debug logs)
 
     if (foundMaxSeverity === 'high') {
       safetyLevel = 'unsafe';
@@ -272,11 +270,11 @@ export class RecipeProvider {
         const keys = await redisClient.keys('recipes:*');
         if (keys.length > 0) {
           await redisClient.del(keys);
-          console.log(`[Cache] Invalidadas ${keys.length} claves de recetas`);
+          ActivityLogger.info('Invalidated recipe cache', { keysCount: keys.length });
         }
       }
     } catch (err) {
-      console.warn('[Cache] Error invalidando cache:', err.message);
+      ActivityLogger.warn('Error invalidating cache', { error: err.message });
     }
   }
 }

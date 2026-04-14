@@ -48,10 +48,12 @@ vi.mock('../middleware/auth.js', () => ({
 import authRoutes from './auth.js';
 import { User } from '../models/User.js';
 import { Profile } from '../models/Profile.js';
+import { errorHandler } from '../middleware/errorHandler.js';
 
 const app = express();
 app.use(express.json());
 app.use('/api/auth', authRoutes);
+app.use(errorHandler);
 
 describe('Auth Routes', () => {
   beforeEach(() => {
@@ -68,7 +70,7 @@ describe('Auth Routes', () => {
 
       const res = await request(app)
         .post('/api/auth/register')
-        .send({ email: 'test@test.com', password: 'password123', displayName: 'Test', acceptedTerms: true });
+        .send({ email: 'test@test.com', password: 'Password123', displayName: 'Test', acceptedTerms: true });
 
       expect(res.status).toBe(201);
       expect(res.body.token).toBe('test-token');
@@ -78,7 +80,7 @@ describe('Auth Routes', () => {
     it('should return 400 if acceptedTerms is missing', async () => {
       const res = await request(app)
         .post('/api/auth/register')
-        .send({ email: 'test@test.com', password: 'password123', displayName: 'Test' });
+        .send({ email: 'test@test.com', password: 'Password123', displayName: 'Test' });
 
       expect(res.status).toBe(400);
     });
@@ -90,7 +92,14 @@ describe('Auth Routes', () => {
         id: 'user-uuid', 
         email: 'test@test.com', 
         password_hash: 'hashed',
-        is_active: true 
+        is_active: true,
+        display_name: 'Test'
+      });
+      User.findByPk.mockResolvedValue({
+        id: 'user-uuid',
+        email: 'test@test.com',
+        display_name: 'Test',
+        profile: { get: () => ({ language: 'en', diet: null, intolerances: [], severities: {} }) }
       });
       bcrypt.compare.mockResolvedValue(true);
       jwt.sign.mockReturnValue('test-token');

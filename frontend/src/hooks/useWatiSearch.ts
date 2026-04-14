@@ -1,12 +1,13 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Recipe, RecipeSearchResponse } from '../types/recipe';
+import { RecipeSearchResponse } from '../types/recipe';
 import { useDebounce } from './useDebounce';
 import { useAuth } from '../AuthContext';
+import { api, ApiError } from '../lib/api';
+import { trackEvent } from '../utils/analytics';
 
 async function fetchRecipes(
   query: string,
-  token?: string | null,
   includeUnsafe?: boolean
 ): Promise<RecipeSearchResponse> {
   const params = new URLSearchParams();
@@ -14,14 +15,7 @@ async function fetchRecipes(
   params.set('number', '20');
   if (includeUnsafe) params.set('includeUnsafe', 'true');
 
-  const headers: Record<string, string> = {};
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  const res = await fetch(`/api/recipes?${params.toString()}`, { headers });
-  if (!res.ok) throw new Error(`Failed to fetch recipes: ${res.status}`);
-  const data = await res.json();
+  const data = await api.get<RecipeSearchResponse | any[]>(`/recipes?${params.toString()}`);
 
   // Backwards-compatible: if the backend returns a plain array (no auth), wrap it
   if (Array.isArray(data)) {
@@ -31,29 +25,49 @@ async function fetchRecipes(
   return data as RecipeSearchResponse;
 }
 
-import { trackEvent } from '../utils/analytics';
-
 export function useWatiSearch() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('q') || '';
+  });
   const [includeUnsafe, setIncludeUnsafe] = useState(false);
   const debouncedQuery = useDebounce(query, 500);
+
+  // Sync URL with query results when they change significantly
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (query.trim()) {
+      params.set('q', query.trim());
+    } else {
+      params.delete('q');
+    }
+    const newUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`;
+    window.history.replaceState({ ...window.history.state }, '', newUrl);
+  }, [debouncedQuery]);
 
   // Reset override when search query changes
   useEffect(() => {
     setIncludeUnsafe(false);
   }, [debouncedQuery]);
 
-  const shouldSearch = debouncedQuery.trim().length === 0 || debouncedQuery.trim().length >= 3;
+  // Security: Basic character validation and length limit
+  const sanitizedQuery = debouncedQuery.replace(/[^\w\s\u00C0-\u00FF]/gi, '').slice(0, 100);
+  const shouldSearch = sanitizedQuery.trim().length === 0 || sanitizedQuery.trim().length >= 2;
 
-  const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['recipes', debouncedQuery, user?.id, user?.intolerances, user?.severities, includeUnsafe],
-    queryFn: () => fetchRecipes(debouncedQuery, localStorage.getItem('wati_jwt'), includeUnsafe),
+  const { data, isLoading, isFetching, error } = useQuery({
+    queryKey: ['recipes', sanitizedQuery, user?.id, user?.intolerances, user?.severities, includeUnsafe],
+    queryFn: () => fetchRecipes(sanitizedQuery, includeUnsafe),
     enabled: shouldSearch,
-    staleTime: 1000 * 30,
+    staleTime: 1000 * 60 * 5, // Improved performance: 5 mins cache for recipes
+    gcTime: 1000 * 60 * 10,
     refetchOnWindowFocus: true,
-    retry: 1,
+    retry: (failureCount, error) => {
+      // Don't retry on 401 or 403
+      if (error instanceof ApiError && (error.status === 401 || error.status === 403)) return false;
+      return failureCount < 2;
+    },
   });
 
   const results = data?.recipes ?? [];
@@ -62,28 +76,28 @@ export function useWatiSearch() {
 
   // Event Tracking: search_success / search_failed
   useEffect(() => {
-    const trimmedQuery = debouncedQuery.trim();
-    if (trimmedQuery.length < 3) return;
+    const trimmedQuery = sanitizedQuery.trim();
+    if (trimmedQuery.length < 2) return;
 
     if (results.length > 0) {
       trackEvent('search_success', {
         query: trimmedQuery,
         resultsCount: results.length
       });
-    } else {
+    } else if (!isLoading && !isFetching && !error) {
       trackEvent('search_failed', {
         query: trimmedQuery,
         resultsCount: 0
       });
     }
-  }, [results.length, debouncedQuery]);
+  }, [results.length, sanitizedQuery, isLoading, isFetching, !!error]);
 
   const isSearching = isFetching && query !== debouncedQuery;
   const isPending = isFetching && results.length === 0 && !isSearching;
 
   const refresh = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['recipes', debouncedQuery] });
-  }, [queryClient, debouncedQuery]);
+    queryClient.invalidateQueries({ queryKey: ['recipes', sanitizedQuery] });
+  }, [queryClient, sanitizedQuery]);
 
   return {
     query,
@@ -92,8 +106,8 @@ export function useWatiSearch() {
     isLoading,
     isSearching,
     isPending,
-    error: null,
-    isQuotaExhausted: false,
+    error: error instanceof ApiError ? error.message : (error instanceof Error ? error.message : null),
+    isQuotaExhausted: error instanceof ApiError && error.status === 402,
     refresh,
     filteredUnsafeCount,
     filteredAllergens,

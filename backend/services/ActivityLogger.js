@@ -16,7 +16,7 @@ export class ActivityLogger {
    * Registra un evento de actividad en la base de datos.
    * El write es asíncrono: errores se loguean en consola, no se propagan.
    *
-   * @param {'SEARCH'|'VIEW_RECIPE'|'ADD_FAVORITE'|'INGEST_SUCCESS'|'INGEST_FAIL'} action
+   * @param {'SEARCH'|'VIEW_RECIPE'|'ADD_FAVORITE'|'INGEST_SUCCESS'|'INGEST_FAIL'|'SYSTEM'|'ERROR'} action
    * @param {object} metadata  Datos adicionales (query, recipeId, title, error, ...)
    * @param {object} options   { userId, ip, failedSearch }
    */
@@ -92,5 +92,36 @@ export class ActivityLogger {
     ActivityLogger.sendTelegramAlert(message).catch(err =>
       console.error('[ActivityLogger] Async alert failed:', err.message)
     );
+  }
+
+  // --- Better Console Logging ---
+
+  static info(message, context = {}) {
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] [INFO] ${message}`, Object.keys(context).length ? context : '');
+  }
+
+  static warn(message, context = {}) {
+    const timestamp = new Date().toISOString();
+    console.warn(`[${timestamp}] [WARN] ${message}`, Object.keys(context).length ? context : '');
+  }
+
+  static error(message, errorObject = null, context = {}) {
+    const timestamp = new Date().toISOString();
+    const errorMessage = errorObject instanceof Error ? errorObject.message : message;
+    const stack = errorObject instanceof Error ? errorObject.stack : null;
+
+    console.error(`[${timestamp}] [ERROR] ${message}:`, errorMessage, Object.keys(context).length ? context : '');
+    if (stack && config.NODE_ENV === 'development') {
+      console.error(stack);
+    }
+
+    // Persist as a system error log
+    this.log('ERROR', { 
+      message, 
+      errorMessage, 
+      stack: config.NODE_ENV === 'production' ? null : stack,
+      ...context 
+    }, { failedSearch: false });
   }
 }

@@ -28,7 +28,10 @@ describe('Auth Middleware', () => {
 
     it('should return 403 if token is invalid', () => {
       req.headers['authorization'] = 'Bearer invalid-token';
-      jwt.verify.mockImplementation((token, secret, cb) => cb(new Error('Invalid'), null));
+      jwt.verify.mockImplementation((...args) => {
+        const cb = args[args.length - 1];
+        cb(new Error('Invalid'), null);
+      });
       
       authenticateToken(req, res, next);
       expect(res.status).toHaveBeenCalledWith(403);
@@ -37,7 +40,10 @@ describe('Auth Middleware', () => {
     it('should call next and set req.user if token is valid', () => {
       const user = { id: '123' };
       req.headers['authorization'] = 'Bearer valid-token';
-      jwt.verify.mockImplementation((token, secret, cb) => cb(null, user));
+      jwt.verify.mockImplementation((...args) => {
+        const cb = args[args.length - 1];
+        cb(null, user);
+      });
       
       authenticateToken(req, res, next);
       expect(req.user).toEqual(user);
@@ -55,7 +61,10 @@ describe('Auth Middleware', () => {
     it('should set req.user if token is valid', () => {
       const user = { id: '123' };
       req.headers['authorization'] = 'Bearer valid-token';
-      jwt.verify.mockImplementation((token, secret, cb) => cb(null, user));
+      jwt.verify.mockImplementation((...args) => {
+        const cb = args[args.length - 1];
+        cb(null, user);
+      });
       
       optionalAuthenticateToken(req, res, next);
       expect(req.user).toEqual(user);

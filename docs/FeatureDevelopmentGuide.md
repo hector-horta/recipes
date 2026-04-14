@@ -30,6 +30,21 @@ Al desarrollar en este repositorio:
 
 ---
 
+## 🏗️ Arquitectura y Calidad de Código
+
+Para combatir la deuda técnica y mantener el codebase profesional:
+
+### Principios Críticos de Diseño
+1. **SSRF Protection**: Toda integración externa (Spoonacular, Groq, NVIDIA) debe pasar por el Proxy del Backend (`ingest.js` o `NvidiaNIM.js`). Nunca llames APIs de terceros desde el frontend.
+2. **Frontend API Client**: Prohibido usar `fetch` directo. Usar `frontend/src/lib/api.ts`.
+   - Esto garantiza que `credentials: 'include'` y los headers de i18n/auth sean consistentes.
+3. **Manejo de Errores**: Nunca usar `console.log` o `console.error` directamente. Usar los métodos estáticos de `ActivityLogger` para logs estructurados y telemetría.
+4. **Validación Zod**: Todo input externo (req.body, req.query, env vars) DEBE ser validado con Zod antes de tocar la lógica. **Usa `backend/models/validators.js`** como repositorio central de esquemas para asegurar consistencia entre rutas.
+5. **No Static URLs**: Prohibido usar URLs de API hardcodeadas en el frontend. Usar el wrapper `api` de `frontend/src/lib/api.ts` que inyecta automáticamente el `CONFIG.API_URL`.
+6. **Resiliencia Frontend**: Usa reintentos (`retry`) en hooks de búsqueda y gestión de estados de error amigables para el usuario.
+
+---
+
 ## 📁 Estructura Completa del Proyecto
 
 ```
@@ -44,9 +59,11 @@ Al desarrollar en este repositorio:
 │   ├── .sequelizerc              # Sequelize CLI paths
 │   ├── config/
 │   │   ├── env.js                # Validación estricta con Zod. FUENTE ÚNICA de process.env
+│   │   ├── resiliency.js         # Fetch con whitelist (SSRF protection) y reintentos (Exponential Backoff)
 │   │   ├── config.cjs            # Sequelize CLI config (CommonJS requerido por CLI)
 │   │   ├── database.js           # Sequelize instance + connectDB()
 │   │   ├── redis.js              # Redis client + connectRedis()
+│   │   ├── cors.js               # CORS config (localhost, local network, credentials)
 │   │   ├── medical.js            # INTOLERANCE_CATALOG + MEDICAL_TRIGGERS (fuente de verdad unificada)
 │   │   └── vault.js              # HCP Vault OAuth2 client
 │   ├── models/
@@ -64,6 +81,7 @@ Al desarrollar en este repositorio:
 │   ├── routes/
 │   │   ├── auth.js               # /api/auth/*
 │   │   ├── favorites.js          # /api/favorites/*
+│   │   ├── recipes.js            # /api/recipes/*
 │   │   ├── ingest.js             # /api/ingest/* (Telegram Bot ingestion)
 │   │   ├── suggestions.js        # /api/suggestions/*
 │   │   └── admin.js              # /admin/*
@@ -96,6 +114,9 @@ Al desarrollar en este repositorio:
 │       ├── main.tsx              # ReactDOM root: Providers → AuthProvider → App
 │       ├── App.tsx               # Router manual: RecipePage ↔ RecipeDetailPage + Modals
 │       ├── AuthContext.tsx        # AuthProvider, useAuth(), UserProfile interface
+│       ├── config.ts              # INFRAESTRUCTURA DE CONFIGURACIÓN CENTRALIZADA (API_URL, etc)
+│       ├── lib/
+│       │   └── api.ts            # Centralized API client (fetch wrapper)
 │       ├── i18n.ts               # i18next config (es/en, localStorage: wati_language)
 │       ├── index.css             # CSS variables + Tailwind utilities (glassmorphism, etc.)
 │       ├── api/
@@ -152,6 +173,14 @@ Al desarrollar en este repositorio:
 │           └── setup.ts         # Import @testing-library/jest-dom
 │
 ├── telegram-bot/                 # Bot de ingesta de recetas
+│   ├── src/
+│   │   ├── index.js              # Entry point — Polling, Auth y Router de eventos
+│   │   ├── config.js             # Validación de env vars del bot
+│   │   ├── handlers/             # Lógica de mensajes, voz, imágenes y callbacks
+│   │   ├── services/             # backendStore.js (Cliente API con x-api-key)
+│   │   └── utils/                # logger.js estructurado, SessionManager, Formatter
+│   ├── package.json              # Scripts: start, dev (node --watch)
+│   └── Dockerfile                # Configuración multi-etapa para producción
 ├── nginx/                        # Reverse proxy OQS (TLS post-cuántico)
 └── terraform/                    # IaC para HCP Vault Secrets
 ```
@@ -369,9 +398,11 @@ router.get('/', validateQuery(miSchema), (req, res) => {
 });
 ```
 
-#### Autenticación
-- **`authenticateToken`**: Requiere JWT válido. Rechaza con 401/403. Setea `req.user = { id, email }`.
-- **`optionalAuthenticateToken`**: Intenta validar JWT si existe. Si no hay token o es inválido, continúa sin `req.user`. Usar para endpoints mixtos (auth opcional).
+#### Autenticación y Sesión
+- **HttpOnly Cookies**: Wati usa JWT persistidos en cookies `HttpOnly` (Lax, Secure en producción). Esto protege contra robo de sesión vía XSS.
+- **`authenticateToken`**: Valida el JWT de la cookie. Rechaza con 401/403. Setea `req.user`.
+- **`optionalAuthenticateToken`**: Intenta validar si existe cookie. Si no, continúa sin `req.user`.
+- **`requireAdminKey`**: Middleware para rutas críticas (ingesta, admin). Verifica el header `X-Admin-Key` contra `config.ADMIN_API_KEY`.
 
 #### Modelo Sequelize (Nuevo)
 ```javascript
@@ -440,6 +471,20 @@ ActivityLogger.alertAsync('🔴 *Mensaje de alerta*');
 - El Global Error Handler está en `server.js`.
 - Errores graves (5xx, NVIDIA, Groq) generan alertas Telegram automáticas.
 - Para errores custom, `throw` un error con `.status`: `const err = new Error('msg'); err.status = 400; throw err;`
+
+#### 🚨 Manejo de Errores y Logging
+Wati utiliza un sistema de logging estructurado a través de `ActivityLogger`.
+
+**Niveles de Log:**
+- `ActivityLogger.info(msg, context)`: Eventos informativos del sistema.
+- `ActivityLogger.warn(msg, context)`: Situaciones inesperadas pero no críticas.
+- `ActivityLogger.error(msg, error, context)`: Errores que requieren atención. En desarrollo muestra el stack trace; en producción lo oculta del cliente pero lo persiste en logs internos.
+
+**Reglas de Oro:**
+1. **Nunca usar `console.log` o `console.error` directamente** — usar los métodos de `ActivityLogger`.
+2. **Propagación**: Siempre usar `try { ... } catch (e) { next(e); }` en las rutas para que el Global Error Handler capture el error.
+3. **Privacidad**: Nunca loguear passwords, tokens o info sensible del usuario (PII) en los mensajes de log.
+4. **Respuesta al Cliente**: El error handler enmascara errores 5xx con un mensaje genérico. Los errores 4xx deben tener mensajes descriptivos para el usuario.
 
 #### Sanitización de Ingesta (LLM → DB)
 Cuando el LLM (NvidiaNIM) estructura una receta, los valores pueden no coincidir con los ENUMs de la DB (ej: `"Fácil"` en vez de `"easy"`). El módulo `utils/ingestSanitizer.js` normaliza:
@@ -524,12 +569,14 @@ const mutation = useMutation({
 - El token JWT se lee de `localStorage.getItem('wati_jwt')`.
 - Las URLs de API son relativas (`/api/...`) — Vite proxy las redirige al backend.
 
-#### Headers de autenticación
-```typescript
-const token = localStorage.getItem('wati_jwt');
-const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-if (token) headers['Authorization'] = `Bearer ${token}`;
-```
+#### Headers y Credenciales
+- **`credentials: 'include'`**: Todas las peticiones `fetch` deben incluir esta opción para enviar/recibir cookies `HttpOnly`.
+- **`CONFIG.API_URL`**: Siempre usar `CONFIG.API_URL` de `src/config.ts` para construir URLs de API. Esto permite que la app sea agnóstica al entorno (local vs cloud).
+
+#### Resiliencia y Estados de Error
+- **Graceful Failures**: No permitas que un fallo de API rompa la UI. Usa `try/catch` en hooks y provee estados de error amigables.
+- **Persistent Error Messages**: Asegúrate de que los errores se limpien cuando el usuario inicia una nueva acción (ej: resetear error al cambiar search query).
+- **Loading States**: Siempre implementa skeletons o spinners durante transiciones asíncronas.
 
 #### AuthContext — Interface `UserProfile`
 ```typescript
@@ -734,17 +781,22 @@ describe('MiComponente', () => {
 ## 🛡️ Checklist de Seguridad y Calidad
 
 - [ ] ¿Los campos de entrada están validados con Zod?
-- [ ] ¿Se usa `req.validatedQuery` en lugar de `req.query` directamente? (Express 5)
-- [ ] ¿La ruta del backend tiene el middleware de autenticación correcto?
+- [ ] ¿Se usa `req.validatedQuery` o `parseResult.data` validado?
+- [ ] ¿La ruta tiene el middleware de auth correcto (`authenticateToken` o `requireAdminKey`)?
+- [ ] ¿El fetch del frontend incluye `credentials: 'include'`?
 - [ ] ¿Se están exponiendo secretos en los logs o respuestas? (Nunca lo hagas)
 - [ ] ¿El componente de React es responsivo (mobile-first)?
 - [ ] ¿Se agregó el evento de tracking en Umami?
+- [ ] ¿Se validaron las URLs externas contra la whitelist de `config/resiliency.js` (SSRF protection)?
+- [ ] ¿Se implementaron reintentos con exponencial backoff para peticiones externas críticas?
 - [ ] ¿Se creó la migración de base de datos si aplica?
 - [ ] ¿Se agregaron las traducciones i18n en ambos archivos (en.json, es.json)?
 - [ ] ¿Se escribieron tests unitarios (TDD)?
 - [ ] ¿El hook encapsula toda la lógica de fetch/estado?
 - [ ] ¿Se implementaron optimistic updates en las mutaciones?
 - [ ] ¿Los nuevos valores de ENUM se agregaron tanto en la migración como en el modelo?
+- [ ] **Resiliencia**: ¿Se manejaron adecuadamente los estados de carga y error persistente?
+- [ ] **Config**: ¿Se usó `CONFIG.API_URL` en lugar de strings hardcodeados?
 
 ---
 

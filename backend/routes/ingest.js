@@ -10,11 +10,36 @@ import { RecipeProvider } from '../services/RecipeProvider.js';
 import { normalizeTags } from '../utils/tagTranslations.js';
 import { ActivityLogger } from '../services/ActivityLogger.js';
 import { sanitizeStructuredRecipe } from '../utils/ingestSanitizer.js';
+import { validateExternalUrl } from '../utils/urlValidator.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const router = Router();
+
+import { z } from 'zod';
+import { requireAdminKey } from '../middleware/auth.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+
+const ingestImageSchema = z.object({
+  imageUrl: z.string().url('URL de imagen inválida'),
+  generateImage: z.boolean().optional().default(true)
+});
+
+const ingestImagesSchema = z.object({
+  imageUrl1: z.string().url('URL de imagen 1 inválida'),
+  imageUrl2: z.string().url('URL de imagen 2 inválida'),
+  generateImage: z.boolean().optional().default(true)
+});
+
+const ingestTextSchema = z.object({
+  text: z.string().min(10, 'El texto debe ser más largo'),
+  generateImage: z.boolean().optional().default(true),
+  sourceType: z.string().optional(),
+  sourceReference: z.string().optional()
+});
+
+router.use(requireAdminKey);
 
 import { config } from '../config/env.js';
 
@@ -32,6 +57,7 @@ function generateSlug(title) {
     .slice(0, 80);
 }
 
+// Helper to handle conflicts with metadata
 async function checkConflict(slug, recipeData, res) {
   const existing = await Recipe.findOne({ where: { slug } });
   if (existing) {
@@ -45,246 +71,227 @@ async function checkConflict(slug, recipeData, res) {
   return false;
 }
 
-function handleSequelizeError(error, sourceType, res) {
-  if (error.name === 'SequelizeValidationError') {
-    const errorMsg = `Error de Validación: ${error.errors.map(e => e.message).join(', ')}`;
-    res.status(400).json({ error: errorMsg, details: error.errors });
-    return true;
+router.post('/image', asyncHandler(async (req, res) => {
+  const parseResult = ingestImageSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    const error = new Error('Datos de ingesta inválidos');
+    error.status = 400;
+    error.name = 'ZodError';
+    error.errors = parseResult.error.errors;
+    throw error;
   }
-  return false;
-}
+  const { imageUrl, generateImage } = parseResult.data;
+  const apiKey = getApiKey();
 
-router.post('/image', async (req, res, next) => {
-  try {
-    const apiKey = getApiKey();
-    const { imageUrl, generateImage = true } = req.body;
+  const rawText = await extractTextFromImage(imageUrl, apiKey);
 
-    if (!imageUrl) {
-      return res.status(400).json({ error: 'imageUrl is required.' });
-    }
-
-    const rawText = await extractTextFromImage(imageUrl, apiKey);
-
-    if (!rawText.trim()) {
-      return res.status(400).json({ error: 'No text could be extracted from the image.' });
-    }
-
-    const structuredRaw = await analyzeAndStructureRecipe(rawText, apiKey);
-    const structured = sanitizeStructuredRecipe(structuredRaw);
-
-    const titleEs = structured.title?.es || 'Receta sin título';
-    const slug = generateSlug(titleEs);
-
-    let imageResult = null;
-    if (generateImage) {
-      try {
-        imageResult = await generateRecipeImage(titleEs, apiKey);
-      } catch (imgErr) {
-        console.warn('[Ingest] Failed to generate image:', imgErr.message);
-      }
-    }
-
-    const recipeData = {
-      title_es: titleEs,
-      title_en: structured.title?.en || titleEs,
-      slug,
-      prep_time_minutes: structured.prepTimeMinutes,
-      cook_time_minutes: structured.cookTimeMinutes,
-      servings: structured.servings,
-      difficulty: structured.difficulty,
-      ingredients: structured.ingredients,
-      steps: structured.steps,
-      tags: structured.tags,
-      image_url: imageResult?.url || null,
-      image_filename: imageResult?.filename || null,
-      sibo_risk_level: structured.siboRiskLevel,
-      sibo_alerts: structured.siboAlerts,
-      source_type: 'ocr_image',
-      source_reference: imageUrl,
-      status: 'published'
-    };
-
-    saveIngestLog(recipeData);
-
-    if (await checkConflict(slug, recipeData, res)) return;
-
-    const recipe = await Recipe.create(recipeData);
-
-    await RecipeProvider.clearCache();
-
-    // ── Telemetría de ingesta ───────────────────────────────────────────
-    ActivityLogger.log('INGEST_SUCCESS', {
-      source_type: 'ocr_image',
-      title_es: recipeData.title_es
-    });
-    // ───────────────────────────────────────────────────────────────────
-
-    res.status(200).json({
-      status: 'processed',
-      recipe: recipe.toJSON(),
-      rawText,
-      tripleCheck: buildTripleCheckMenu(recipeData)
-    });
-  } catch (error) {
-    if (handleSequelizeError(error, 'ocr_image', res)) return;
-    ActivityLogger.log('INGEST_FAIL', { source_type: 'ocr_image', error: error.message });
-    ActivityLogger.alertAsync(`⚠️ *[INGEST FAIL] OCR Single Image*\n\`${error.message.slice(0, 200)}\``);
-    next(error);
+  if (!rawText.trim()) {
+    return res.status(400).json({ error: 'No text could be extracted from the image.' });
   }
-});
 
-router.post('/images', async (req, res, next) => {
-  try {
-    const apiKey = getApiKey();
-    const { imageUrl1, imageUrl2, generateImage = true } = req.body;
+  const structuredRaw = await analyzeAndStructureRecipe(rawText, apiKey);
+  const structured = sanitizeStructuredRecipe(structuredRaw);
 
-    if (!imageUrl1 || !imageUrl2) {
-      return res.status(400).json({ error: 'Both imageUrl1 and imageUrl2 are required.' });
+  const titleEs = structured.title?.es || 'Receta sin título';
+  const slug = generateSlug(titleEs);
+
+  let imageResult = null;
+  if (generateImage) {
+    try {
+      imageResult = await generateRecipeImage(titleEs, apiKey);
+    } catch (imgErr) {
+      ActivityLogger.warn('[Ingest] Failed to generate image', { error: imgErr.message, title: titleEs });
     }
-
-    console.log(`[Ingest] Processing 2 images as recipe parts`);
-
-    const rawText = await extractTextFromTwoImages(imageUrl1, imageUrl2, apiKey);
-
-    if (!rawText.trim()) {
-      return res.status(400).json({ error: 'No text could be extracted from the images.' });
-    }
-
-    const structuredRaw = await analyzeAndStructureRecipe(rawText, apiKey);
-    const structured = sanitizeStructuredRecipe(structuredRaw);
-
-    const titleEs = structured.title?.es || 'Receta sin título';
-    const slug = generateSlug(titleEs);
-
-    let imageResult = null;
-    if (generateImage) {
-      try {
-        imageResult = await generateRecipeImage(titleEs, apiKey);
-      } catch (imgErr) {
-        console.warn('[Ingest] Failed to generate image:', imgErr.message);
-      }
-    }
-
-    const recipeData = {
-      title_es: titleEs,
-      title_en: structured.title?.en || titleEs,
-      slug,
-      prep_time_minutes: structured.prepTimeMinutes,
-      cook_time_minutes: structured.cookTimeMinutes,
-      servings: structured.servings,
-      difficulty: structured.difficulty,
-      ingredients: structured.ingredients,
-      steps: structured.steps,
-      tags: structured.tags,
-      image_url: imageResult?.url || null,
-      image_filename: imageResult?.filename || null,
-      sibo_risk_level: structured.siboRiskLevel,
-      sibo_alerts: structured.siboAlerts,
-      source_type: 'ocr_image',
-      source_reference: `multi_image:${imageUrl1},${imageUrl2}`,
-      status: 'published'
-    };
-
-    saveIngestLog(recipeData);
-
-    if (await checkConflict(slug, recipeData, res)) return;
-
-    const recipe = await Recipe.create(recipeData);
-
-    await RecipeProvider.clearCache();
-
-    // ── Telemetría de ingesta ───────────────────────────────────────────
-    ActivityLogger.log('INGEST_SUCCESS', {
-      source_type: 'ocr_image_dual',
-      title_es: recipeData.title_es
-    });
-    // ───────────────────────────────────────────────────────────────────
-
-    res.status(200).json({
-      status: 'processed',
-      recipe: recipe.toJSON(),
-      rawText,
-      tripleCheck: buildTripleCheckMenu(recipeData)
-    });
-  } catch (error) {
-    if (handleSequelizeError(error, 'ocr_image', res)) return;
-    ActivityLogger.log('INGEST_FAIL', { source_type: 'ocr_image', error: error.message });
-    ActivityLogger.alertAsync(`⚠️ *[INGEST FAIL] OCR Double Image*\n\`${error.message.slice(0, 200)}\``);
-    next(error);
   }
-});
 
-router.post('/text', async (req, res, next) => {
-  try {
-    const apiKey = getApiKey();
-    const { text, generateImage = true } = req.body;
+  const recipeData = {
+    title_es: titleEs,
+    title_en: structured.title?.en || titleEs,
+    slug,
+    prep_time_minutes: structured.prepTimeMinutes,
+    cook_time_minutes: structured.cookTimeMinutes,
+    servings: structured.servings,
+    difficulty: structured.difficulty,
+    ingredients: structured.ingredients,
+    steps: structured.steps,
+    tags: structured.tags,
+    image_url: imageResult?.url || null,
+    image_filename: imageResult?.filename || null,
+    sibo_risk_level: structured.siboRiskLevel,
+    sibo_alerts: structured.siboAlerts,
+    source_type: 'ocr_image',
+    source_reference: imageUrl,
+    status: 'published'
+  };
 
-    if (!text || !text.trim()) {
-      return res.status(400).json({ error: 'text is required.' });
-    }
+  saveIngestLog(recipeData);
 
-    const structuredRaw = await analyzeAndStructureRecipe(text, apiKey);
-    const structured = sanitizeStructuredRecipe(structuredRaw);
+  if (await checkConflict(slug, recipeData, res)) return;
 
-    const titleEs = structured.title?.es || 'Receta sin título';
-    const slug = generateSlug(titleEs);
+  const recipe = await Recipe.create(recipeData);
 
-    let imageResult = null;
-    if (generateImage) {
-      try {
-        imageResult = await generateRecipeImage(titleEs, apiKey);
-      } catch (imgErr) {
-        console.warn('[Ingest] Failed to generate image:', imgErr.message);
-      }
-    }
+  await RecipeProvider.clearCache();
 
-    const recipeData = {
-      title_es: titleEs,
-      title_en: structured.title?.en || titleEs,
-      slug,
-      prep_time_minutes: structured.prepTimeMinutes,
-      cook_time_minutes: structured.cookTimeMinutes,
-      servings: structured.servings,
-      difficulty: structured.difficulty,
-      ingredients: structured.ingredients,
-      steps: structured.steps,
-      tags: structured.tags,
-      image_url: imageResult?.url || null,
-      image_filename: imageResult?.filename || null,
-      sibo_risk_level: structured.siboRiskLevel,
-      sibo_alerts: structured.siboAlerts,
-      source_type: req.body.sourceType || 'manual',
-      source_reference: req.body.sourceReference || null,
-      status: 'published'
-    };
+  // ── Telemetría de ingesta ───────────────────────────────────────────
+  ActivityLogger.log('INGEST_SUCCESS', {
+    source_type: 'ocr_image',
+    title_es: recipeData.title_es
+  });
+  // ───────────────────────────────────────────────────────────────────
 
-    saveIngestLog(recipeData);
+  res.status(200).json({
+    status: 'processed',
+    recipe: recipe.toJSON(),
+    rawText,
+    tripleCheck: buildTripleCheckMenu(recipeData)
+  });
+}));
 
-    if (await checkConflict(slug, recipeData, res)) return;
-
-    const recipe = await Recipe.create(recipeData);
-
-    await RecipeProvider.clearCache();
-
-    // ── Telemetría de ingesta ───────────────────────────────────────────
-    ActivityLogger.log('INGEST_SUCCESS', {
-      source_type: req.body.sourceType || 'manual',
-      title_es: recipeData.title_es
-    });
-    // ───────────────────────────────────────────────────────────────────
-
-    res.status(200).json({
-      status: 'processed',
-      recipe: recipe.toJSON(),
-      tripleCheck: buildTripleCheckMenu(recipeData)
-    });
-  } catch (error) {
-    if (handleSequelizeError(error, req.body.sourceType || 'manual', res)) return;
-    ActivityLogger.log('INGEST_FAIL', { source_type: req.body.sourceType || 'manual', error: error.message });
-    ActivityLogger.alertAsync(`⚠️ *[INGEST FAIL] Texto*\n\`${error.message.slice(0, 200)}\``);
-    next(error);
+router.post('/images', asyncHandler(async (req, res) => {
+  const parseResult = ingestImagesSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    const error = new Error('Datos de ingesta inválidos');
+    error.status = 400;
+    error.name = 'ZodError';
+    error.errors = parseResult.error.errors;
+    throw error;
   }
-});
+  const { imageUrl1, imageUrl2, generateImage } = parseResult.data;
+  const apiKey = getApiKey();
+
+  ActivityLogger.info('Processing dual images for dual ingest', { imageUrl1, imageUrl2 });
+  const rawText = await extractTextFromTwoImages(imageUrl1, imageUrl2, apiKey);
+
+  if (!rawText.trim()) {
+    return res.status(400).json({ error: 'No text could be extracted from the images.' });
+  }
+
+  const structuredRaw = await analyzeAndStructureRecipe(rawText, apiKey);
+  const structured = sanitizeStructuredRecipe(structuredRaw);
+
+  const titleEs = structured.title?.es || 'Receta sin título';
+  const slug = generateSlug(titleEs);
+
+  let imageResult = null;
+  if (generateImage) {
+    try {
+      imageResult = await generateRecipeImage(titleEs, apiKey);
+    } catch (imgErr) {
+      ActivityLogger.warn('Failed to generate image during dual ingest', { error: imgErr.message, title: titleEs });
+    }
+  }
+
+  const recipeData = {
+    title_es: titleEs,
+    title_en: structured.title?.en || titleEs,
+    slug,
+    prep_time_minutes: structured.prepTimeMinutes,
+    cook_time_minutes: structured.cookTimeMinutes,
+    servings: structured.servings,
+    difficulty: structured.difficulty,
+    ingredients: structured.ingredients,
+    steps: structured.steps,
+    tags: structured.tags,
+    image_url: imageResult?.url || null,
+    image_filename: imageResult?.filename || null,
+    sibo_risk_level: structured.siboRiskLevel,
+    sibo_alerts: structured.siboAlerts,
+    source_type: 'ocr_image',
+    source_reference: `multi_image:${imageUrl1},${imageUrl2}`,
+    status: 'published'
+  };
+
+  saveIngestLog(recipeData);
+
+  if (await checkConflict(slug, recipeData, res)) return;
+
+  const recipe = await Recipe.create(recipeData);
+
+  await RecipeProvider.clearCache();
+
+  // ── Telemetría de ingesta ───────────────────────────────────────────
+  ActivityLogger.log('INGEST_SUCCESS', {
+    source_type: 'ocr_image_dual',
+    title_es: recipeData.title_es
+  });
+  // ───────────────────────────────────────────────────────────────────
+
+  res.status(200).json({
+    status: 'processed',
+    recipe: recipe.toJSON(),
+    rawText,
+    tripleCheck: buildTripleCheckMenu(recipeData)
+  });
+}));
+
+router.post('/text', asyncHandler(async (req, res) => {
+  const parseResult = ingestTextSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    const error = new Error('Datos de ingesta inválidos');
+    error.status = 400;
+    error.name = 'ZodError';
+    error.errors = parseResult.error.errors;
+    throw error;
+  }
+  const { text, generateImage, sourceType, sourceReference } = parseResult.data;
+  const apiKey = getApiKey();
+
+  const structuredRaw = await analyzeAndStructureRecipe(text, apiKey);
+  const structured = sanitizeStructuredRecipe(structuredRaw);
+
+  const titleEs = structured.title?.es || 'Receta sin título';
+  const slug = generateSlug(titleEs);
+
+  let imageResult = null;
+  if (generateImage) {
+    try {
+      imageResult = await generateRecipeImage(titleEs, apiKey);
+    } catch (imgErr) {
+      ActivityLogger.warn('[Ingest] Failed to generate image', { error: imgErr.message, title: titleEs });
+    }
+  }
+
+  const recipeData = {
+    title_es: titleEs,
+    title_en: structured.title?.en || titleEs,
+    slug,
+    prep_time_minutes: structured.prepTimeMinutes,
+    cook_time_minutes: structured.cookTimeMinutes,
+    servings: structured.servings,
+    difficulty: structured.difficulty,
+    ingredients: structured.ingredients,
+    steps: structured.steps,
+    tags: structured.tags,
+    image_url: imageResult?.url || null,
+    image_filename: imageResult?.filename || null,
+    sibo_risk_level: structured.siboRiskLevel,
+    sibo_alerts: structured.siboAlerts,
+    source_type: sourceType || 'manual',
+    source_reference: sourceReference || null,
+    status: 'published'
+  };
+
+  saveIngestLog(recipeData);
+
+  if (await checkConflict(slug, recipeData, res)) return;
+
+  const recipe = await Recipe.create(recipeData);
+
+  await RecipeProvider.clearCache();
+
+  // ── Telemetría de ingesta ───────────────────────────────────────────
+  ActivityLogger.log('INGEST_SUCCESS', {
+    source_type: sourceType || 'manual',
+    title_es: recipeData.title_es
+  });
+  // ───────────────────────────────────────────────────────────────────
+
+  res.status(200).json({
+    status: 'processed',
+    recipe: recipe.toJSON(),
+    tripleCheck: buildTripleCheckMenu(recipeData)
+  });
+}));
 
 function getGroqKey() {
   const key = config.GROQ_API_KEY;
@@ -292,114 +299,121 @@ function getGroqKey() {
   return key;
 }
 
-router.post('/transcribe', async (req, res, next) => {
-  try {
-    const groqKey = getGroqKey();
-    const { audioUrl, language = 'es' } = req.body;
-
-    if (!audioUrl) {
-      return res.status(400).json({ error: 'audioUrl is required.' });
-    }
-
-    const audioRes = await fetch(audioUrl);
-    if (!audioRes.ok) throw new Error(`Failed to download audio: ${audioRes.status}`);
-    const audioBuffer = Buffer.from(await audioRes.arrayBuffer());
-
-    const transcribedText = await transcribeAudio(audioBuffer, groqKey, language);
-
-    if (!transcribedText.trim()) {
-      return res.status(400).json({ error: 'No text could be transcribed from audio.' });
-    }
-
-    res.status(200).json({ transcribedText });
-  } catch (error) {
-    next(error);
-  }
+const transcribeSchema = z.object({
+  audioUrl: z.string().url('audioUrl must be a valid URL'),
+  language: z.string().optional().default('es')
 });
 
-router.post('/voice', async (req, res, next) => {
-  try {
-    const groqKey = getGroqKey();
-    const { audioUrl, language = 'es' } = req.body;
-
-    if (!audioUrl) {
-      return res.status(400).json({ error: 'audioUrl is required.' });
-    }
-
-    const audioRes = await fetch(audioUrl);
-    if (!audioRes.ok) throw new Error(`Failed to download audio: ${audioRes.status}`);
-    const audioBuffer = Buffer.from(await audioRes.arrayBuffer());
-
-    const transcribedText = await transcribeAudio(audioBuffer, groqKey, language);
-
-    if (!transcribedText.trim()) {
-      return res.status(400).json({ error: 'No text could be transcribed from audio.' });
-    }
-
-    const nvidiaKey = getApiKey();
-    const structuredRaw = await analyzeAndStructureRecipe(transcribedText, nvidiaKey);
-    const structured = sanitizeStructuredRecipe(structuredRaw);
-
-    const titleEs = structured.title?.es || 'Receta sin título';
-    const slug = generateSlug(titleEs);
-
-    let imageResult = null;
-    try {
-      imageResult = await generateRecipeImage(titleEs, nvidiaKey);
-    } catch (imgErr) {
-      console.warn('[Ingest] Failed to generate image:', imgErr.message);
-    }
-
-    const recipeData = {
-      title_es: titleEs,
-      title_en: structured.title?.en || titleEs,
-      slug,
-      prep_time_minutes: structured.prepTimeMinutes,
-      cook_time_minutes: structured.cookTimeMinutes,
-      servings: structured.servings,
-      difficulty: structured.difficulty,
-      ingredients: structured.ingredients,
-      steps: structured.steps,
-      tags: structured.tags,
-      image_url: imageResult?.url || null,
-      image_filename: imageResult?.filename || null,
-      sibo_risk_level: structured.siboRiskLevel,
-      sibo_alerts: structured.siboAlerts,
-      source_type: 'audio',
-      source_reference: audioUrl,
-      status: 'published'
-    };
-
-    saveIngestLog(recipeData);
-
-    if (await checkConflict(slug, recipeData, res)) return;
-
-    const recipe = await Recipe.create(recipeData);
-
-    await RecipeProvider.clearCache();
-
-    res.status(200).json({
-      status: 'processed',
-      recipe: recipe.toJSON(),
-      transcribedText,
-      tripleCheck: buildTripleCheckMenu(recipeData)
-    });
-  } catch (error) {
-    if (handleSequelizeError(error, 'voice', res)) return;
-    ActivityLogger.log('INGEST_FAIL', { source_type: 'voice', error: error.message });
-    ActivityLogger.alertAsync(`⚠️ *[INGEST FAIL] Voz*\n\`${error.message.slice(0, 200)}\``);
-    next(error);
+router.post('/transcribe', asyncHandler(async (req, res) => {
+  const parseResult = transcribeSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    const error = new Error('audioUrl is required.');
+    error.status = 400;
+    error.name = 'ZodError';
+    error.errors = parseResult.error.errors;
+    throw error;
   }
-});
+  const { audioUrl, language } = parseResult.data;
+  const groqKey = getGroqKey();
 
-router.post('/:slug/:action', async (req, res, next) => {
+  // SSRF Protection
+  validateExternalUrl(audioUrl, ['telegram.org', 'api.telegram.org', 'cloudfront.net', 'amazonaws.com']);
+
+  const audioRes = await fetch(audioUrl);
+  if (!audioRes.ok) throw new Error(`Failed to download audio: ${audioRes.status}`);
+  const audioBuffer = Buffer.from(await audioRes.arrayBuffer());
+
+  const transcribedText = await transcribeAudio(audioBuffer, groqKey, language);
+
+  if (!transcribedText.trim()) {
+    return res.status(400).json({ error: 'No text could be transcribed from audio.' });
+  }
+
+  res.status(200).json({ transcribedText });
+}));
+
+router.post('/voice', asyncHandler(async (req, res) => {
+  const parseResult = transcribeSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    const error = new Error('audioUrl is required.');
+    error.status = 400;
+    error.name = 'ZodError';
+    error.errors = parseResult.error.errors;
+    throw error;
+  }
+  const { audioUrl, language } = parseResult.data;
+  const groqKey = getGroqKey();
+
+  // SSRF Protection
+  validateExternalUrl(audioUrl, ['telegram.org', 'api.telegram.org', 'cloudfront.net', 'amazonaws.com']);
+
+  const audioRes = await fetch(audioUrl);
+  if (!audioRes.ok) throw new Error(`Failed to download audio: ${audioRes.status}`);
+  const audioBuffer = Buffer.from(await audioRes.arrayBuffer());
+
+  const transcribedText = await transcribeAudio(audioBuffer, groqKey, language);
+
+  if (!transcribedText.trim()) {
+    return res.status(400).json({ error: 'No text could be transcribed from audio.' });
+  }
+
+  const nvidiaKey = getApiKey();
+  const structuredRaw = await analyzeAndStructureRecipe(transcribedText, nvidiaKey);
+  const structured = sanitizeStructuredRecipe(structuredRaw);
+
+  const titleEs = structured.title?.es || 'Receta sin título';
+  const slug = generateSlug(titleEs);
+
+  let imageResult = null;
   try {
-    const { slug, action } = req.params;
+    imageResult = await generateRecipeImage(titleEs, nvidiaKey);
+  } catch (imgErr) {
+    ActivityLogger.warn('Image generation failed for voice ingest', { error: imgErr.message });
+  }
 
-    const recipe = await Recipe.findOne({ where: { slug } });
-    if (!recipe) {
-      return res.status(404).json({ error: 'Recipe not found.' });
-    }
+  const recipeData = {
+    title_es: titleEs,
+    title_en: structured.title?.en || titleEs,
+    slug,
+    prep_time_minutes: structured.prepTimeMinutes,
+    cook_time_minutes: structured.cookTimeMinutes,
+    servings: structured.servings,
+    difficulty: structured.difficulty,
+    ingredients: structured.ingredients,
+    steps: structured.steps,
+    tags: structured.tags,
+    image_url: imageResult?.url || null,
+    image_filename: imageResult?.filename || null,
+    sibo_risk_level: structured.siboRiskLevel,
+    sibo_alerts: structured.siboAlerts,
+    source_type: 'audio',
+    source_reference: audioUrl,
+    status: 'published'
+  };
+
+  saveIngestLog(recipeData);
+
+  if (await checkConflict(slug, recipeData, res)) return;
+
+  const recipe = await Recipe.create(recipeData);
+
+  await RecipeProvider.clearCache();
+
+  res.status(200).json({
+    status: 'processed',
+    recipe: recipe.toJSON(),
+    transcribedText,
+    tripleCheck: buildTripleCheckMenu(recipeData)
+  });
+}));
+
+router.post('/:slug/:action', asyncHandler(async (req, res) => {
+  const { slug, action } = req.params;
+
+  const recipe = await Recipe.findOne({ where: { slug } });
+  if (!recipe) {
+    return res.status(404).json({ error: 'Recipe not found.' });
+  }
 
     switch (action) {
       case 'publish': {
@@ -436,62 +450,54 @@ router.post('/:slug/:action', async (req, res, next) => {
       default:
         return res.status(400).json({ error: 'Invalid action. Use: publish, post, csv, or curl.' });
     }
-  } catch (error) {
-    next(error);
+}));
+
+router.post('/save', asyncHandler(async (req, res) => {
+  const recipeData = req.body;
+
+  if (!recipeData.title_es || !recipeData.title_en) {
+    return res.status(400).json({ error: 'title_es and title_en are required.' });
   }
-});
 
-router.post('/save', async (req, res, next) => {
-  try {
-    const recipeData = req.body;
+  const slug = recipeData.slug || generateSlug(recipeData.title_es);
 
-    if (!recipeData.title_es || !recipeData.title_en) {
-      return res.status(400).json({ error: 'title_es and title_en are required.' });
-    }
+  const sanitized = sanitizeStructuredRecipe({
+    ...recipeData,
+    title: { es: recipeData.title_es, en: recipeData.title_en }
+  });
 
-    const slug = recipeData.slug || generateSlug(recipeData.title_es);
+  const finalData = {
+    title_es: sanitized.title.es,
+    title_en: sanitized.title.en,
+    slug: slug,
+    prep_time_minutes: sanitized.prepTimeMinutes,
+    cook_time_minutes: sanitized.cookTimeMinutes,
+    servings: sanitized.servings,
+    difficulty: sanitized.difficulty,
+    ingredients: sanitized.ingredients,
+    steps: sanitized.steps,
+    tags: sanitized.tags,
+    image_url: recipeData.image_url,
+    image_filename: recipeData.image_filename,
+    sibo_risk_level: sanitized.siboRiskLevel,
+    sibo_alerts: sanitized.siboAlerts,
+    source_type: recipeData.source_type || 'manual',
+    source_reference: recipeData.source_reference,
+    status: 'published'
+  };
 
-    const sanitized = sanitizeStructuredRecipe({
-      ...recipeData,
-      title: { es: recipeData.title_es, en: recipeData.title_en }
-    });
-
-    const finalData = {
-      title_es: sanitized.title.es,
-      title_en: sanitized.title.en,
-      slug: slug,
-      prep_time_minutes: sanitized.prepTimeMinutes,
-      cook_time_minutes: sanitized.cookTimeMinutes,
-      servings: sanitized.servings,
-      difficulty: sanitized.difficulty,
-      ingredients: sanitized.ingredients,
-      steps: sanitized.steps,
-      tags: sanitized.tags,
-      image_url: recipeData.image_url,
-      image_filename: recipeData.image_filename,
-      sibo_risk_level: sanitized.siboRiskLevel,
-      sibo_alerts: sanitized.siboAlerts,
-      source_type: recipeData.source_type || 'manual',
-      source_reference: recipeData.source_reference,
-      status: 'published'
-    };
-
-    const existing = await Recipe.findOne({ where: { slug } });
-    if (existing) {
-      Object.assign(existing, finalData);
-      await existing.save();
-      await RecipeProvider.clearCache();
-      return res.json({ status: 'updated', recipe: existing });
-    }
-
-    const recipe = await Recipe.create(finalData);
+  const existing = await Recipe.findOne({ where: { slug } });
+  if (existing) {
+    Object.assign(existing, finalData);
+    await existing.save();
     await RecipeProvider.clearCache();
-    return res.status(201).json({ status: 'created', recipe });
-  } catch (error) {
-    if (handleSequelizeError(error, 'save', res)) return;
-    next(error);
+    return res.json({ status: 'updated', recipe: existing });
   }
-});
+
+  const recipe = await Recipe.create(finalData);
+  await RecipeProvider.clearCache();
+  return res.status(201).json({ status: 'created', recipe });
+}));
 
 router.get('/logs', (req, res) => {
   const logsDir = path.join(__dirname, '..', 'ingest_logs');

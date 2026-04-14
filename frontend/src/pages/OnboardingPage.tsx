@@ -66,14 +66,12 @@ export function OnboardingPage() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const conditions: string[] = [];
       const intolerances = selectedIds;
       await updateUserProfile({
         diet,
         daily_calories: dailyCalories,
         intolerances,
         severities,
-        conditions,
         onboardingComplete: true
       });
       navigate('/');

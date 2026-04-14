@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { ActivityLogger } from '../services/ActivityLogger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,9 +28,9 @@ export function recoveryLogger(req, res, next) {
 
       try {
         fs.writeFileSync(filepath, JSON.stringify(body, null, 2), 'utf-8');
-        console.log(`[Recovery Log] Saved: ${filename}`);
+        ActivityLogger.info('Recovery log saved', { filename });
       } catch (err) {
-        console.error('[Recovery Log] Failed to write:', err.message);
+        ActivityLogger.error('Recovery log write failed', { error: err.message, filename });
       }
     }
 
@@ -51,8 +52,8 @@ export function saveIngestLog(recipeData) {
 
   try {
     fs.writeFileSync(filepath, JSON.stringify(recipeData, null, 2), 'utf-8');
-    console.log(`[Recovery Log] Saved: ${filename}`);
+    ActivityLogger.info('Recovery log saved (manual)', { filename });
   } catch (err) {
-    console.error('[Recovery Log] Failed to write:', err.message);
+    ActivityLogger.error('Recovery log write failed (manual)', { error: err.message, filename });
   }
 }

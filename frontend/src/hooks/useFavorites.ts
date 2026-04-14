@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../AuthContext';
 import { trackEvent } from '../utils/analytics';
+import { api, ApiError } from '../lib/api';
 
 export interface FavoriteItem {
   id: string;
@@ -10,48 +11,36 @@ export interface FavoriteItem {
   image: string;
 }
 
-const getAuthToken = () => localStorage.getItem('wati_jwt');
-
-const authHeaders = () => ({
-  'Authorization': `Bearer ${getAuthToken()}`
-});
-
 export function useFavorites() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: favorites = [], isLoading } = useQuery({
-    queryKey: ['favorites', user?.id, user?.intolerances, user?.severities],
+  const queryKey = ['favorites', user?.id, user?.intolerances, user?.severities];
+
+  const { data: favorites = [], isLoading, error } = useQuery({
+    queryKey,
     queryFn: async () => {
       if (!user) return [];
-      const res = await fetch(`/api/favorites`, {
-        headers: authHeaders()
-      });
-      if (!res.ok) return [];
-      return res.json() as Promise<FavoriteItem[]>;
+      try {
+        return await api.get<FavoriteItem[]>('/favorites');
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) return [];
+        throw err;
+      }
     },
     enabled: !!user,
+    retry: 1,
   });
 
   const toggleMutation = useMutation({
     mutationFn: async (recipe: { id: string; title: string; imageUrl: string }) => {
-      const res = await fetch(`/api/favorites`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders()
-        },
-        body: JSON.stringify({
-          recipeId: recipe.id,
-          title: recipe.title,
-          image: recipe.imageUrl
-        })
+      return await api.post<{ favorited: boolean }>('/favorites', {
+        recipeId: recipe.id,
+        title: recipe.title,
+        image: recipe.imageUrl
       });
-      if (!res.ok) throw new Error('Failed to toggle favorite');
-      return res.json();
     },
     onSuccess: (data, recipe) => {
-      // Event Tracking
       if (data?.favorited) {
         trackEvent('recipe_favorited', {
           title: recipe.title,
@@ -65,11 +54,11 @@ export function useFavorites() {
       }
     },
     onMutate: async (recipe) => {
-      await queryClient.cancelQueries({ queryKey: ['favorites', user?.id, user?.intolerances, user?.severities] });
-      const previous = queryClient.getQueryData<FavoriteItem[]>(['favorites', user?.id, user?.intolerances, user?.severities]) ?? [];
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<FavoriteItem[]>(queryKey) ?? [];
       const exists = previous.some(f => f.recipe_id === recipe.id);
 
-      queryClient.setQueryData<FavoriteItem[]>(['favorites', user?.id, user?.intolerances, user?.severities], prev => {
+      queryClient.setQueryData<FavoriteItem[]>(queryKey, prev => {
         if (!prev) return [];
         if (exists) {
           return prev.filter(f => f.recipe_id !== recipe.id);
@@ -87,11 +76,11 @@ export function useFavorites() {
     },
     onError: (_err, _recipe, context) => {
       if (context?.previous !== undefined) {
-        queryClient.setQueryData(['favorites', user?.id, user?.intolerances, user?.severities], context.previous);
+        queryClient.setQueryData(queryKey, context.previous);
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['favorites', user?.id] });
+      queryClient.invalidateQueries({ queryKey });
     },
   });
 
@@ -102,8 +91,9 @@ export function useFavorites() {
   return {
     favorites,
     isLoading,
+    error: error instanceof ApiError ? error.message : (error instanceof Error ? error.message : null),
     toggleFavorite: toggleMutation.mutateAsync,
     isFavorited,
-    refresh: () => queryClient.invalidateQueries({ queryKey: ['favorites', user?.id] })
+    refresh: () => queryClient.invalidateQueries({ queryKey })
   };
 }
