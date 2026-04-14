@@ -75,44 +75,10 @@ app.get('/api/medical/triggers', (req, res) => {
   res.json(MEDICAL_TRIGGERS);
 });
 
+import { errorHandler } from './middleware/errorHandler.js';
+
 // Global Error Handler
-app.use((err, req, res, next) => {
-  const status = err.status || 500;
-  const isFatal = status >= 500;
-  
-  // Log structured error
-  ActivityLogger.error(`Request Failed: ${req.method} ${req.url}`, err, {
-    status,
-    ip: req.ip,
-    userId: req.user?.id
-  });
-
-  // Alert on critical failures
-  const isNvidiaError = err.message?.includes('NVIDIA') || err.message?.includes('SDXL');
-  const isGroqError = err.message?.includes('GROQ') || err.message?.includes('Whisper');
-
-  if (isNvidiaError || isGroqError || isFatal) {
-    const service = isNvidiaError ? 'NVIDIA API' : isGroqError ? 'Groq API' : 'Backend';
-    ActivityLogger.alertAsync(
-      `🔴 *[ERROR ${status}] ${service}*\n\n` +
-      `\`${(err.message || 'Unknown error').slice(0, 200)}\`\n\n` +
-      `📍 ${req.method} ${req.originalUrl || req.url}`
-    );
-  }
-
-  // Response Masking
-  let message = 'Vaya, ocurrió un problema inesperado. Inténtalo más tarde.';
-  if (status === 402) message = 'Se ha agotado la cuota de la API externa para hoy.';
-  if (status === 504) message = 'La búsqueda tardó demasiado. Inténtalo de nuevo.';
-  if (status < 500) message = err.message; // User-facing errors (4xx) can show actual message
-
-  res.status(status).json({ 
-    error: message,
-    code: err.code || 'INTERNAL_ERROR',
-    // Include stack only in development
-    stack: config.NODE_ENV === 'development' ? err.stack : undefined
-  });
-});
+app.use(errorHandler);
 
 process.on('unhandledRejection', (reason) => {
   ActivityLogger.error('Unhandled Rejection', reason);

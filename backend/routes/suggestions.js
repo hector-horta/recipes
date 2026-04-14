@@ -4,6 +4,7 @@ import { ActivityLogger } from '../services/ActivityLogger.js';
 import { User } from '../models/User.js';
 import rateLimit from 'express-rate-limit';
 import { requireAdminKey } from '../middleware/auth.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
 
 const router = Router();
 
@@ -20,7 +21,7 @@ const TELEGRAM_BOT_TOKEN = config.TELEGRAM_BOT_TOKEN;
 
 async function sendTelegramSuggestion(term, userId) {
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_USER_ID) {
-    console.warn('[Suggestions] Telegram not configured, skipping notification.');
+    ActivityLogger.warn('[Suggestions] Telegram not configured, skipping notification.');
     return;
   }
 
@@ -71,75 +72,63 @@ const suggestionSchema = z.object({
   userId: z.string().uuid().optional().nullable()
 });
 
-router.post('/', suggestionLimiter, async (req, res) => {
-  const parseResult = suggestionSchema.safeParse(req.body);
-  if (!parseResult.success) {
-    return res.status(400).json({ error: parseResult.error.errors[0].message });
-  }
+router.post('/', suggestionLimiter, asyncHandler(async (req, res) => {
+  const { term: cleanTerm, userId } = suggestionSchema.parse(req.body);
+  const validUserId = userId || null;
 
-  try {
-    const { term: cleanTerm, userId } = parseResult.data;
-    const validUserId = userId || null;
+  const searchLog = await SearchLog.create({
+    term: cleanTerm,
+    status: 'suggested',
+    conversion: true,
+    user_id: validUserId,
+    ip: req.ip
+  });
 
-    const searchLog = await SearchLog.create({
-      term: cleanTerm,
-      status: 'suggested',
-      conversion: true,
-      user_id: validUserId,
-      ip: req.ip
-    });
+  ActivityLogger.log('SUGGEST_TO_CHEF', { term: cleanTerm }, {
+    userId: validUserId,
+    ip: req.ip
+  });
 
-    ActivityLogger.log('SUGGEST_TO_CHEF', { term: cleanTerm }, {
-      userId: validUserId,
-      ip: req.ip
-    });
+  // Background task, don't await to avoid blocking response
+  sendTelegramSuggestion(cleanTerm, validUserId).catch(err => {
+    ActivityLogger.error('[Suggestions] Telegram background task failed', err);
+  });
 
-    sendTelegramSuggestion(cleanTerm, validUserId);
+  res.status(201).json({
+    message: 'Suggestion recorded',
+    searchLog: {
+      id: searchLog.id,
+      term: searchLog.term,
+      status: searchLog.status,
+      conversion: searchLog.conversion
+    }
+  });
+}));
 
-    res.status(201).json({
-      message: 'Suggestion recorded',
-      searchLog: {
-        id: searchLog.id,
-        term: searchLog.term,
-        status: searchLog.status,
-        conversion: searchLog.conversion
-      }
-    });
-  } catch (error) {
-    ActivityLogger.error('[Suggestions] Error', error);
-    res.status(500).json({ error: 'Failed to record suggestion' });
-  }
-});
+router.get('/stats', requireAdminKey, asyncHandler(async (req, res) => {
+  const { Op } = await import('sequelize');
+  const totalFailed = await SearchLog.count({ where: { status: 'failed' } });
+  const totalSuggested = await SearchLog.count({ where: { status: 'suggested' } });
+  const conversionRate = totalFailed > 0
+    ? ((totalSuggested / (totalFailed + totalSuggested)) * 100).toFixed(1)
+    : 0;
 
-router.get('/stats', requireAdminKey, async (req, res) => {
-  try {
-    const { Op } = await import('sequelize');
-    const totalFailed = await SearchLog.count({ where: { status: 'failed' } });
-    const totalSuggested = await SearchLog.count({ where: { status: 'suggested' } });
-    const conversionRate = totalFailed > 0
-      ? ((totalSuggested / (totalFailed + totalSuggested)) * 100).toFixed(1)
-      : 0;
+  const recentTerms = await SearchLog.findAll({
+    where: { status: 'failed' },
+    order: [['created_at', 'DESC']],
+    limit: 20,
+    attributes: ['term', 'created_at']
+  });
 
-    const recentTerms = await SearchLog.findAll({
-      where: { status: 'failed' },
-      order: [['created_at', 'DESC']],
-      limit: 20,
-      attributes: ['term', 'created_at']
-    });
-
-    res.json({
-      totalFailed,
-      totalSuggested,
-      conversionRate: `${conversionRate}%`,
-      recentFailedTerms: recentTerms.map(r => ({
-        term: r.term,
-        date: r.created_at
-      }))
-    });
-  } catch (error) {
-    ActivityLogger.error('[Suggestions Stats] Error', error);
-    res.status(500).json({ error: 'Failed to fetch stats' });
-  }
-});
+  res.json({
+    totalFailed,
+    totalSuggested,
+    conversionRate: `${conversionRate}%`,
+    recentFailedTerms: recentTerms.map(r => ({
+      term: r.term,
+      date: r.created_at
+    }))
+  });
+}));
 
 export default router;
