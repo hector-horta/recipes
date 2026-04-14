@@ -32,7 +32,7 @@ async function sendTelegramSuggestion(term, userId) {
         userInfo = `${user.display_name} (${user.email})`;
       }
     } catch (err) {
-      console.error('[Suggestions] Failed to fetch user info:', err.message);
+      ActivityLogger.error('[Suggestions] Failed to fetch user info', err);
     }
   }
 
@@ -57,25 +57,29 @@ async function sendTelegramSuggestion(term, userId) {
 
     if (!res.ok) {
       const err = await res.text().catch(() => '');
-      console.error(`[Suggestions] Telegram API error (${res.status}):`, err);
+      ActivityLogger.error(`[Suggestions] Telegram API error (${res.status})`, err);
     }
   } catch (err) {
-    console.error('[Suggestions] Telegram fetch failed:', err.message);
+    ActivityLogger.error('[Suggestions] Telegram fetch failed', err);
   }
 }
 
+import { z } from 'zod';
+
+const suggestionSchema = z.object({
+  term: z.string().trim().min(2, 'term is required (min 2 characters)'),
+  userId: z.string().uuid().optional().nullable()
+});
+
 router.post('/', suggestionLimiter, async (req, res) => {
+  const parseResult = suggestionSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    return res.status(400).json({ error: parseResult.error.errors[0].message });
+  }
+
   try {
-    const { term, userId } = req.body;
-
-    if (!term || typeof term !== 'string' || term.trim().length < 2) {
-      return res.status(400).json({ error: 'term is required (min 2 characters)' });
-    }
-
-    const cleanTerm = term.trim();
-    const validUserId = userId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)
-      ? userId
-      : null;
+    const { term: cleanTerm, userId } = parseResult.data;
+    const validUserId = userId || null;
 
     const searchLog = await SearchLog.create({
       term: cleanTerm,
@@ -102,7 +106,7 @@ router.post('/', suggestionLimiter, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('[Suggestions] Error:', error.message);
+    ActivityLogger.error('[Suggestions] Error', error);
     res.status(500).json({ error: 'Failed to record suggestion' });
   }
 });
@@ -133,7 +137,7 @@ router.get('/stats', requireAdminKey, async (req, res) => {
       }))
     });
   } catch (error) {
-    console.error('[Suggestions Stats] Error:', error.message);
+    ActivityLogger.error('[Suggestions Stats] Error', error);
     res.status(500).json({ error: 'Failed to fetch stats' });
   }
 });

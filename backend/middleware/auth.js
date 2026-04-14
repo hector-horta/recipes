@@ -48,12 +48,14 @@ export const optionalAuthenticateToken = (req, res, next) => {
   });
 };
 
+import { ActivityLogger } from '../services/ActivityLogger.js';
+
 export const requireAdminKey = (req, res, next) => {
   const key = req.headers['x-admin-key'];
   const expected = config.ADMIN_API_KEY;
 
   if (!expected) {
-    console.error('[Admin] ADMIN_API_KEY not configured in environment.');
+    ActivityLogger.error('[Admin] ADMIN_API_KEY not configured in environment.');
     return res.status(503).json({ error: 'Admin endpoint not configured.' });
   }
 

@@ -29,7 +29,7 @@ router.get('/', authenticateToken, async (req, res) => {
     });
     res.json(favorites);
   } catch (error) {
-    console.error('[Favorites] Error fetching:', error);
+    ActivityLogger.error('[Favorites] Error fetching', error);
     res.status(500).json({ error: 'Error al obtener favoritos' });
   }
 });
@@ -69,7 +69,7 @@ router.post('/', authenticateToken, async (req, res) => {
       return res.status(201).json({ favorited: true, data: favorite });
     }
   } catch (error) {
-    console.error('[Favorites] Error toggling:', error);
+    ActivityLogger.error('[Favorites] Error toggling', error);
     res.status(500).json({ error: 'Error al procesar favorito' });
   }
 });
@@ -89,7 +89,7 @@ router.delete('/:recipeId', authenticateToken, async (req, res) => {
       res.status(404).json({ error: 'Receta no encontrada en favoritos' });
     }
   } catch (error) {
-    console.error('[Favorites] Error deleting:', error);
+    ActivityLogger.error('[Favorites] Error deleting', error);
     res.status(500).json({ error: 'Error al eliminar favorito' });
   }
 });

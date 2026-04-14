@@ -2,6 +2,7 @@ import express from 'express';
 import { Op, fn, col, literal } from 'sequelize';
 import { ActivityLog } from '../models/ActivityLog.js';
 import { FavoriteRecipe } from '../models/FavoriteRecipe.js';
+import { ActivityLogger } from '../services/ActivityLogger.js';
 
 const router = express.Router();
 
@@ -155,7 +156,7 @@ router.get('/stats', requireAdminKey, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[Admin] Stats error:', error);
+    ActivityLogger.error('[Admin] Stats error', error);
     res.status(500).json({ error: 'Error generating stats' });
   }
 });
