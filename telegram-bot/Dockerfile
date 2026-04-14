@@ -15,4 +15,4 @@ RUN chown -R nodeapp:nodejs /app
 
 USER nodeapp
 
-CMD ["node", "bot.js"]
+CMD ["npm", "start"]
