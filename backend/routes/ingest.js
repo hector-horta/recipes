@@ -10,6 +10,7 @@ import { RecipeProvider } from '../services/RecipeProvider.js';
 import { normalizeTags } from '../utils/tagTranslations.js';
 import { ActivityLogger } from '../services/ActivityLogger.js';
 import { sanitizeStructuredRecipe } from '../utils/ingestSanitizer.js';
+import { validateExternalUrl } from '../utils/urlValidator.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -150,8 +151,7 @@ router.post('/image', async (req, res, next) => {
     });
   } catch (error) {
     if (handleSequelizeError(error, 'ocr_image', res)) return;
-    ActivityLogger.log('INGEST_FAIL', { source_type: 'ocr_image', error: error.message });
-    ActivityLogger.alertAsync(`⚠️ *[INGEST FAIL] OCR Single Image*\n\`${error.message.slice(0, 200)}\``);
+    ActivityLogger.error('OCR Single Image ingest failed', { error: error.message, url: req.body.imageUrl });
     next(error);
   }
 });
@@ -165,8 +165,7 @@ router.post('/images', async (req, res, next) => {
     const { imageUrl1, imageUrl2, generateImage } = parseResult.data;
     const apiKey = getApiKey();
 
-    console.log(`[Ingest] Processing 2 images as recipe parts`);
-
+    ActivityLogger.info('Processing dual images for dual ingest', { imageUrl1, imageUrl2 });
     const rawText = await extractTextFromTwoImages(imageUrl1, imageUrl2, apiKey);
 
     if (!rawText.trim()) {
@@ -184,7 +183,7 @@ router.post('/images', async (req, res, next) => {
       try {
         imageResult = await generateRecipeImage(titleEs, apiKey);
       } catch (imgErr) {
-        console.warn('[Ingest] Failed to generate image:', imgErr.message);
+        ActivityLogger.warn('Failed to generate image during dual ingest', { error: imgErr.message, title: titleEs });
       }
     }
 
@@ -231,8 +230,7 @@ router.post('/images', async (req, res, next) => {
     });
   } catch (error) {
     if (handleSequelizeError(error, 'ocr_image', res)) return;
-    ActivityLogger.log('INGEST_FAIL', { source_type: 'ocr_image', error: error.message });
-    ActivityLogger.alertAsync(`⚠️ *[INGEST FAIL] OCR Double Image*\n\`${error.message.slice(0, 200)}\``);
+    ActivityLogger.error('OCR Double Image ingest failed', { error: error.message, urls: [req.body.imageUrl1, req.body.imageUrl2] });
     next(error);
   }
 });
@@ -324,6 +322,9 @@ router.post('/transcribe', async (req, res, next) => {
       return res.status(400).json({ error: 'audioUrl is required.' });
     }
 
+    // SSRF Protection
+    validateExternalUrl(audioUrl, ['telegram.org', 'api.telegram.org', 'cloudfront.net', 'amazonaws.com']);
+
     const audioRes = await fetch(audioUrl);
     if (!audioRes.ok) throw new Error(`Failed to download audio: ${audioRes.status}`);
     const audioBuffer = Buffer.from(await audioRes.arrayBuffer());
@@ -336,6 +337,7 @@ router.post('/transcribe', async (req, res, next) => {
 
     res.status(200).json({ transcribedText });
   } catch (error) {
+    ActivityLogger.error('Audio transcription failed', { error: error.message, url: req.body.audioUrl });
     next(error);
   }
 });
@@ -348,6 +350,9 @@ router.post('/voice', async (req, res, next) => {
     if (!audioUrl) {
       return res.status(400).json({ error: 'audioUrl is required.' });
     }
+
+    // SSRF Protection
+    validateExternalUrl(audioUrl, ['telegram.org', 'api.telegram.org', 'cloudfront.net', 'amazonaws.com']);
 
     const audioRes = await fetch(audioUrl);
     if (!audioRes.ok) throw new Error(`Failed to download audio: ${audioRes.status}`);
@@ -370,7 +375,7 @@ router.post('/voice', async (req, res, next) => {
     try {
       imageResult = await generateRecipeImage(titleEs, nvidiaKey);
     } catch (imgErr) {
-      console.warn('[Ingest] Failed to generate image:', imgErr.message);
+      ActivityLogger.warn('Image generation failed for voice ingest', { error: imgErr.message });
     }
 
     const recipeData = {
@@ -409,8 +414,7 @@ router.post('/voice', async (req, res, next) => {
     });
   } catch (error) {
     if (handleSequelizeError(error, 'voice', res)) return;
-    ActivityLogger.log('INGEST_FAIL', { source_type: 'voice', error: error.message });
-    ActivityLogger.alertAsync(`⚠️ *[INGEST FAIL] Voz*\n\`${error.message.slice(0, 200)}\``);
+    ActivityLogger.error('Voice ingest failed', { error: error.message, url: req.body.audioUrl });
     next(error);
   }
 });

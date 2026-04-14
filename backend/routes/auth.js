@@ -6,8 +6,8 @@ import rateLimit from 'express-rate-limit';
 import { User } from '../models/User.js';
 import { Profile } from '../models/Profile.js';
 import { authenticateToken } from '../middleware/auth.js';
-
 import { config } from '../config/env.js';
+import { ActivityLogger } from '../services/ActivityLogger.js';
 
 const router = express.Router();
 const JWT_SECRET = config.JWT_SECRET;
@@ -78,6 +78,7 @@ router.post('/register', async (req, res) => {
     });
 
     res.status(201).json({
+      token,
       user: {
         id: newUser.id,
         email: newUser.email,
@@ -85,8 +86,8 @@ router.post('/register', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('[Auth] Error de DB o servidor durante el registro:', error);
-    res.status(500).json({ error: 'Error interno del servidor.' });
+    ActivityLogger.error('Registration failed', { error: error.message, email: req.body.email });
+    res.status(500).json({ error: 'Error interno del servidor durante el registro.' });
   }
 });
 
@@ -120,6 +121,7 @@ router.post('/login', loginLimiter, async (req, res) => {
     });
 
     res.json({
+      token,
       user: {
         id: user.id,
         email: user.email,
@@ -127,8 +129,8 @@ router.post('/login', loginLimiter, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('[Auth] Error de DB o servidor durante el login:', error.message);
-    res.status(500).json({ error: 'Error interno del servidor.' });
+    ActivityLogger.error('Login failed', { error: error.message, email: req.body.email });
+    res.status(500).json({ error: 'Error interno del servidor durante el inicio de sesión.' });
   }
 });
 
@@ -159,8 +161,8 @@ router.get('/me', authenticateToken, async (req, res) => {
       updatedAt: user.updatedAt
     });
   } catch (error) {
-    console.error('[DEBUG-AUTH-ERROR] Error obteniendo perfil:', error);
-    res.status(500).json({ error: 'Error interno del servidor.' });
+    ActivityLogger.error('Fetching self (me) profile failed', { error: error.message, userId: req.user?.id });
+    res.status(500).json({ error: 'Error al obtener su perfil.' });
   }
 });
 
@@ -190,8 +192,8 @@ router.put('/profile', authenticateToken, async (req, res) => {
     await profile.save();
     res.json(profile);
   } catch (error) {
-    console.error('[Auth] Error al actualizar perfil:', error);
-    res.status(500).json({ error: 'Error interno del servidor.' });
+    ActivityLogger.error('Profile update failed', { error: error.message, userId: req.user?.id });
+    res.status(500).json({ error: 'Error al actualizar sus preferencias.' });
   }
 });
 
@@ -207,7 +209,7 @@ router.delete('/me', authenticateToken, async (req, res) => {
     await user.destroy();
     res.json({ message: 'Sus datos han sido eliminados de manera permanente exitosamente.' });
   } catch (error) {
-    console.error('[Auth] Fallo durante la eliminación (GDPR) de cuenta.');
+    ActivityLogger.error('GDPR user deletion failed', { error: error.message, userId: req.user?.id });
     res.status(500).json({ error: 'Error al intentar procesar su solicitud de borrado.' });
   }
 });

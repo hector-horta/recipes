@@ -1,3 +1,6 @@
+import { validateExternalUrl } from '../utils/urlValidator.js';
+import { ActivityLogger } from './ActivityLogger.js';
+
 const NVIDIA_API_BASE = 'https://integrate.api.nvidia.com/v1';
 const NVIDIA_GENAI_BASE = 'https://ai.api.nvidia.com/v1/genai';
 
@@ -39,6 +42,7 @@ async function nvidiaImageRequest(body, apiKey) {
 }
 
 async function downloadImageAsBase64(imageUrl) {
+  validateExternalUrl(imageUrl);
   const res = await fetch(imageUrl);
   if (!res.ok) throw new Error(`Failed to download image: ${res.status}`);
   const buffer = await res.arrayBuffer();
@@ -164,14 +168,14 @@ CRITICAL RULES:
 
   const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
-    console.error('[NvidiaNIM] Raw Llama 4 response:', content);
+    ActivityLogger.info('[NvidiaNIM] Raw Llama 4 response:', content);
     throw new Error('Failed to parse Llama 4 response as JSON. Raw response: ' + content.slice(0, 200));
   }
 
   try {
     return JSON.parse(jsonMatch[0]);
   } catch {
-    console.error('[NvidiaNIM] JSON parse failed for:', jsonMatch[0].slice(0, 500));
+    ActivityLogger.info('[NvidiaNIM] JSON parse failed for:', jsonMatch[0].slice(0, 500));
     throw new Error('Failed to parse Llama 4 response as JSON');
   }
 }
@@ -210,7 +214,7 @@ export async function generateRecipeImage(prompt, apiKey) {
   const buffer = Buffer.from(imageData, 'base64');
   fs.writeFileSync(filepath, buffer);
 
-  console.log(`[SDXL] Image saved: ${filename}`);
+  ActivityLogger.info('SDXL Image saved', { filename, prompt: prompt.slice(0, 50) });
 
   return {
     filename,

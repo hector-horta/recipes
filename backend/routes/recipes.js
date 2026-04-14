@@ -5,18 +5,20 @@ import { Profile } from '../models/Profile.js';
 import { ActivityLogger } from '../services/ActivityLogger.js';
 import rateLimit from 'express-rate-limit';
 
+import { validateQuery } from '../middleware/validate.js';
+import { recipeQuerySchema } from '../models/validators.js';
+
 const router = express.Router();
 
 const recipeLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, 
   limit: 100,
-  standardHeaders: true,
-  legacyHeaders: false,
   message: { error: 'Se han agotado las búsquedas permitidas por este dispositivo durante 15 minutos.' }
 });
 
-router.get('/', optionalAuthenticateToken, recipeLimiter, async (req, res, next) => {
+router.get('/', optionalAuthenticateToken, recipeLimiter, validateQuery(recipeQuerySchema), async (req, res, next) => {
   try {
+    const params = req.validatedQuery;
     let userProfile = null;
     if (req.user) {
       userProfile = await Profile.findOne({ where: { user_id: req.user.id } });
@@ -28,9 +30,9 @@ router.get('/', optionalAuthenticateToken, recipeLimiter, async (req, res, next)
       }
     }
 
-    const { query } = req.query;
+    const { query } = params;
     const plainProfile = userProfile ? userProfile.get({ plain: true }) : null;
-    const data = await RecipeProvider.getRecipes(req.query, plainProfile);
+    const data = await RecipeProvider.getRecipes(params, plainProfile);
 
     // Telemetría
     const searchTerms = query?.trim() || '';
