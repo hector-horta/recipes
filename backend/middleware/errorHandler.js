@@ -26,13 +26,24 @@ export const errorHandler = (err, req, res, next) => {
   
   const isFatal = status >= 500;
   
+  // Mask sensitive fields in the body before logging
+  let sanitizedBody = undefined;
+  if (req.method !== 'GET' && req.body) {
+    sanitizedBody = { ...req.body };
+    const sensitiveFields = ['password', 'token', 'admin_key', 'api_key', 'secret'];
+    sensitiveFields.forEach(field => {
+      if (sanitizedBody[field]) sanitizedBody[field] = '*****';
+    });
+  }
+
   // Log structured error
   ActivityLogger.error(`Request Failed: ${req.method} ${req.url}`, err, {
     status,
     ip: req.ip,
     userId: req.user?.id,
     code,
-    details: details ? JSON.stringify(details) : undefined
+    details: details ? JSON.stringify(details) : undefined,
+    body: sanitizedBody
   });
 
   // Alert on critical failures

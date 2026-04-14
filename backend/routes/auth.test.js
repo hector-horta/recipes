@@ -70,7 +70,7 @@ describe('Auth Routes', () => {
 
       const res = await request(app)
         .post('/api/auth/register')
-        .send({ email: 'test@test.com', password: 'password123', displayName: 'Test', acceptedTerms: true });
+        .send({ email: 'test@test.com', password: 'Password123', displayName: 'Test', acceptedTerms: true });
 
       expect(res.status).toBe(201);
       expect(res.body.token).toBe('test-token');
@@ -80,7 +80,7 @@ describe('Auth Routes', () => {
     it('should return 400 if acceptedTerms is missing', async () => {
       const res = await request(app)
         .post('/api/auth/register')
-        .send({ email: 'test@test.com', password: 'password123', displayName: 'Test' });
+        .send({ email: 'test@test.com', password: 'Password123', displayName: 'Test' });
 
       expect(res.status).toBe(400);
     });

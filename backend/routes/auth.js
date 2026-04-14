@@ -51,7 +51,10 @@ router.post('/register', asyncHandler(async (req, res) => {
 
   await Profile.create({ user_id: newUser.id, language: language || 'en' });
 
-  const token = jwt.sign({ id: newUser.id, email: newUser.email }, JWT_SECRET, { expiresIn: '7d' });
+  const token = jwt.sign({ id: newUser.id, email: newUser.email }, JWT_SECRET, { 
+    expiresIn: '7d',
+    algorithm: 'HS256' 
+  });
 
   res.cookie('token', token, {
     httpOnly: true,
@@ -102,7 +105,10 @@ router.post('/login', loginLimiter, asyncHandler(async (req, res) => {
     throw error;
   }
 
-  const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+  const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { 
+    expiresIn: '7d',
+    algorithm: 'HS256'
+  });
 
   res.cookie('token', token, {
     httpOnly: true,

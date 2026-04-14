@@ -10,7 +10,10 @@ export const recipeQuerySchema = z.object({
 
 export const registerSchema = z.object({
   email: z.string().email('Debe ser un email válido'),
-  password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres'),
+  password: z.string()
+    .min(8, 'La contraseña debe tener al menos 8 caracteres')
+    .regex(/[A-Z]/, 'La contraseña debe tener al menos una mayúscula')
+    .regex(/[0-9]/, 'La contraseña debe tener al menos un número'),
   displayName: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
   acceptedTerms: z.boolean().refine(val => val === true, { message: 'Debe aceptar los términos' }),
   language: z.string().optional()
