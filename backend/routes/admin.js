@@ -7,24 +7,7 @@ const router = express.Router();
 
 import { config } from '../config/env.js';
 
-/**
- * Middleware: verifica la ADMIN_API_KEY en el header x-admin-key.
- */
-function requireAdminKey(req, res, next) {
-  const key = req.headers['x-admin-key'];
-  const expected = config.ADMIN_API_KEY;
-
-  if (!expected) {
-    console.error('[Admin] ADMIN_API_KEY not configured in environment.');
-    return res.status(503).json({ error: 'Admin endpoint not configured.' });
-  }
-
-  if (!key || key !== expected) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  next();
-}
+import { requireAdminKey } from '../middleware/auth.js';
 
 /**
  * GET /admin/stats

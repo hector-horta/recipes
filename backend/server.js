@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import cookieParser from 'cookie-parser';
 
 import { config } from './config/env.js';
 
@@ -15,7 +16,6 @@ const corsOptions = {
     const allowedHosts = [
       config.FRONTEND_URL,
       'http://localhost:5173',
-      'http://localhost',
       'http://127.0.0.1:5173'
     ];
     
@@ -33,6 +33,7 @@ const corsOptions = {
       callback(new Error('Not allowed by CORS'));
     }
   },
+  credentials: true,
   optionsSuccessStatus: 200
 };
 
@@ -52,6 +53,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 app.use(helmet());
+app.use(cookieParser());
 
 // Nginx actúa como reverse proxy: Express debe confiar en X-Forwarded-For
 // para que el rate limiting vea la IP real del cliente, no la IP interna de Nginx.

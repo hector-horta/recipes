@@ -2,8 +2,16 @@ import { Router } from 'express';
 import { SearchLog } from '../models/SearchLog.js';
 import { ActivityLogger } from '../services/ActivityLogger.js';
 import { User } from '../models/User.js';
+import rateLimit from 'express-rate-limit';
+import { requireAdminKey } from '../middleware/auth.js';
 
 const router = Router();
+
+const suggestionLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3, // Limit each IP to 3 suggestions per hour
+  message: { error: 'Demasiadas sugerencias. Intenta de nuevo más tarde.' }
+});
 
 import { config } from '../config/env.js';
 
@@ -56,7 +64,7 @@ async function sendTelegramSuggestion(term, userId) {
   }
 }
 
-router.post('/', async (req, res) => {
+router.post('/', suggestionLimiter, async (req, res) => {
   try {
     const { term, userId } = req.body;
 
@@ -99,7 +107,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.get('/stats', async (req, res) => {
+router.get('/stats', requireAdminKey, async (req, res) => {
   try {
     const { Op } = await import('sequelize');
     const totalFailed = await SearchLog.count({ where: { status: 'failed' } });

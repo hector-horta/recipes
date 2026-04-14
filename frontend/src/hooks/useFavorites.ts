@@ -10,11 +10,7 @@ export interface FavoriteItem {
   image: string;
 }
 
-const getAuthToken = () => localStorage.getItem('wati_jwt');
-
-const authHeaders = () => ({
-  'Authorization': `Bearer ${getAuthToken()}`
-});
+const authHeaders = () => ({});
 
 export function useFavorites() {
   const { user } = useAuth();
@@ -25,7 +21,7 @@ export function useFavorites() {
     queryFn: async () => {
       if (!user) return [];
       const res = await fetch(`/api/favorites`, {
-        headers: authHeaders()
+        credentials: 'include'
       });
       if (!res.ok) return [];
       return res.json() as Promise<FavoriteItem[]>;
@@ -38,9 +34,9 @@ export function useFavorites() {
       const res = await fetch(`/api/favorites`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders()
+          'Content-Type': 'application/json'
         },
+        credentials: 'include',
         body: JSON.stringify({
           recipeId: recipe.id,
           title: recipe.title,
@@ -91,7 +87,7 @@ export function useFavorites() {
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['favorites', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['favorites', user?.id, user?.intolerances, user?.severities] });
     },
   });
 

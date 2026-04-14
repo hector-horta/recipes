@@ -6,7 +6,6 @@ import { useAuth } from '../AuthContext';
 
 async function fetchRecipes(
   query: string,
-  token?: string | null,
   includeUnsafe?: boolean
 ): Promise<RecipeSearchResponse> {
   const params = new URLSearchParams();
@@ -14,12 +13,9 @@ async function fetchRecipes(
   params.set('number', '20');
   if (includeUnsafe) params.set('includeUnsafe', 'true');
 
-  const headers: Record<string, string> = {};
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  const res = await fetch(`/api/recipes?${params.toString()}`, { headers });
+  const res = await fetch(`/api/recipes?${params.toString()}`, { 
+    credentials: 'include' 
+  });
   if (!res.ok) throw new Error(`Failed to fetch recipes: ${res.status}`);
   const data = await res.json();
 
@@ -49,7 +45,7 @@ export function useWatiSearch() {
 
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ['recipes', debouncedQuery, user?.id, user?.intolerances, user?.severities, includeUnsafe],
-    queryFn: () => fetchRecipes(debouncedQuery, localStorage.getItem('wati_jwt'), includeUnsafe),
+    queryFn: () => fetchRecipes(debouncedQuery, includeUnsafe),
     enabled: shouldSearch,
     staleTime: 1000 * 30,
     refetchOnWindowFocus: true,

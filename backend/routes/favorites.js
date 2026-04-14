@@ -1,4 +1,5 @@
 import express from 'express';
+import { z } from 'zod';
 import { FavoriteRecipe, associateWithRecipe } from '../models/FavoriteRecipe.js';
 import { Recipe } from '../models/Recipe.js';
 import { authenticateToken } from '../middleware/auth.js';
@@ -8,6 +9,12 @@ import { ActivityLogger } from '../services/ActivityLogger.js';
 associateWithRecipe(Recipe);
 
 const router = express.Router();
+
+const favoriteSchema = z.object({
+  recipeId: z.string().uuid('ID de receta inválido'),
+  title: z.string().min(1, 'El título es requerido'),
+  image: z.string().url('URL de imagen inválida').optional().or(z.string().nullable())
+});
 
 router.get('/', authenticateToken, async (req, res) => {
   try {
@@ -28,11 +35,12 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 router.post('/', authenticateToken, async (req, res) => {
-  const { recipeId, title, image } = req.body;
-
-  if (!recipeId || !title) {
-    return res.status(400).json({ error: 'Recipe ID y Título son requeridos' });
+  const parseResult = favoriteSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    return res.status(400).json({ error: 'Datos de favorito inválidos', details: parseResult.error.errors });
   }
+  
+  const { recipeId, title, image } = parseResult.data;
 
   try {
     const existing = await FavoriteRecipe.findOne({

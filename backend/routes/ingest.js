@@ -16,6 +16,29 @@ const __dirname = path.dirname(__filename);
 
 const router = Router();
 
+import { z } from 'zod';
+import { requireAdminKey } from '../middleware/auth.js';
+
+const ingestImageSchema = z.object({
+  imageUrl: z.string().url('URL de imagen inválida'),
+  generateImage: z.boolean().optional().default(true)
+});
+
+const ingestImagesSchema = z.object({
+  imageUrl1: z.string().url('URL de imagen 1 inválida'),
+  imageUrl2: z.string().url('URL de imagen 2 inválida'),
+  generateImage: z.boolean().optional().default(true)
+});
+
+const ingestTextSchema = z.object({
+  text: z.string().min(10, 'El texto debe ser más largo'),
+  generateImage: z.boolean().optional().default(true),
+  sourceType: z.string().optional(),
+  sourceReference: z.string().optional()
+});
+
+router.use(requireAdminKey);
+
 import { config } from '../config/env.js';
 
 function getApiKey() {
@@ -56,12 +79,12 @@ function handleSequelizeError(error, sourceType, res) {
 
 router.post('/image', async (req, res, next) => {
   try {
-    const apiKey = getApiKey();
-    const { imageUrl, generateImage = true } = req.body;
-
-    if (!imageUrl) {
-      return res.status(400).json({ error: 'imageUrl is required.' });
+    const parseResult = ingestImageSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ error: 'Datos de ingesta inválidos', details: parseResult.error.errors });
     }
+    const { imageUrl, generateImage } = parseResult.data;
+    const apiKey = getApiKey();
 
     const rawText = await extractTextFromImage(imageUrl, apiKey);
 
@@ -135,12 +158,12 @@ router.post('/image', async (req, res, next) => {
 
 router.post('/images', async (req, res, next) => {
   try {
-    const apiKey = getApiKey();
-    const { imageUrl1, imageUrl2, generateImage = true } = req.body;
-
-    if (!imageUrl1 || !imageUrl2) {
-      return res.status(400).json({ error: 'Both imageUrl1 and imageUrl2 are required.' });
+    const parseResult = ingestImagesSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ error: 'Datos de ingesta inválidos', details: parseResult.error.errors });
     }
+    const { imageUrl1, imageUrl2, generateImage } = parseResult.data;
+    const apiKey = getApiKey();
 
     console.log(`[Ingest] Processing 2 images as recipe parts`);
 
@@ -216,12 +239,12 @@ router.post('/images', async (req, res, next) => {
 
 router.post('/text', async (req, res, next) => {
   try {
-    const apiKey = getApiKey();
-    const { text, generateImage = true } = req.body;
-
-    if (!text || !text.trim()) {
-      return res.status(400).json({ error: 'text is required.' });
+    const parseResult = ingestTextSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ error: 'Datos de ingesta inválidos', details: parseResult.error.errors });
     }
+    const { text, generateImage, sourceType, sourceReference } = parseResult.data;
+    const apiKey = getApiKey();
 
     const structuredRaw = await analyzeAndStructureRecipe(text, apiKey);
     const structured = sanitizeStructuredRecipe(structuredRaw);

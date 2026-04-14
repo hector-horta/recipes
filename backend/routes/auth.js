@@ -31,6 +31,16 @@ const loginSchema = z.object({
   password: z.string()
 });
 
+const profileUpdateSchema = z.object({
+  diet: z.string().optional(),
+  intolerances: z.array(z.string()).optional(),
+  excluded_ingredients: z.array(z.string()).optional(),
+  daily_calories: z.number().optional(),
+  onboarding_completed: z.boolean().optional(),
+  language: z.string().length(2).optional(),
+  severities: z.record(z.string()).optional()
+});
+
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
@@ -60,8 +70,14 @@ router.post('/register', async (req, res) => {
 
     const token = jwt.sign({ id: newUser.id, email: newUser.email }, JWT_SECRET, { expiresIn: '7d' });
 
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: config.NODE_ENV === 'production',
+      sameSite: 'Lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
     res.status(201).json({
-      token,
       user: {
         id: newUser.id,
         email: newUser.email,
@@ -96,8 +112,14 @@ router.post('/login', loginLimiter, async (req, res) => {
 
     const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
 
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: config.NODE_ENV === 'production',
+      sameSite: 'Lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
     res.json({
-      token,
       user: {
         id: user.id,
         email: user.email,
@@ -108,6 +130,12 @@ router.post('/login', loginLimiter, async (req, res) => {
     console.error('[Auth] Error de DB o servidor durante el login:', error.message);
     res.status(500).json({ error: 'Error interno del servidor.' });
   }
+});
+
+// POST /api/auth/logout
+router.post('/logout', (req, res) => {
+  res.clearCookie('token');
+  res.json({ message: 'Sesión cerrada exitosamente.' });
 });
 
 // GET /api/auth/me
@@ -139,7 +167,12 @@ router.get('/me', authenticateToken, async (req, res) => {
 // PUT /api/auth/profile
 router.put('/profile', authenticateToken, async (req, res) => {
   try {
-    const updates = req.body;
+    const parseResult = profileUpdateSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ error: 'Datos de perfil inválidos', details: parseResult.error.errors });
+    }
+    
+    const updates = parseResult.data;
 
     const profile = await Profile.findOne({ where: { user_id: req.user.id } });
     if (!profile) {

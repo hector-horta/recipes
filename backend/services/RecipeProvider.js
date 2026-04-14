@@ -8,12 +8,16 @@ const CACHE_TTL_SECONDS = 3600; // 1 hour
 
 export class RecipeProvider {
   static async getRecipes(params, userProfile) {
-    const { query, number = 10 } = params;
+    let { query, number = 10 } = params;
+    
+    // Security: Ensure query is a string and reasonable length
+    if (typeof query !== 'string') query = '';
+    query = query.trim().slice(0, 200);
 
     const whereClause = { status: 'published' };
 
-    if (query && query.trim()) {
-      const q = query.trim();
+    if (query) {
+      const q = query;
       // Handle simple Spanish plurals for the search query (rough approximation)
       const baseQ = q.toLowerCase().endsWith('es') ? q.slice(0, -2) : (q.toLowerCase().endsWith('s') ? q.slice(0, -1) : q);
       
@@ -57,7 +61,7 @@ export class RecipeProvider {
       }
     */
 
-    const requestedLimit = parseInt(number, 10) || 10;
+    const requestedLimit = Math.min(Math.max(parseInt(number, 10) || 10, 1), 50);
     
     // Identificar si necesitamos un buffer para el filtrado post-DB
     const hasFilters = userIntolerances.length > 0;

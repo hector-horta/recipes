@@ -369,9 +369,11 @@ router.get('/', validateQuery(miSchema), (req, res) => {
 });
 ```
 
-#### Autenticación
-- **`authenticateToken`**: Requiere JWT válido. Rechaza con 401/403. Setea `req.user = { id, email }`.
-- **`optionalAuthenticateToken`**: Intenta validar JWT si existe. Si no hay token o es inválido, continúa sin `req.user`. Usar para endpoints mixtos (auth opcional).
+#### Autenticación y Sesión
+- **HttpOnly Cookies**: Wati usa JWT persistidos en cookies `HttpOnly` (Lax, Secure en producción). Esto protege contra robo de sesión vía XSS.
+- **`authenticateToken`**: Valida el JWT de la cookie. Rechaza con 401/403. Setea `req.user`.
+- **`optionalAuthenticateToken`**: Intenta validar si existe cookie. Si no, continúa sin `req.user`.
+- **`requireAdminKey`**: Middleware para rutas críticas (ingesta, admin). Verifica el header `X-Admin-Key` contra `config.ADMIN_API_KEY`.
 
 #### Modelo Sequelize (Nuevo)
 ```javascript
@@ -524,12 +526,9 @@ const mutation = useMutation({
 - El token JWT se lee de `localStorage.getItem('wati_jwt')`.
 - Las URLs de API son relativas (`/api/...`) — Vite proxy las redirige al backend.
 
-#### Headers de autenticación
-```typescript
-const token = localStorage.getItem('wati_jwt');
-const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-if (token) headers['Authorization'] = `Bearer ${token}`;
-```
+#### Headers y Credenciales
+- **`credentials: 'include'`**: Todas las peticiones `fetch` deben incluir esta opción para enviar/recibir cookies `HttpOnly`.
+- **Tokens**: No es necesario leer el token de `localStorage` para las peticiones API; el navegador lo incluye automáticamente en las cookies.
 
 #### AuthContext — Interface `UserProfile`
 ```typescript
@@ -734,8 +733,9 @@ describe('MiComponente', () => {
 ## 🛡️ Checklist de Seguridad y Calidad
 
 - [ ] ¿Los campos de entrada están validados con Zod?
-- [ ] ¿Se usa `req.validatedQuery` en lugar de `req.query` directamente? (Express 5)
-- [ ] ¿La ruta del backend tiene el middleware de autenticación correcto?
+- [ ] ¿Se usa `req.validatedQuery` o `parseResult.data` validado?
+- [ ] ¿La ruta tiene el middleware de auth correcto (`authenticateToken` o `requireAdminKey`)?
+- [ ] ¿El fetch del frontend incluye `credentials: 'include'`?
 - [ ] ¿Se están exponiendo secretos en los logs o respuestas? (Nunca lo hagas)
 - [ ] ¿El componente de React es responsivo (mobile-first)?
 - [ ] ¿Se agregó el evento de tracking en Umami?

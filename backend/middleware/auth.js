@@ -5,8 +5,13 @@ const JWT_SECRET = config.JWT_SECRET;
 
 export const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
-  // Expect format: "Bearer <token>"
-  const token = authHeader && authHeader.split(' ')[1];
+  // Prefer format: "Bearer <token>"
+  let token = authHeader && authHeader.split(' ')[1];
+
+  // Fallback to cookie
+  if (!token && req.cookies) {
+    token = req.cookies.token;
+  }
 
   if (!token) {
     return res.status(401).json({ error: 'Acceso denegado. Token no proporcionado.' });
@@ -24,7 +29,12 @@ export const authenticateToken = (req, res, next) => {
 
 export const optionalAuthenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  let token = authHeader && authHeader.split(' ')[1];
+
+  // Fallback to cookie
+  if (!token && req.cookies) {
+    token = req.cookies.token;
+  }
 
   if (!token) {
     return next();
@@ -36,4 +46,20 @@ export const optionalAuthenticateToken = (req, res, next) => {
     }
     next();
   });
+};
+
+export const requireAdminKey = (req, res, next) => {
+  const key = req.headers['x-admin-key'];
+  const expected = config.ADMIN_API_KEY;
+
+  if (!expected) {
+    console.error('[Admin] ADMIN_API_KEY not configured in environment.');
+    return res.status(503).json({ error: 'Admin endpoint not configured.' });
+  }
+
+  if (!key || key !== expected) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  next();
 };

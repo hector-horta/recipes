@@ -34,11 +34,8 @@ const AuthContext = createContext<AuthContextType | null>(null);
 const TOKEN_KEY = 'wati_jwt';
 const API_URL = '';
 
-const getAuthToken = () => localStorage.getItem(TOKEN_KEY);
-
 const authHeaders = (): Record<string, string> => {
-  const token = getAuthToken();
-  return token ? { 'Authorization': `Bearer ${token}` } : {};
+  return {};
 };
 
 function mapProfileData(data: any): UserProfile {
@@ -60,13 +57,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { isLoading: isSessionLoading } = useQuery({
     queryKey: ['auth', 'session'],
     queryFn: async () => {
-      const token = getAuthToken();
-      if (!token) return null;
       const res = await fetch(`${API_URL}/api/auth/me`, {
-        headers: authHeaders()
+        credentials: 'include'
       });
       if (!res.ok) {
-        localStorage.removeItem(TOKEN_KEY);
         return null;
       }
       const data = await res.json();
@@ -88,16 +82,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password }),
+        credentials: 'include'
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al iniciar sesión');
       return data;
     },
-    onSuccess: async (data) => {
-      localStorage.setItem(TOKEN_KEY, data.token);
+    onSuccess: async () => {
       const profileRes = await fetch(`${API_URL}/api/auth/me`, {
-        headers: { 'Authorization': `Bearer ${data.token}` }
+        credentials: 'include'
       });
       if (profileRes.ok) {
         const pData = await profileRes.json();
@@ -119,16 +113,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await fetch(`${API_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, displayName, acceptedTerms, language: currentLang })
+        body: JSON.stringify({ email, password, displayName, acceptedTerms, language: currentLang }),
+        credentials: 'include'
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al registrarse');
       return data;
     },
-    onSuccess: async (data) => {
-      localStorage.setItem(TOKEN_KEY, data.token);
+    onSuccess: async () => {
       const profileRes = await fetch(`${API_URL}/api/auth/me`, {
-        headers: { 'Authorization': `Bearer ${data.token}` }
+        credentials: 'include'
       });
       if (profileRes.ok) {
         const pData = await profileRes.json();
@@ -142,8 +136,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateProfileMutation = useMutation({
     mutationFn: async (updates: Partial<UserProfile>) => {
-      const token = getAuthToken();
-      if (!token) throw new Error('No token');
       const backendUpdates: any = { ...updates };
       if (updates.onboardingComplete !== undefined) {
         backendUpdates.onboarding_completed = updates.onboardingComplete;
@@ -152,10 +144,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await fetch(`${API_URL}/api/auth/profile`, {
         method: 'PUT',
         headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify(backendUpdates)
+        body: JSON.stringify(backendUpdates),
+        credentials: 'include'
       });
       if (!res.ok) throw new Error('Error al actualizar el perfil');
       return res.json();
@@ -183,8 +175,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
-  const logout = () => {
-    localStorage.removeItem(TOKEN_KEY);
+  const logout = async () => {
+    try {
+      await fetch(`${API_URL}/api/auth/logout`, { method: 'POST', credentials: 'include' });
+    } catch (err) {
+      console.error('[Auth] Error al cerrar sesión en el servidor');
+    }
     setUser(null);
     queryClient.setQueryData(['auth', 'session'], null);
     queryClient.clear();
@@ -192,9 +188,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
-      const data = await loginMutation.mutateAsync({ email, password });
+      await loginMutation.mutateAsync({ email, password });
       const profileRes = await fetch(`${API_URL}/api/auth/me`, {
-        headers: { 'Authorization': `Bearer ${data.token}` }
+        credentials: 'include'
       });
       if (profileRes.ok) {
         const pData = await profileRes.json();
@@ -208,9 +204,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = async (email: string, password: string, displayName: string, acceptedTerms: boolean) => {
     try {
-      const data = await registerMutation.mutateAsync({ email, password, displayName, acceptedTerms });
+      await registerMutation.mutateAsync({ email, password, displayName, acceptedTerms });
       const profileRes = await fetch(`${API_URL}/api/auth/me`, {
-        headers: { 'Authorization': `Bearer ${data.token}` }
+        credentials: 'include'
       });
       if (profileRes.ok) {
         const pData = await profileRes.json();
