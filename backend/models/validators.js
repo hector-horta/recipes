@@ -27,10 +27,14 @@ export const loginSchema = z.object({
 export const profileUpdateSchema = z.object({
   diet: z.string().optional(),
   intolerances: z.array(z.string()).optional(),
-  excluded_ingredients: z.array(z.string()).optional(), // Note: Frontend might send string or array, backend model expects TEXT
+  // Support both array (from frontend form) and string (from older clients or raw API)
+  excluded_ingredients: z.union([
+    z.array(z.string()),
+    z.string()
+  ]).optional(),
   daily_calories: z.number().optional(),
   onboarding_completed: z.boolean().optional(),
-  language: z.string().length(2).optional(),
-  severities: z.record(z.string()).optional(),
+  language: z.string().min(2).max(5).optional(),
+  severities: z.record(z.string(), z.string()).optional(),
   conditions: z.array(z.string()).optional(),
 });

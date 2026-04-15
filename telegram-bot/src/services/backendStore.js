@@ -13,8 +13,8 @@ class BackendStore {
       ...options.headers,
     };
 
-    if (config.EXTERNAL_API_KEY) {
-      headers['x-api-key'] = config.EXTERNAL_API_KEY;
+    if (config.ADMIN_API_KEY) {
+      headers['x-admin-key'] = config.ADMIN_API_KEY;
     }
 
     try {

@@ -62,6 +62,7 @@ services:
       - NVIDIA_API_KEY=${NVIDIA_API_KEY}
       - GROQ_API_KEY=${GROQ_API_KEY}
       - DATABASE_URL=${DATABASE_URL}
+      - ADMIN_API_KEY=${ADMIN_API_KEY}
     depends_on:
       - postgres
       - redis
@@ -79,6 +80,7 @@ services:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - TELEGRAM_USER_ID=${TELEGRAM_USER_ID}
       - BACKEND_URL=http://backend:5001
+      - ADMIN_API_KEY=${ADMIN_API_KEY}
     depends_on:
       - backend
     restart: unless-stopped

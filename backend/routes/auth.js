@@ -163,12 +163,18 @@ router.get('/me', authenticateToken, asyncHandler(async (req, res) => {
 
 // PUT /api/auth/profile
 router.put('/profile', authenticateToken, asyncHandler(async (req, res) => {
+  if (!req.body || typeof req.body !== 'object') {
+    const error = new Error('El cuerpo de la solicitud debe ser un objeto JSON válido.');
+    error.status = 400;
+    throw error;
+  }
+
   const parseResult = profileUpdateSchema.safeParse(req.body);
   if (!parseResult.success) {
-    const error = new Error('Datos de perfil inválidos');
+    // Inject custom message into the ZodError before throwing
+    const error = parseResult.error;
     error.status = 400;
-    error.name = 'ZodError';
-    error.errors = parseResult.error.errors;
+    error.message = 'Datos de perfil inválidos';
     throw error;
   }
   

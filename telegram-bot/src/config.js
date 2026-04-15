@@ -6,9 +6,9 @@ export const config = {
   ALLOWED_USER_ID: process.env.TELEGRAM_USER_ID,
   BACKEND_URL: process.env.BACKEND_URL || 'http://backend:5001',
   NODE_ENV: process.env.NODE_ENV || 'development',
-  // API Key for Backend -> Bot communication? Or Bot -> Backend?
+  // Admin API Key for Backend -> Bot communication? Or Bot -> Backend?
   // Let's use a simple Bot API Key for now if we want to secure the ingest endpoints
-  EXTERNAL_API_KEY: process.env.EXTERNAL_API_KEY
+  ADMIN_API_KEY: process.env.ADMIN_API_KEY
 };
 
 export const validateConfig = () => {
