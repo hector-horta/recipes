@@ -25,8 +25,10 @@ Al desarrollar en este repositorio:
 3. **No es necesario explorar la estructura de carpetas** — toda la información relevante ya está documentada aquí.
 4. Si un feature no requiere persistencia, saltar el paso de Database.
 5. Todo texto visible al usuario debe soportar **i18n** (español e inglés).
-6. **Mantener esta guía actualizada**: Al finalizar un feature nuevo o la corrección de un bug, **actualizar este archivo** si el cambio afectó la estructura de carpetas, esquemas de DB, endpoints, patrones, convenciones, componentes reutilizables, tipos TypeScript, eventos de analytics, o cualquier otra sección documentada aquí. Esta guía es la fuente de verdad — si no se actualiza, el próximo agente trabajará con información obsoleta.
-7. **Scratch scripts**: Los scripts en `backend/scratch/` son efímeros, para verificar funcionalidad durante desarrollo sin desplegar todo el sitio. **Deben eliminarse antes de hacer commit.** La carpeta está en `.gitignore` y no debe entrar al repositorio.
+6. **Regla de Autenticación**: Los usuarios deben verificar su correo electrónico mediante un Magic Link con expiración de 15 minutos (JWT) antes de realizar acciones core (añadir favoritos o ver detalles de recetas).
+7. **Regla de Integraciones Externas**: Todos los servicios de terceros (Email, Analytics, etc.) DEBEN estar abstraídos detrás de una **Facade** o interfaz. La lógica de negocio principal nunca debe interactuar directamente con SDKs externos.
+8. **Mantener esta guía actualizada**: Al finalizar un feature nuevo o la corrección de un bug, **actualizar este archivo** si el cambio afectó la estructura de carpetas, esquemas de DB, endpoints, patrones, convenciones, componentes reutilizables, tipos TypeScript, eventos de analytics, o cualquier otra sección documentada aquí. Esta guía es la fuente de verdad — si no se actualiza, el próximo agente trabajará con información obsoleta.
+9. **Scratch scripts**: Los scripts en `backend/scratch/` son efímeros, para verificar funcionalidad durante desarrollo sin desplegar todo el sitio. **Deben eliminarse antes de hacer commit.** La carpeta está en `.gitignore` y no debe entrar al repositorio.
 
 ---
 

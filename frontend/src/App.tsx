@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { CheckCircle, X } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import { RecipePage } from './pages/RecipePage';
 import { RecipeDetailPage } from './pages/RecipeDetailPage';
@@ -35,6 +36,21 @@ function App() {
   }, []);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [activeModal, setActiveModal] = useState<ModalState>('none');
+  const [notification, setNotification] = useState<string | null>(null);
+
+  // Handle verification status from URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('status') === 'verified') {
+      setNotification(t('auth.verificationSuccess'));
+      // Clean up URL
+      const newUrl = window.location.origin + window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+      
+      // Auto-hide notification
+      setTimeout(() => setNotification(null), 6000);
+    }
+  }, [t]);
 
   // Handle browser back/forward buttons
   useEffect(() => {
@@ -115,6 +131,24 @@ function App() {
         <OnboardingModal
           onClose={handleOnboardingClose}
         />
+      )}
+
+      {/* Verification Notification */}
+      {notification && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="bg-brand-forest text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border border-brand-mint/20 backdrop-blur-xl">
+            <div className="w-10 h-10 bg-brand-mint/20 rounded-xl flex items-center justify-center text-brand-mint">
+              <CheckCircle size={24} />
+            </div>
+            <p className="font-bold text-sm tracking-tight">{notification}</p>
+            <button 
+              onClick={() => setNotification(null)}
+              className="ml-2 p-1 hover:bg-white/10 rounded-lg transition-colors"
+            >
+              <X size={18} className="opacity-40" />
+            </button>
+          </div>
+        </div>
       )}
     </>
   );

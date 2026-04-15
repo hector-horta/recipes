@@ -72,10 +72,18 @@
     "nameRequired": "Ingresa tu nombre.",
     "termsRequired": "Debes aceptar la Política de Privacidad y Términos (GDPR) para continuar.",
     "unexpectedError": "Error inesperado.",
-    "dataStored": "Datos almacenados localmente. Cifrado AES-256."
+    "dataStored": "Datos almacenados localmente. Cifrado AES-256.",
+    "verificationRequiredTitle": "Verificación Requerida",
+    "verificationRequiredDesc": "Para acceder a los detalles de la receta y guardarla en tus favoritos, necesitamos verificar tu correo electrónico. Si no recibiste el correo, revisa tu carpeta de spam o solicita uno nuevo.",
+    "openEmail": "Abrir mi Correo",
+    "resendLink": "Reenviar Enlace",
+    "linkSent": "¡Enlace Enviado!",
+    "verificationSuccess": "¡Correo verificado! Ya tienes acceso completo.",
+    "secureCooking": "Cocina Segura"
   },
   "onboarding": {
     "whatToAvoid": "¿Qué alimentos debes evitar?",
+    "securityRules": "Reglas de Seguridad",
     "sensitivityLevel": "Nivel de severidad",
     "selectIntolerances": "Selecciona tus intolerancias o alergias alimentarias. Puedes cambiarlas más tarde.",
     "adjustSensitivity": "Ajusta la severidad de cada intolerancia para personalizar tus alertas.",

@@ -74,7 +74,7 @@ export class RecipeProvider {
       limit: hasFilters ? requestedLimit * 5 : requestedLimit
     });
 
-    let results = recipes.map(r => this.normalizeRecipe(r.toJSON(), userProfile));
+    let results = recipes.map(r => this.normalizeRecipe(r.toJSON(), userProfile, false));
 
     // Collect unsafe metadata before filtering
     let filteredUnsafeCount = 0;
@@ -122,7 +122,7 @@ export class RecipeProvider {
     return response;
   }
 
-  static normalizeRecipe(recipe, userProfile) {
+  static normalizeRecipe(recipe, userProfile, includeDetails = true) {
     const profile = userProfile || {};
     const userIntolerances = profile.intolerances || [];
     const userSeverities = profile.severities || {};
@@ -244,24 +244,29 @@ export class RecipeProvider {
       return true;
     });
 
-    return {
+    const result = {
       id: recipe.id,
       title: recipe.title_es,
       titleEn: recipe.title_en,
       imageUrl,
       prepTimeMinutes: recipe.prep_time_minutes || 0,
       estimatedCost: 2,
-      ingredients,
-      instructions,
-      instructionsEn: (recipe.steps || [])
-        .sort((a, b) => (a.order || 0) - (b.order || 0))
-        .map(s => s.instruction?.en || ''),
-      summary: '',
       safetyLevel,
       siboAllergiesTags,
       siboAlerts: recipe.sibo_alerts || [],
       _matchedAllergens: [...matchedAllergenIds]
     };
+
+    if (includeDetails) {
+      result.ingredients = ingredients;
+      result.instructions = instructions;
+      result.instructionsEn = (recipe.steps || [])
+        .sort((a, b) => (a.order || 0) - (b.order || 0))
+        .map(s => s.instruction?.en || '');
+      result.summary = '';
+    }
+
+    return result;
   }
 
   static async clearCache() {

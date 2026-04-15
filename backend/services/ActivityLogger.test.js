@@ -55,8 +55,11 @@ describe('ActivityLogger', () => {
       });
     });
 
-    it('should create SearchLog when failedSearch is true', () => {
+    it('should create SearchLog when failedSearch is true', async () => {
       ActivityLogger.log('SEARCH', { query: 'notfound' }, { failedSearch: true, userId: 'u1' });
+
+      // Dar tiempo a que las promesas "fire and forget" se procesen
+      await new Promise(resolve => setTimeout(resolve, 0));
 
       expect(SearchLog.create).toHaveBeenCalledWith({
         term: 'notfound',
@@ -66,18 +69,39 @@ describe('ActivityLogger', () => {
         ip: null
       });
     });
+
+    it('should create SearchLog when action is SUGGEST_TO_CHEF', async () => {
+      ActivityLogger.log('SUGGEST_TO_CHEF', { term: 'pizza' }, { userId: 'u1', ip: '1.2.3.4' });
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(SearchLog.create).toHaveBeenCalledWith({
+        term: 'pizza',
+        status: 'suggested',
+        conversion: true,
+        user_id: 'u1',
+        ip: '1.2.3.4'
+      });
+    });
+
+    it('should track REMOVE_FAVORITE correctly', () => {
+      ActivityLogger.log('REMOVE_FAVORITE', { recipeId: 'r1', title: 'Torta' }, { userId: 'u1' });
+
+      expect(ActivityLog.create).toHaveBeenCalledWith({
+        action: 'REMOVE_FAVORITE',
+        metadata: { recipeId: 'r1', title: 'Torta' },
+        failed_search: false,
+        user_id: 'u1',
+        ip: null
+      });
+    });
   });
 
   describe('sendTelegramAlert', () => {
-    it('should skip when credentials not configured', async () => {
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      
-      await ActivityLogger.sendTelegramAlert('Test message');
-
-      expect(consoleSpy).toHaveBeenCalledWith(
-        '[ActivityLogger] Telegram credentials not configured, skipping alert.'
-      );
-      consoleSpy.mockRestore();
+    it('should skip gracefully when credentials not configured', async () => {
+      // En la nueva arquitectura, el adaptador simplemente retorna si no hay credenciales
+      const result = await ActivityLogger.sendTelegramAlert('Test message');
+      expect(result).toBeUndefined();
     });
 
     it('should be callable without crashing', async () => {

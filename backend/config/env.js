@@ -14,6 +14,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   FRONTEND_URL: z.string().default('http://localhost:5173'),
   JWT_SECRET: z.string().min(1, 'JWT_SECRET is required'),
+  MAGIC_LINK_SECRET: z.string().min(1, 'MAGIC_LINK_SECRET is required'),
   DATABASE_URL: z.string().optional(),
   REDIS_URL: z.string().optional(),
 
@@ -40,7 +41,11 @@ const envSchema = z.object({
   POSTGRES_PASSWORD: z.string().optional(),
   POSTGRES_USER: z.string().default('wati_user'),
   POSTGRES_HOST: z.string().optional(),
-  POSTGRES_DB: z.string().default('wati_db')
+  POSTGRES_DB: z.string().default('wati_db'),
+
+  // Analytics
+  UMAMI_URL: z.string().default('http://analytics.localhost'),
+  UMAMI_WEBSITE_ID: z.string().optional()
 });
 
 const _env = envSchema.safeParse(process.env);

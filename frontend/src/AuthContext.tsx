@@ -11,6 +11,7 @@ export interface UserProfile {
   daily_calories?: number;
   onboarding_completed: boolean;
   language: string;
+  is_verified: boolean;
   severities?: Record<string, string>;
   conditions?: string[];
   createdAt?: string;
@@ -24,6 +25,7 @@ interface AuthContextType {
   register: (data: any) => Promise<UserProfile>;
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
+  resendVerification: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -97,8 +99,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const resendVerification = async () => {
+    try {
+      await api.post('/auth/resend-verification');
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'Error al reenviar verificación';
+      setError(msg);
+      throw err;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, error, login, register, logout, updateProfile }}>
+    <AuthContext.Provider value={{ user, loading, error, login, register, logout, updateProfile, resendVerification }}>
       {children}
     </AuthContext.Provider>
   );

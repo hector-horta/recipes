@@ -1,4 +1,5 @@
-import { ArrowLeft, Clock, ChefHat, ListChecks, Heart } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Clock, ChefHat, ListChecks, Heart, Loader2 } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { Recipe } from '../types/recipe';
 import { useFavorites } from '../hooks/useFavorites';
@@ -6,33 +7,99 @@ import { useTranslation } from 'react-i18next';
 import { useCachedImage } from '../hooks/useCachedImage';
 import { AuthGuard } from '../components/auth/AuthGuard';
 import { useAuth } from '../AuthContext';
+import { api, ApiError } from '../lib/api';
+import { VerificationRequired } from '../components/auth/VerificationRequired';
 
 interface RecipeDetailPageProps {
   recipe: Recipe;
   onBack: () => void;
 }
 
-export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
+export function RecipeDetailPage({ recipe: initialRecipe, onBack }: RecipeDetailPageProps) {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
+  const [recipe, setRecipe] = useState<Recipe>(initialRecipe);
+  const [isLoading, setIsLoading] = useState(!initialRecipe.ingredients || initialRecipe.ingredients.length === 0);
+  const [verificationError, setVerificationError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const lang = i18n.language.startsWith('en') ? 'en' : 'es';
+  const { toggleFavorite, isFavorited } = useFavorites();
+  const favorited = isFavorited(recipe.id);
+  const { imageSrc, loading: imageLoading } = useCachedImage(recipe.imageUrl);
+
+  useEffect(() => {
+    async function fetchDetails() {
+      // Si ya tenemos los detalles (ingredientes e instrucciones), no hace falta pedir de nuevo
+      if (recipe.ingredients && recipe.ingredients.length > 0 && recipe.instructions && recipe.instructions.length > 0) {
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setVerificationError(false);
+      setError(null);
+
+      try {
+        const fullRecipe = await api.get<Recipe>(`/recipes/${recipe.id}`);
+        setRecipe(fullRecipe);
+      } catch (err: any) {
+        if (err instanceof ApiError && err.code === 'VALIDATION_REQUIRED') {
+          setVerificationError(true);
+        } else {
+          setError(err.message || t('common.errorLoadingRecipe'));
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchDetails();
+  }, [recipe.id, t]);
+
   const displayTitle = lang === 'en' && recipe.titleEn ? recipe.titleEn : recipe.title;
   const hasAnyIntolerance = (user?.intolerances?.length || 0) > 0;
   const displayInstructions = lang === 'en' && recipe.instructionsEn?.length ? recipe.instructionsEn : recipe.instructions;
-  const { toggleFavorite, isFavorited } = useFavorites();
-  const favorited = isFavorited(recipe.id);
-  const { imageSrc, loading } = useCachedImage(recipe.imageUrl);
 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     toggleFavorite({ id: recipe.id, title: displayTitle, imageUrl: recipe.imageUrl });
   };
 
+  if (verificationError) {
+    return (
+      <div className="min-h-screen bg-brand-cream">
+        <div className="p-6">
+          <button onClick={onBack} className="p-2 rounded-xl bg-white shadow-sm border border-brand-sage/10 text-brand-forest"><ArrowLeft /></button>
+        </div>
+        <VerificationRequired onBack={onBack} />
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-brand-cream flex flex-col items-center justify-center gap-4">
+        <Loader2 className="w-12 h-12 text-brand-mint animate-spin" />
+        <p className="text-brand-forest/40 text-xs font-black uppercase tracking-widest">{t('common.loading')}</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-brand-cream flex flex-col items-center justify-center p-6 text-center">
+        <div className="p-4 bg-red-50 text-red-600 rounded-2xl mb-4 border border-red-100">{error}</div>
+        <button onClick={onBack} className="font-bold text-brand-forest hover:underline flex items-center gap-2"><ArrowLeft size={16} /> {t('common.back')}</button>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-brand-cream font-sans">
       {/* Hero Section with Image */}
       <div className="relative h-[40vh] sm:h-[50vh] w-full bg-brand-forest/10">
-        {loading ? (
+        {imageLoading ? (
           <div className="w-full h-full animate-pulse bg-brand-sage/10" />
         ) : imageSrc ? (
           <img 
@@ -163,7 +230,7 @@ export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
                   <h2 className="text-2xl font-black text-brand-forest">{t('recipe.preparation')}</h2>
                 </div>
                 <div className="space-y-10">
-                  {displayInstructions.length > 0 ? (
+                  {displayInstructions && displayInstructions.length > 0 ? (
                     displayInstructions.map((step, idx) => (
                       <div key={idx} className="relative pl-12">
                         <div className="absolute left-0 top-0 w-8 h-8 rounded-xl bg-brand-forest text-brand-cream flex items-center justify-center text-sm font-black shadow-md">

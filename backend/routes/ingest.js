@@ -395,9 +395,13 @@ router.post('/voice', asyncHandler(async (req, res) => {
 
   if (await checkConflict(slug, recipeData, res)) return;
 
-  const recipe = await Recipe.create(recipeData);
-
   await RecipeProvider.clearCache();
+
+  // Telemetría de ingesta (Voice)
+  ActivityLogger.log('INGEST_SUCCESS', {
+    source_type: 'audio',
+    title_es: recipeData.title_es
+  });
 
   res.status(200).json({
     status: 'processed',
@@ -496,6 +500,13 @@ router.post('/save', asyncHandler(async (req, res) => {
 
   const recipe = await Recipe.create(finalData);
   await RecipeProvider.clearCache();
+
+  // Telemetría de ingesta (Save/Manual)
+  ActivityLogger.log('INGEST_SUCCESS', {
+    source_type: finalData.source_type || 'manual',
+    title_es: finalData.title_es
+  });
+
   return res.status(201).json({ status: 'created', recipe });
 }));
 

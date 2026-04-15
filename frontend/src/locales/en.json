@@ -72,7 +72,14 @@
     "nameRequired": "Enter your name.",
     "termsRequired": "You must accept the Privacy Policy and Terms (GDPR) to continue.",
     "unexpectedError": "Unexpected error.",
-    "dataStored": "Data stored locally. AES-256 encryption."
+    "dataStored": "Data stored locally. AES-256 encryption.",
+    "verificationRequiredTitle": "Verification Required",
+    "verificationRequiredDesc": "To access recipe details and save them to your favorites, we need to verify your email. If you didn't receive the email, please check your spam folder or request a new link.",
+    "openEmail": "Open my Email",
+    "resendLink": "Resend Link",
+    "linkSent": "Link Sent!",
+    "verificationSuccess": "Email verified! You now have full access.",
+    "secureCooking": "Secure Cooking"
   },
   "onboarding": {
     "whatToAvoid": "What foods should you avoid?",

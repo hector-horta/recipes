@@ -19,7 +19,17 @@ export const ActivityLog = sequelize.define('ActivityLog', {
       'VIEW_RECIPE',
       'ADD_FAVORITE',
       'INGEST_SUCCESS',
-      'INGEST_FAIL'
+      'INGEST_FAIL',
+      'SUGGEST_TO_CHEF',
+      'USER_REGISTERED',
+      'LOGIN_SUCCESS',
+      'LOGIN_UNVERIFIED',
+      'EMAIL_VERIFIED',
+      'EMAIL_RESENT',
+      'REMOVE_FAVORITE',
+      'SYSTEM',
+      'SYSTEM_ERROR',
+      'ERROR'
     ),
     allowNull: false
   },

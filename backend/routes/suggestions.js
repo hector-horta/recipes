@@ -15,56 +15,6 @@ const suggestionLimiter = rateLimit({
 });
 
 import { config } from '../config/env.js';
-
-const TELEGRAM_USER_ID = config.TELEGRAM_USER_ID;
-const TELEGRAM_BOT_TOKEN = config.TELEGRAM_BOT_TOKEN;
-
-async function sendTelegramSuggestion(term, userId) {
-  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_USER_ID) {
-    ActivityLogger.warn('[Suggestions] Telegram not configured, skipping notification.');
-    return;
-  }
-
-  let userInfo = 'anonymous';
-  if (userId) {
-    try {
-      const user = await User.findByPk(userId, { attributes: ['display_name', 'email'] });
-      if (user) {
-        userInfo = `${user.display_name} (${user.email})`;
-      }
-    } catch (err) {
-      ActivityLogger.error('[Suggestions] Failed to fetch user info', err);
-    }
-  }
-
-  const message =
-    `👨‍🍳 *Chef Suggestion*\n\n` +
-    `A user searched for *"${term}"* and wants the recipe.\n\n` +
-    `👤 ${userInfo}`;
-
-  try {
-    const res = await fetch(
-      `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: TELEGRAM_USER_ID,
-          text: message,
-          parse_mode: 'Markdown'
-        })
-      }
-    );
-
-    if (!res.ok) {
-      const err = await res.text().catch(() => '');
-      ActivityLogger.error(`[Suggestions] Telegram API error (${res.status})`, err);
-    }
-  } catch (err) {
-    ActivityLogger.error('[Suggestions] Telegram fetch failed', err);
-  }
-}
-
 import { z } from 'zod';
 
 const suggestionSchema = z.object({
@@ -76,32 +26,23 @@ router.post('/', suggestionLimiter, asyncHandler(async (req, res) => {
   const { term: cleanTerm, userId } = suggestionSchema.parse(req.body);
   const validUserId = userId || null;
 
-  const searchLog = await SearchLog.create({
-    term: cleanTerm,
-    status: 'suggested',
-    conversion: true,
-    user_id: validUserId,
-    ip: req.ip
-  });
+  let userInfo = 'guest';
+  if (validUserId) {
+    const user = await User.findByPk(validUserId, { attributes: ['display_name', 'email'] });
+    if (user) {
+      userInfo = `${user.display_name} (${user.email})`;
+    }
+  }
 
-  ActivityLogger.log('SUGGEST_TO_CHEF', { term: cleanTerm }, {
-    userId: validUserId,
-    ip: req.ip
-  });
-
-  // Background task, don't await to avoid blocking response
-  sendTelegramSuggestion(cleanTerm, validUserId).catch(err => {
-    ActivityLogger.error('[Suggestions] Telegram background task failed', err);
-  });
+  // Fachada unificada: se encarga de Database (SearchLog + ActivityLog), Telegram y Umami
+  ActivityLogger.log('SUGGEST_TO_CHEF', 
+    { term: cleanTerm, userInfo }, 
+    { userId: validUserId, ip: req.ip }
+  );
 
   res.status(201).json({
     message: 'Suggestion recorded',
-    searchLog: {
-      id: searchLog.id,
-      term: searchLog.term,
-      status: searchLog.status,
-      conversion: searchLog.conversion
-    }
+    term: cleanTerm
   });
 }));
 

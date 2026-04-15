@@ -1,6 +1,8 @@
 import jwt from 'jsonwebtoken';
 import { config } from '../config/env.js';
 import crypto from 'crypto';
+import { User } from '../models/User.js';
+import { ActivityLogger } from '../services/ActivityLogger.js';
 
 const JWT_SECRET = config.JWT_SECRET;
 const JWT_ALGO = 'HS256';
@@ -29,6 +31,31 @@ export const authenticateToken = (req, res, next) => {
   });
 };
 
+/**
+ * ensureVerified — Restricts access to verified users only.
+ * Performs a DB check to ensure real-time status.
+ */
+export const ensureVerified = async (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Acceso denegado. Se requiere autenticación.' });
+  }
+
+  try {
+    const user = await User.findByPk(req.user.id, { attributes: ['is_verified'] });
+    if (!user || !user.is_verified) {
+      return res.status(403).json({ 
+        error: 'VALIDATION_REQUIRED',
+        message: 'Tu correo electrónico aún no ha sido verificado.',
+        details: 'Revisa tu bandeja de entrada o solicita un nuevo enlace de acceso.'
+      });
+    }
+    next();
+  } catch (err) {
+    ActivityLogger.error('Error in ensureVerified middleware', err, { userId: req.user.id });
+    res.status(500).json({ error: 'Error interno del servidor.' });
+  }
+};
+
 export const optionalAuthenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   let token = authHeader && authHeader.split(' ')[1];
@@ -50,7 +77,8 @@ export const optionalAuthenticateToken = (req, res, next) => {
   });
 };
 
-import { ActivityLogger } from '../services/ActivityLogger.js';
+  });
+};
 
 export const requireAdminKey = (req, res, next) => {
   const key = req.headers['x-admin-key'];
