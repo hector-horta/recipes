@@ -6,6 +6,8 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { AuthGuard } from '../auth/AuthGuard';
 
+
+
 interface PageHeaderProps {
   searchQuery: string;
   setSearchQuery: (val: string) => void;
@@ -67,12 +69,16 @@ export function PageHeader({
               onChange={(e) => setSearchQuery(e.target.value)}
               leftIcon={isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
             />
+            
+
+
             {isSearching && (
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-brand-teal/70 font-medium">
+              <span className="absolute right-3 top-5 -translate-y-1/2 text-xs text-brand-teal/70 font-medium">
                 {t('common.searching')}
               </span>
             )}
           </div>
+
 
           {isQuotaExhausted && (
             <div className="mt-4 flex items-center gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-600 text-[10px] font-bold uppercase tracking-wider animate-in fade-in slide-in-from-top-2">

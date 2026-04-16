@@ -3,6 +3,7 @@ import { Recipe } from '../models/Recipe.js';
 import { redisClient } from '../config/redis.js';
 import { MEDICAL_TRIGGERS } from '../config/medical.js';
 import { ActivityLogger } from './ActivityLogger.js';
+import { TagService } from './TagService.js';
 import crypto from 'crypto';
 
 const CACHE_TTL_SECONDS = 3600; // 1 hour
@@ -11,6 +12,14 @@ export class RecipeProvider {
   static async getRecipes(params, userProfile) {
     let { query, number = 10 } = params;
     
+    // Fetch tags for translation
+    const allTags = await TagService.getAllTags();
+    const tagMap = Object.fromEntries(
+      allTags.map(t => [TagService.normalizeKey(t.key), t])
+    );
+    // console.log('DEBUG tagMap keys:', Object.keys(tagMap));
+    // console.log('DEBUG postre entry:', tagMap['postre']);
+
     // Security: Ensure query is a string and reasonable length
     if (typeof query !== 'string') query = '';
     query = query.trim().slice(0, 200);
@@ -43,10 +52,11 @@ export class RecipeProvider {
       q: query || '',
       n: number,
       intolerances: userIntolerances.sort(),
-      severities: userProfile?.severities || {}
+      severities: userProfile?.severities || {},
+      uid: userProfile?.id || 'anonymous'
     };
     const cacheHash = crypto.createHash('md5').update(JSON.stringify(cachePayload)).digest('hex');
-    const cacheKey = `recipes:${cacheHash}`;
+    const cacheKey = `recipes:v2:${cacheHash}`;
 
     try {
       if (redisClient.isReady) {
@@ -74,7 +84,18 @@ export class RecipeProvider {
       limit: hasFilters ? requestedLimit * 5 : requestedLimit
     });
 
-    let results = recipes.map(r => this.normalizeRecipe(r.toJSON(), userProfile));
+    // Fetch user favorites if authenticated
+    const favoriteIds = new Set();
+    if (userProfile && userProfile.id) {
+      const { FavoriteRecipe } = await import('../models/FavoriteRecipe.js');
+      const favorites = await FavoriteRecipe.findAll({
+        where: { user_id: userProfile.id },
+        attributes: ['recipe_id']
+      });
+      favorites.forEach(f => favoriteIds.add(f.recipe_id));
+    }
+
+    let results = recipes.map(r => this.normalizeRecipe(r.toJSON(), userProfile, tagMap, favoriteIds.has(r.id)));
 
     // Collect unsafe metadata before filtering
     let filteredUnsafeCount = 0;
@@ -122,7 +143,7 @@ export class RecipeProvider {
     return response;
   }
 
-  static normalizeRecipe(recipe, userProfile) {
+  static normalizeRecipe(recipe, userProfile, tagMap = {}, isFavorite = false) {
     const profile = userProfile || {};
     const userIntolerances = profile.intolerances || [];
     const userSeverities = profile.severities || {};
@@ -233,16 +254,76 @@ export class RecipeProvider {
 
     const imageUrl = recipe.image_url || '';
 
-    const allTags = (recipe.tags || [])
-      .map(t => typeof t === 'object' && t.es ? t : { es: t, en: t })
-      .filter(t => t.es && t.es.trim() !== '');
+    const CANONICAL_CATEGORIES = [
+      { key: 'bebestible', es: 'Bebestible', en: 'Drink', keywords: ['jugo', 'batido', 'te', 'cafe', 'bebida', 'chocolate caliente', 'infusion', 'smoothie', 'juice', 'drink', 'tea', 'coffee'] },
+      { key: 'postre', es: 'Postre', en: 'Dessert', keywords: ['postre', 'dulce', 'torta', 'galleta', 'helado', 'pudin', 'mousse', 'dessert', 'sweet', 'cake', 'cookie', 'ice cream'] },
+      { key: 'entrada', es: 'Entrada', en: 'Starter Dish', keywords: ['entrada', 'sopa', 'ensalada', 'aperitivo', 'starter', 'soup', 'salad', 'appetizer'] },
+      { key: 'plato_principal', es: 'Plato Principal', en: 'Main Course', keywords: ['plato principal', 'fondo', 'almuerzo', 'cena', 'guiso', 'estofado', 'main course', 'dinner', 'lunch', 'stew'] },
+      { key: 'snack', es: 'Snack', en: 'Snack', keywords: ['snack', 'picoteo', 'tentempie', 'frutos secos', 'chips', 'snack'] },
+      { key: 'aderezo_salsa', es: 'Aderezo/Salsa', en: 'Dressing/Salsa', keywords: ['salsa', 'aderezo', 'dip', 'aliño', 'vinagreta', 'dressing', 'vinaigrette', 'sauce', 'mayonnaise', 'mayonesa', 'pesto', 'hummus'] }
+    ];
 
-    const siboAllergiesTags = allTags.filter(t => {
-      const tagText = t.es.toLowerCase();
-      const isSiboRelated = tagText.includes('sibo') || tagText.includes('fructanos') || tagText.includes('fodmap');
-      if (isSiboRelated) return hasSibo;
-      return true;
+    const DIETARY_HIGHLIGHTS = [
+      { key: 'vegano', es: 'Vegano', en: 'Vegan' },
+      { key: 'sin_gluten', es: 'Sin Gluten', en: 'Gluten-free' },
+      { key: 'low_fodmap', es: 'Bajo en FODMAP', en: 'Low FODMAP' }
+    ];
+
+    const rawTags = recipe.tags || [];
+    const processedTags = rawTags.map(t => {
+      const isString = typeof t === 'string';
+      const tagObj = isString ? { es: t, en: t } : t;
+      const key = TagService.normalizeKey(tagObj.key || tagObj.es || '');
+      
+      if (tagMap[key]) {
+        return { es: tagMap[key].es, en: tagMap[key].en, key };
+      }
+      
+      return { 
+        es: tagObj.es || '', 
+        en: tagObj.en || tagObj.es || '',
+        key
+      };
     });
+
+    // 1. Filter allowed tags (Categories + Dietary)
+    const allowedKeys = [...CANONICAL_CATEGORIES, ...DIETARY_HIGHLIGHTS].map(c => c.key);
+    let finalTags = processedTags.filter(t => allowedKeys.includes(t.key));
+
+    // Special mapping: SIBO/Fodmap related tags -> Low FODMAP
+    const legacyFodmapKeys = ['sibo', 'fodmap', 'sibo_safe', 'bajo_en_fodmap'];
+    if (processedTags.some(t => legacyFodmapKeys.includes(t.key))) {
+      const lowFodmapTag = DIETARY_HIGHLIGHTS.find(d => d.key === 'low_fodmap');
+      if (!finalTags.some(t => t.key === 'low_fodmap')) {
+        finalTags.push({ es: lowFodmapTag.es, en: lowFodmapTag.en, key: lowFodmapTag.key });
+      }
+    }
+
+    // 2. Auto-Categorization (Heuristic)
+    if (!finalTags.some(t => CANONICAL_CATEGORIES.map(c => c.key).includes(t.key))) {
+      const searchText = ` ${recipe.title_es} ${recipe.title_en} ${ingredients.map(i => i.name).join(' ')} `.toLowerCase();
+      
+      const detectedCategories = CANONICAL_CATEGORIES.filter(cat => 
+        cat.keywords.some(k => {
+          // Use word-like matching to avoid "test" matching "te"
+          const regex = new RegExp(`\\b${k}\\b`, 'i');
+          return regex.test(searchText);
+        })
+      );
+
+      detectedCategories.forEach(cat => {
+        if (!finalTags.some(t => t.key === cat.key)) {
+          finalTags.push({ es: cat.es, en: cat.en, key: cat.key });
+        }
+      });
+    }
+
+    // Filter by SIBO context (only show Low FODMAP related if user has SIBO or if it's explicitly tagged)
+    // Actually, user wants to keep these 3 regardless or filtered?
+    // "Keep the 'vegan', 'gluten free' and 'SIBO-Safe' [Low FODMAP]"
+    // I will show all finalTags found.
+
+    const siboAllergiesTags = finalTags.map(({ key, ...rest }) => rest);
 
     return {
       id: recipe.id,
@@ -250,6 +331,8 @@ export class RecipeProvider {
       titleEn: recipe.title_en,
       imageUrl,
       prepTimeMinutes: recipe.prep_time_minutes || 0,
+      cookTimeMinutes: recipe.cook_time_minutes || 0,
+      totalTimeMinutes: (recipe.prep_time_minutes || 0) + (recipe.cook_time_minutes || 0),
       estimatedCost: 2,
       ingredients,
       instructions,
@@ -258,6 +341,7 @@ export class RecipeProvider {
         .map(s => s.instruction?.en || ''),
       summary: '',
       safetyLevel,
+      isFavorite,
       siboAllergiesTags,
       siboAlerts: recipe.sibo_alerts || [],
       _matchedAllergens: [...matchedAllergenIds]

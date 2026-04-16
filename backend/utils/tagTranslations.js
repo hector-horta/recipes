@@ -1,58 +1,59 @@
-export const TAG_TRANSLATIONS = {
-  avena: { es: 'Avena', en: 'Oat' },
-  bebida: { es: 'Bebida', en: 'Drink' },
-  crema: { es: 'Crema', en: 'Cream' },
-  desayuno: { es: 'Desayuno', en: 'Breakfast' },
-  empanadas: { es: 'Empanadas', en: 'Empanadas' },
-  espinacas: { es: 'Espinacas', en: 'Spinach' },
-  frío: { es: 'Frío', en: 'Cold' },
-  frio: { es: 'Frío', en: 'Cold' },
-  integral: { es: 'Integral', en: 'Whole Grain' },
-  mayonesa: { es: 'Mayonesa', en: 'Mayonnaise' },
-  orégano: { es: 'Orégano', en: 'Oregano' },
-  oregano: { es: 'Orégano', en: 'Oregano' },
-  pan: { es: 'Pan', en: 'Bread' },
-  papa: { es: 'Papa', en: 'Potato' },
-  pita: { es: 'Pita', en: 'Pita' },
-  saludable: { es: 'Saludable', en: 'Healthy' },
-  vegetal: { es: 'Vegetal', en: 'Vegetable' },
-  vegetales: { es: 'Vegetales', en: 'Vegetables' },
-  vegetariano: { es: 'Vegetariano', en: 'Vegetarian' },
-  zanahoria: { es: 'Zanahoria', en: 'Carrot' },
-  dairy: { es: 'Lácteos', en: 'Dairy' },
-  egg: { es: 'Huevo', en: 'Egg' },
-  gluten: { es: 'Gluten', en: 'Gluten' },
-  grain: { es: 'Grano', en: 'Grain' },
-  peanut: { es: 'Maní', en: 'Peanut' },
-  seafood: { es: 'Pescado', en: 'Fish' },
-  sesame: { es: 'Sésamo', en: 'Sesame' },
-  shellfish: { es: 'Mariscos', en: 'Shellfish' },
-  soy: { es: 'Soja', en: 'Soy' },
-  sulfite: { es: 'Sulfitos', en: 'Sulfites' },
-  tree_nut: { es: 'Frutos Secos', en: 'Tree Nuts' },
-  wheat: { es: 'Trigo', en: 'Wheat' },
-  corn: { es: 'Maíz', en: 'Corn' },
-  sibo: { es: 'SIBO', en: 'SIBO' },
-};
+import { TagService } from '../services/TagService.js';
 
-export function normalizeTag(tag) {
-  if (tag && typeof tag === 'object' && tag.es && tag.en) {
+/**
+ * Normalizes a single tag using the database-driven translations.
+ * @param {string|object} tag 
+ * @param {Object} translationMap Map of key -> {es, en}
+ */
+export function normalizeTag(tag, translationMap = {}) {
+  let tagText = '';
+  let existingEn = null;
+
+  if (tag && typeof tag === 'object') {
+    tagText = tag.es || tag.en || '';
+    existingEn = tag.en;
+  } else if (typeof tag === 'string') {
+    tagText = tag;
+  } else {
+    tagText = String(tag);
+  }
+
+  const key = tagText.toLowerCase().trim().replace(/\s+/g, '_');
+  const translation = translationMap[key];
+
+  if (translation) return { es: translation.es, en: translation.en };
+
+  // If no translation found but we already have an object with both es and en, keep it
+  if (tag && typeof tag === 'object' && tag.es && tag.en && tag.es !== tag.en) {
     return tag;
   }
-  if (typeof tag !== 'string') return { es: String(tag), en: String(tag) };
-  
-  const key = tag.toLowerCase().replace(/\s+/g, '_');
-  return TAG_TRANSLATIONS[key] || { es: tag, en: tag };
+
+  // Fallback
+  return { es: tagText, en: existingEn || tagText };
 }
 
-export function normalizeTags(tags) {
+/**
+ * Normalizes an array of tags fetching translations from TagService.
+ * @param {Array} tags 
+ */
+export async function normalizeTags(tags) {
   if (!Array.isArray(tags)) return [];
+  
+  // Fetch all tags from DB/Cache once
+  const allTags = await TagService.getAllTags();
+  const translationMap = allTags.reduce((acc, t) => {
+    acc[t.key] = t;
+    return acc;
+  }, {});
+
   const seen = new Set();
   const result = [];
   for (const tag of tags) {
     if (!tag || (typeof tag === 'string' && tag.trim() === '')) continue;
-    const normalized = normalizeTag(tag);
+    
+    const normalized = normalizeTag(tag, translationMap);
     if (!normalized.es || normalized.es.trim() === '') continue;
+    
     const id = normalized.es.toLowerCase();
     if (!seen.has(id)) {
       seen.add(id);

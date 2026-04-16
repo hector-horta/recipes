@@ -11,9 +11,10 @@ interface RecipeCardProps {
   onCookNow: (recipe: Recipe) => void;
   isFavorited?: boolean;
   onToggleFavorite?: (e: React.MouseEvent) => void;
+  onTagClick?: (tag: string) => void;
 }
 
-export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite }: RecipeCardProps) {
+export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite, onTagClick }: RecipeCardProps) {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const lang = i18n.language.startsWith('en') ? 'en' : 'es';
@@ -83,7 +84,7 @@ export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite }:
         <div className="absolute bottom-4 left-4">
           <span className="px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-md bg-white/90 text-slate-700 shadow-sm border border-slate-200/50 tracking-wide flex items-center gap-1.5">
             <Clock className="w-3.5 h-3.5" />
-            {recipe.prepTimeMinutes} {t('common.min')}
+            {recipe.totalTimeMinutes ?? recipe.prepTimeMinutes} {t('common.min')}
           </span>
         </div>
       </div>
@@ -105,8 +106,17 @@ export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite }:
             })
             .map((tag, idx) => {
               const displayTag = typeof tag === 'object' ? (lang === 'en' ? tag.en || tag.es : tag.es || tag.en) : tag;
+              const searchTag = typeof tag === 'object' ? (lang === 'en' ? tag.en : tag.es) : tag;
+              
               return (
-                <span key={idx} className="px-2.5 py-1 rounded-md bg-brand-forest/5 text-brand-forest text-[10px] font-bold tracking-wider uppercase border border-brand-forest/10">
+                <span 
+                  key={idx} 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onTagClick?.(searchTag);
+                  }}
+                  className="px-2.5 py-1 rounded-md bg-brand-forest/5 text-brand-forest text-[10px] font-bold tracking-wider uppercase border border-brand-forest/10 hover:bg-brand-forest/10 transition-colors"
+                >
                   {displayTag}
                 </span>
               );
@@ -114,6 +124,7 @@ export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite }:
         </div>
       </div>
     </article>
+
   );
 }
 

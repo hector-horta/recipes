@@ -5,7 +5,7 @@ import { withRetry } from '../utils/retry.js';
 const NVIDIA_API_BASE = 'https://integrate.api.nvidia.com/v1';
 const NVIDIA_GENAI_BASE = 'https://ai.api.nvidia.com/v1/genai';
 
-async function nvidiaChatRequest(body, apiKey) {
+export async function nvidiaChatRequest(body, apiKey) {
   return withRetry(async () => {
     const res = await fetch(`${NVIDIA_API_BASE}/chat/completions`, {
       method: 'POST',
@@ -149,15 +149,20 @@ export async function analyzeAndStructureRecipe(rawText, apiKey) {
       "durationMinutes": number
     }
   ],
-  "tags": string[],
+  "tags": [
+    { "es": "string", "en": "string" }
+  ],
   "difficulty": "easy" | "medium" | "hard",
   "siboRiskLevel": "safe" | "caution" | "avoid",
   "siboAlerts": string[]
 }
 
 CRITICAL RULES:
-- Dual translation: ALL text fields must have both _es and _en versions
-- SIBO filter: Cross-reference ingredients against known FODMAPs
+- Dual translation: ALL text fields MUST have both es and en versions.
+- Time extraction: Extract "prepTimeMinutes" and "cookTimeMinutes". If they are NOT explicitly stated in the text, ESTIMATE them based on the steps. "prepTimeMinutes" should be the sum of preparation/mixing steps; "cookTimeMinutes" should be the sum of baking/cooking steps.
+- Categories: Use ONLY these keys for categorization in tags: Drink (Bebestible), Dessert (Postre), Starter Dish (Entrada), Main Course (Plato Principal), Snack (Snack), Dressing/Salsa (Aderezo/Salsa).
+- Highlights: Also include Vegan (Vegano), Gluten-free (Sin Gluten), Low FODMAP (Bajo en FODMAP) if applicable.
+- SIBO filter: Cross-reference ingredients against known FODMAPs.
 - Return ONLY the JSON object, no markdown code blocks, no extra text`;
 
   const content = await nvidiaChatRequest({
@@ -185,9 +190,9 @@ CRITICAL RULES:
   }
 }
 
-export async function generateRecipeImage(prompt, apiKey) {
+export async function generateRecipeImage(prompt, apiKey, feedback = '') {
   return withRetry(async () => {
-    const decoratedPrompt = `Professional editorial food photography of ${prompt}, 8k, macro lens, soft natural lighting, high-end restaurant plating, vibrant colors, shallow depth of field`;
+    const decoratedPrompt = `Professional editorial food photography of ${prompt}, 8k, macro lens, soft natural lighting, high-end restaurant plating, vibrant colors, shallow depth of field${feedback ? `, ${feedback}` : ''}`;
 
     const response = await nvidiaImageRequest({
       text_prompts: [{ text: decoratedPrompt }],
@@ -228,4 +233,30 @@ export async function generateRecipeImage(prompt, apiKey) {
       filepath
     };
   }, { serviceName: 'NVIDIA Image (Full)' });
+}
+
+/**
+ * Specifically classifies a recipe into canonical categories
+ */
+export async function classifyRecipe(recipe, apiKey) {
+  const prompt = `Classify this recipe into EXACTLY ONE of these categories: Drink, Dessert, Starter Dish, Main Course, Snack, Dressing/Salsa.
+  
+Return ONLY the english key from this list: [bebestible, postre, entrada, plato_principal, snack, aderezo_salsa].
+
+Recipe Title: ${recipe.title_en}
+Ingredients: ${(recipe.ingredients || []).map(i => i.name?.en || i.name).join(', ')}
+
+Return ONLY the key.`;
+
+  const response = await nvidiaChatRequest({
+    model: "meta/llama-4-maverick-17b-128e-instruct",
+    messages: [
+      { role: "system", content: "You are a recipe classifier. You MUST return ONLY the English key from the provided list, with NO punctuation and NO extra explanation." },
+      { role: "user", content: prompt }
+    ],
+    temperature: 0,
+    max_tokens: 10
+  }, apiKey);
+
+  return response.trim().toLowerCase().replace(/[^a-z_]/g, '');
 }

@@ -5,7 +5,7 @@ import { processImage, processText, processVoice } from './handlers/messageHandl
 import { handleCallback } from './handlers/callbackHandler.js';
 import { handleStart, handleLogs } from './handlers/commandHandler.js';
 import { sessionManager } from './utils/session.js';
-import { formatRecipeSummary, buildInlineKeyboard } from './utils/formatters.js';
+import { sendRecipeResult } from './utils/botUI.js';
 
 async function init() {
   try {
@@ -53,6 +53,26 @@ async function init() {
         return;
       } catch (err) {
         logger.error('Error handling voice edit', { chatId, error: err.message });
+      }
+    }
+
+    // Check if awaiting image feedback
+    const pendingFeedback = sessionManager.getImageFeedback(chatId);
+    if (pendingFeedback && msg.text && !msg.text.startsWith('/')) {
+      try {
+        const { slug } = pendingFeedback;
+        sessionManager.deleteImageFeedback(chatId);
+        
+        const statusMsg = await bot.sendMessage(chatId, '⏳ *Regenerando imagen con tu feedback...*', { parse_mode: 'Markdown' });
+        
+        const result = await backendStore.refreshImage(slug, msg.text);
+        
+        await sendImageFeedback(bot, chatId, result.recipe, statusMsg.message_id);
+        
+        return;
+      } catch (err) {
+        logger.error('Error handling image feedback', { chatId, error: err.message });
+        bot.sendMessage(chatId, `❌ Error: ${err.message}`);
       }
     }
 

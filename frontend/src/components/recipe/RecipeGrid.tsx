@@ -10,6 +10,7 @@ interface RecipeGridProps {
   isFavorited: (id: string) => boolean;
   onToggleFavorite: (payload: { id: string, title: string, imageUrl: string }) => void;
   onSelectRecipe: (recipe: Recipe) => void;
+  onTagClick?: (tag: string) => void;
 }
 
 export function RecipeGrid({
@@ -18,7 +19,8 @@ export function RecipeGrid({
   isPending,
   isFavorited,
   onToggleFavorite,
-  onSelectRecipe
+  onSelectRecipe,
+  onTagClick
 }: RecipeGridProps) {
   const { t } = useTranslation();
   const itemsPerPage = 10;
@@ -51,9 +53,11 @@ export function RecipeGrid({
               isFavorited={isFavorited(recipe.id)}
               onToggleFavorite={() => onToggleFavorite({ id: recipe.id, title: recipe.title, imageUrl: recipe.imageUrl })}
               onCookNow={() => onSelectRecipe(recipe)} 
+              onTagClick={onTagClick}
             />
           ))
       )}
     </div>
   );
 }
+

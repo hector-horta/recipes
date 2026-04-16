@@ -37,34 +37,34 @@ class BackendStore {
   }
 
   // Ingest Image
-  async ingestImage(imageUrl) {
+  async ingestImage(imageUrl, saveToDb = true, generateImage = true) {
     return this._request('/api/ingest/image', {
       method: 'POST',
-      body: JSON.stringify({ imageUrl })
+      body: JSON.stringify({ imageUrl, saveToDb, generateImage })
     });
   }
 
   // Ingest Multiple Images
-  async ingestImages(imageUrl1, imageUrl2) {
+  async ingestImages(imageUrl1, imageUrl2, saveToDb = true, generateImage = true) {
     return this._request('/api/ingest/images', {
       method: 'POST',
-      body: JSON.stringify({ imageUrl1, imageUrl2 })
+      body: JSON.stringify({ imageUrl1, imageUrl2, saveToDb, generateImage })
     });
   }
 
   // Ingest Text
-  async ingestText(text, sourceType = 'telegram') {
+  async ingestText(text, sourceType = 'telegram', saveToDb = true, generateImage = true) {
     return this._request('/api/ingest/text', {
       method: 'POST',
-      body: JSON.stringify({ text, sourceType })
+      body: JSON.stringify({ text, sourceType, saveToDb, generateImage })
     });
   }
 
   // Transcribe Audio
-  async transcribeAudio(audioUrl, language = 'es') {
+  async transcribeAudio(audioUrl, language = 'es', saveToDb = true) {
     return this._request('/api/ingest/transcribe', {
       method: 'POST',
-      body: JSON.stringify({ audioUrl, language })
+      body: JSON.stringify({ audioUrl, language, saveToDb })
     });
   }
 
@@ -76,12 +76,24 @@ class BackendStore {
     });
   }
 
-  // Update/Save Recipe (Overwrite)
-  async saveRecipe(recipe) {
+  // Publish Recipe (move from draft)
+  async publishRecipe(slug) {
+    return this._request(`/api/ingest/${slug}/publish`, {
+      method: 'POST'
+    });
+  }
+
+  // Update/Save Recipe (General Save/Draft)
+  async saveRecipe(recipe, status = 'published', generateImage = false) {
     return this._request('/api/ingest/save', {
       method: 'POST',
-      body: JSON.stringify(recipe)
+      body: JSON.stringify({ ...recipe, status, generateImage })
     });
+  }
+
+  // Save as Draft (Helper)
+  async saveDraft(recipe) {
+    return this.saveRecipe(recipe, 'draft', true);
   }
 
   // Get CSV
@@ -94,6 +106,14 @@ class BackendStore {
   // Get Curl
   async getCurl(slug) {
     return this._request(`/api/ingest/${slug}/curl`, { method: 'POST' });
+  }
+
+  // Refresh Image
+  async refreshImage(slug, issue = '') {
+    return this._request(`/api/ingest/${slug}/refresh-image`, {
+      method: 'POST',
+      body: JSON.stringify({ issue })
+    });
   }
 }
 

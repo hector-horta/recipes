@@ -88,8 +88,13 @@ export function RecipePage({
             isFavorited={isFavorited}
             onToggleFavorite={toggleFavorite}
             onSelectRecipe={onSelectRecipe}
+            onTagClick={(tag) => {
+              setSearchQuery(tag);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
           />
         )}
+
 
         {showSafetyGate && (
           <AllergenSafetyGate 

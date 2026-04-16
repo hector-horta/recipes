@@ -9,6 +9,8 @@ import { saveIngestLog } from '../middleware/recoveryLogger.js';
 import { RecipeProvider } from '../services/RecipeProvider.js';
 import { normalizeTags } from '../utils/tagTranslations.js';
 import { ActivityLogger } from '../services/ActivityLogger.js';
+import { TagService } from '../services/TagService.js';
+
 import { sanitizeStructuredRecipe } from '../utils/ingestSanitizer.js';
 import { validateExternalUrl } from '../utils/urlValidator.js';
 
@@ -23,18 +25,21 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 
 const ingestImageSchema = z.object({
   imageUrl: z.string().url('URL de imagen inválida'),
-  generateImage: z.boolean().optional().default(true)
+  generateImage: z.boolean().optional().default(true),
+  saveToDb: z.boolean().optional().default(true)
 });
 
 const ingestImagesSchema = z.object({
   imageUrl1: z.string().url('URL de imagen 1 inválida'),
   imageUrl2: z.string().url('URL de imagen 2 inválida'),
-  generateImage: z.boolean().optional().default(true)
+  generateImage: z.boolean().optional().default(true),
+  saveToDb: z.boolean().optional().default(true)
 });
 
 const ingestTextSchema = z.object({
   text: z.string().min(10, 'El texto debe ser más largo'),
   generateImage: z.boolean().optional().default(true),
+  saveToDb: z.boolean().optional().default(true),
   sourceType: z.string().optional(),
   sourceReference: z.string().optional()
 });
@@ -80,7 +85,7 @@ router.post('/image', asyncHandler(async (req, res) => {
     error.errors = parseResult.error.errors;
     throw error;
   }
-  const { imageUrl, generateImage } = parseResult.data;
+  const { imageUrl, generateImage, saveToDb } = parseResult.data;
   const apiKey = getApiKey();
 
   const rawText = await extractTextFromImage(imageUrl, apiKey);
@@ -90,7 +95,12 @@ router.post('/image', asyncHandler(async (req, res) => {
   }
 
   const structuredRaw = await analyzeAndStructureRecipe(rawText, apiKey);
-  const structured = sanitizeStructuredRecipe(structuredRaw);
+  const structured = await sanitizeStructuredRecipe(structuredRaw);
+  
+  // Automate tag collection
+  if (structured.tags && structured.tags.length > 0) {
+    await TagService.upsertTags(structured.tags);
+  }
 
   const titleEs = structured.title?.es || 'Receta sin título';
   const slug = generateSlug(titleEs);
@@ -98,7 +108,7 @@ router.post('/image', asyncHandler(async (req, res) => {
   let imageResult = null;
   if (generateImage) {
     try {
-      imageResult = await generateRecipeImage(titleEs, apiKey);
+      imageResult = await generateRecipeImage(structured.title?.en || titleEs, apiKey);
     } catch (imgErr) {
       ActivityLogger.warn('[Ingest] Failed to generate image', { error: imgErr.message, title: titleEs });
     }
@@ -121,8 +131,17 @@ router.post('/image', asyncHandler(async (req, res) => {
     sibo_alerts: structured.siboAlerts,
     source_type: 'ocr_image',
     source_reference: imageUrl,
-    status: 'published'
+    status: saveToDb ? 'published' : 'draft'
   };
+
+  if (!saveToDb) {
+    return res.status(200).json({
+      status: 'processed',
+      recipe: recipeData,
+      rawText,
+      saveToDb: false
+    });
+  }
 
   saveIngestLog(recipeData);
 
@@ -156,7 +175,7 @@ router.post('/images', asyncHandler(async (req, res) => {
     error.errors = parseResult.error.errors;
     throw error;
   }
-  const { imageUrl1, imageUrl2, generateImage } = parseResult.data;
+  const { imageUrl1, imageUrl2, generateImage, saveToDb } = parseResult.data;
   const apiKey = getApiKey();
 
   ActivityLogger.info('Processing dual images for dual ingest', { imageUrl1, imageUrl2 });
@@ -167,17 +186,23 @@ router.post('/images', asyncHandler(async (req, res) => {
   }
 
   const structuredRaw = await analyzeAndStructureRecipe(rawText, apiKey);
-  const structured = sanitizeStructuredRecipe(structuredRaw);
+  const structured = await sanitizeStructuredRecipe(structuredRaw);
+
+  // Automate tag collection
+  if (structured.tags && structured.tags.length > 0) {
+    await TagService.upsertTags(structured.tags);
+  }
 
   const titleEs = structured.title?.es || 'Receta sin título';
   const slug = generateSlug(titleEs);
 
   let imageResult = null;
+  const titleEn = structured.title?.en || titleEs;
   if (generateImage) {
     try {
-      imageResult = await generateRecipeImage(titleEs, apiKey);
+      imageResult = await generateRecipeImage(titleEn, apiKey);
     } catch (imgErr) {
-      ActivityLogger.warn('Failed to generate image during dual ingest', { error: imgErr.message, title: titleEs });
+      ActivityLogger.warn('Failed to generate image during dual ingest', { error: imgErr.message, title: titleEn });
     }
   }
 
@@ -198,8 +223,17 @@ router.post('/images', asyncHandler(async (req, res) => {
     sibo_alerts: structured.siboAlerts,
     source_type: 'ocr_image',
     source_reference: `multi_image:${imageUrl1},${imageUrl2}`,
-    status: 'published'
+    status: saveToDb ? 'published' : 'draft'
   };
+
+  if (!saveToDb) {
+    return res.status(200).json({
+      status: 'processed',
+      recipe: recipeData,
+      rawText,
+      saveToDb: false
+    });
+  }
 
   saveIngestLog(recipeData);
 
@@ -233,11 +267,16 @@ router.post('/text', asyncHandler(async (req, res) => {
     error.errors = parseResult.error.errors;
     throw error;
   }
-  const { text, generateImage, sourceType, sourceReference } = parseResult.data;
+  const { text, generateImage, saveToDb, sourceType, sourceReference } = parseResult.data;
   const apiKey = getApiKey();
 
   const structuredRaw = await analyzeAndStructureRecipe(text, apiKey);
-  const structured = sanitizeStructuredRecipe(structuredRaw);
+  const structured = await sanitizeStructuredRecipe(structuredRaw);
+
+  // Automate tag collection
+  if (structured.tags && structured.tags.length > 0) {
+    await TagService.upsertTags(structured.tags);
+  }
 
   const titleEs = structured.title?.es || 'Receta sin título';
   const slug = generateSlug(titleEs);
@@ -245,7 +284,7 @@ router.post('/text', asyncHandler(async (req, res) => {
   let imageResult = null;
   if (generateImage) {
     try {
-      imageResult = await generateRecipeImage(titleEs, apiKey);
+      imageResult = await generateRecipeImage(structured.title?.en || titleEs, apiKey);
     } catch (imgErr) {
       ActivityLogger.warn('[Ingest] Failed to generate image', { error: imgErr.message, title: titleEs });
     }
@@ -268,8 +307,16 @@ router.post('/text', asyncHandler(async (req, res) => {
     sibo_alerts: structured.siboAlerts,
     source_type: sourceType || 'manual',
     source_reference: sourceReference || null,
-    status: 'published'
+    status: saveToDb ? 'published' : 'draft'
   };
+
+  if (!saveToDb) {
+    return res.status(200).json({
+      status: 'processed',
+      recipe: recipeData,
+      saveToDb: false
+    });
+  }
 
   saveIngestLog(recipeData);
 
@@ -341,7 +388,7 @@ router.post('/voice', asyncHandler(async (req, res) => {
     error.errors = parseResult.error.errors;
     throw error;
   }
-  const { audioUrl, language } = parseResult.data;
+  const { audioUrl, language, saveToDb = true } = parseResult.data;
   const groqKey = getGroqKey();
 
   // SSRF Protection
@@ -359,16 +406,25 @@ router.post('/voice', asyncHandler(async (req, res) => {
 
   const nvidiaKey = getApiKey();
   const structuredRaw = await analyzeAndStructureRecipe(transcribedText, nvidiaKey);
-  const structured = sanitizeStructuredRecipe(structuredRaw);
+  const structured = await sanitizeStructuredRecipe(structuredRaw);
+
+  // Automate tag collection
+  if (structured.tags && structured.tags.length > 0) {
+    await TagService.upsertTags(structured.tags);
+  }
 
   const titleEs = structured.title?.es || 'Receta sin título';
   const slug = generateSlug(titleEs);
 
   let imageResult = null;
-  try {
-    imageResult = await generateRecipeImage(titleEs, nvidiaKey);
-  } catch (imgErr) {
-    ActivityLogger.warn('Image generation failed for voice ingest', { error: imgErr.message });
+  const titleEn = structured.title?.en || titleEs;
+  // If we don't save to DB, we don't generate image yet (per new flow)
+  if (saveToDb) {
+    try {
+      imageResult = await generateRecipeImage(titleEn, nvidiaKey);
+    } catch (imgErr) {
+      ActivityLogger.warn('Image generation failed for voice ingest', { error: imgErr.message, title: titleEn });
+    }
   }
 
   const recipeData = {
@@ -388,8 +444,17 @@ router.post('/voice', asyncHandler(async (req, res) => {
     sibo_alerts: structured.siboAlerts,
     source_type: 'audio',
     source_reference: audioUrl,
-    status: 'published'
+    status: saveToDb ? 'published' : 'draft'
   };
+
+  if (!saveToDb) {
+    return res.status(200).json({
+      status: 'processed',
+      recipe: recipeData,
+      transcribedText,
+      saveToDb: false
+    });
+  }
 
   saveIngestLog(recipeData);
 
@@ -415,45 +480,76 @@ router.post('/:slug/:action', asyncHandler(async (req, res) => {
     return res.status(404).json({ error: 'Recipe not found.' });
   }
 
-    switch (action) {
-      case 'publish': {
-        recipe.status = 'published';
+  switch (action) {
+    case 'publish':
+      recipe.status = 'published';
+      await recipe.save();
+      await RecipeProvider.clearCache();
+      return res.json({ status: 'published', recipe });
+
+    case 'post':
+      // Direct insertion is already handled by Recipe.create in the previous step,
+      // but we ensure it's marked as published if it was in draft.
+      recipe.status = 'published';
+      await recipe.save();
+      await RecipeProvider.clearCache();
+      return res.json({ status: 'posted', recipe });
+
+    case 'csv':
+      res.setHeader('Content-Type', 'text/csv');
+      res.attachment(`${slug}.csv`);
+      return res.send(buildCSVRow(recipe.toJSON()));
+
+    case 'curl':
+      return res.json({ 
+        command: buildCurlCommand(recipe.toJSON()) 
+      });
+
+    case 'refresh-image': {
+      const apiKey = getApiKey();
+      const issue = req.body.issue || '';
+      
+      ActivityLogger.info('Regenerating image for recipe', { slug: recipe.slug, feedback: issue });
+      
+      try {
+        // Clean up old image if it exists
+        if (recipe.image_filename) {
+          const oldPath = path.join(__dirname, '..', 'public', 'recipes', recipe.image_filename);
+          if (fs.existsSync(oldPath)) {
+            try {
+              fs.unlinkSync(oldPath);
+              ActivityLogger.info('Deleted old recipe image', { path: oldPath });
+            } catch (unlinkErr) {
+              ActivityLogger.warn('Failed to delete old image', { error: unlinkErr.message });
+            }
+          }
+        }
+
+        const imageResult = await generateRecipeImage(recipe.title_en, apiKey, issue);
+        
+        recipe.image_url = imageResult.url;
+        recipe.image_filename = imageResult.filename;
         await recipe.save();
+        
         await RecipeProvider.clearCache();
-        return res.json({ status: 'published', recipe });
+        
+        return res.json({ 
+          status: 'image_refreshed', 
+          recipe 
+        });
+      } catch (imgErr) {
+        ActivityLogger.error('Failed to regenerate image', { error: imgErr.message, slug: recipe.slug });
+        return res.status(500).json({ error: `Error regenerando imagen: ${imgErr.message}` });
       }
-
-      case 'post': {
-        recipe.status = req.body.status || 'published';
-        if (req.body.title_es) recipe.title_es = req.body.title_es;
-        if (req.body.title_en) recipe.title_en = req.body.title_en;
-        if (req.body.ingredients) recipe.ingredients = req.body.ingredients;
-        if (req.body.steps) recipe.steps = req.body.steps;
-        if (req.body.sibo_risk_level) recipe.sibo_risk_level = req.body.sibo_risk_level;
-        await recipe.save();
-        await RecipeProvider.clearCache();
-        return res.json({ status: 'saved', recipe });
-      }
-
-      case 'csv': {
-        const csv = buildCSVRow(recipe);
-        res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', `attachment; filename="${recipe.slug}.csv"`);
-        return res.send(csv);
-      }
-
-      case 'curl': {
-        const curlCmd = buildCurlCommand(recipe);
-        return res.json({ curl: curlCmd, recipe });
-      }
-
-      default:
-        return res.status(400).json({ error: 'Invalid action. Use: publish, post, csv, or curl.' });
     }
+
+    default:
+      return res.status(400).json({ error: 'Invalid action. Use: publish, post, csv, curl, or refresh-image.' });
+  }
 }));
 
 router.post('/save', asyncHandler(async (req, res) => {
-  const recipeData = req.body;
+  const { status = 'published', generateImage = false, ...recipeData } = req.body;
 
   if (!recipeData.title_es || !recipeData.title_en) {
     return res.status(400).json({ error: 'title_es and title_en are required.' });
@@ -461,10 +557,15 @@ router.post('/save', asyncHandler(async (req, res) => {
 
   const slug = recipeData.slug || generateSlug(recipeData.title_es);
 
-  const sanitized = sanitizeStructuredRecipe({
+  const sanitized = await sanitizeStructuredRecipe({
     ...recipeData,
     title: { es: recipeData.title_es, en: recipeData.title_en }
   });
+
+  // Automate tag collection
+  if (sanitized.tags && sanitized.tags.length > 0) {
+    await TagService.upsertTags(sanitized.tags);
+  }
 
   const finalData = {
     title_es: sanitized.title.es,
@@ -483,8 +584,21 @@ router.post('/save', asyncHandler(async (req, res) => {
     sibo_alerts: sanitized.siboAlerts,
     source_type: recipeData.source_type || 'manual',
     source_reference: recipeData.source_reference,
-    status: 'published'
+    status: status
   };
+
+  const apiKey = getApiKey();
+  let imageResult = null;
+
+  if (generateImage && !finalData.image_url) {
+    try {
+      imageResult = await generateRecipeImage(finalData.title_en, apiKey);
+      finalData.image_url = imageResult.url;
+      finalData.image_filename = imageResult.filename;
+    } catch (imgErr) {
+      ActivityLogger.warn('Image generation failed during manual save', { error: imgErr.message });
+    }
+  }
 
   const existing = await Recipe.findOne({ where: { slug } });
   if (existing) {

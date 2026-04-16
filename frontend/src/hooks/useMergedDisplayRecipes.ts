@@ -26,43 +26,12 @@ export function useMergedDisplayRecipes({
     const favoriteIds = new Set(favorites.map((f) => f.recipe_id));
 
     const favoriteRecipes: Recipe[] = favorites.map((f) => {
-      // Si el favorito incluye datos de la receta real, usarlos
+      // Si el favorito incluye datos de la receta real (ya normalizada por el backend), usarlos directamente
       const recipeData = (f as any).recipe;
       if (recipeData) {
-        const ingredients = (recipeData.ingredients || []).map((i: any) => ({
-          id: i.name?.es || i.name || 'unknown',
-          name: i.name?.es || i.name || 'Desconocido',
-          nameEn: i.name?.en || '',
-          quantity: i.quantity || '',
-          unit: typeof i.unit === 'object' ? (i.unit?.es || '') : (i.unit || ''),
-          unitEn: typeof i.unit === 'object' ? (i.unit?.en || '') : '',
-          siboAlert: i.siboAlert || false
-        }));
-
-        const instructions = (recipeData.steps || [])
-          .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
-          .map((s: any) => s.instruction?.es || s.instruction || '');
-
-        const tags = (recipeData.tags || [])
-          .map((t: any) => typeof t === 'object' && t.es ? t : { es: t, en: t })
-          .filter((t: any) => t.es && t.es.trim() !== '');
-
         return {
-          id: recipeData.id,
-          title: recipeData.title_es,
-          titleEn: recipeData.title_en,
-          imageUrl: recipeData.image_url || f.image || '',
-          prepTimeMinutes: recipeData.prep_time_minutes || 20,
-          estimatedCost: 2,
-          ingredients,
-          instructions: instructions.length > 0 ? instructions : ['Sin instrucciones disponibles.'],
-          instructionsEn: (recipeData.steps || [])
-            .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
-            .map((s: any) => s.instruction?.en || ''),
-          summary: '',
-          safetyLevel: recipeData.sibo_risk_level === 'safe' ? 'safe' : (recipeData.sibo_risk_level === 'caution' ? 'review' : 'unsafe'),
-          siboAllergiesTags: [{ es: t('recipe.favorite'), en: t('recipe.favorite') }, ...tags],
-          siboAlerts: recipeData.sibo_alerts || []
+          ...recipeData,
+          imageUrl: recipeData.imageUrl || f.image || ''
         };
       }
 
@@ -77,6 +46,7 @@ export function useMergedDisplayRecipes({
         instructions: [],
         summary: '',
         safetyLevel: 'safe',
+        isFavorite: true,
         siboAllergiesTags: [{ es: t('recipe.favorite'), en: t('recipe.favorite') }]
       };
     });

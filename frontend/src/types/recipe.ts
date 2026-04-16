@@ -20,6 +20,8 @@ export interface Recipe {
   titleEn?: string;
   imageUrl: string;
   prepTimeMinutes: number;
+  cookTimeMinutes?: number;
+  totalTimeMinutes?: number;
   estimatedCost: number;
   ingredients: Ingredient[];
   instructions: string[];

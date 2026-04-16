@@ -38,3 +38,11 @@ export const profileUpdateSchema = z.object({
   severities: z.record(z.string(), z.string()).optional(),
   conditions: z.array(z.string()).optional(),
 });
+
+export const tagSchema = z.object({
+  es: z.string().trim().min(1, "El tag en español es requerido"),
+  en: z.string().trim().min(1, "English tag is required")
+});
+
+export const tagUpsertSchema = z.array(tagSchema);
+

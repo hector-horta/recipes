@@ -7,6 +7,19 @@ class SessionManager {
     this.voiceEdits = new Map();
     this.images = new Map();
     this.overwrites = new Map();
+    this.imageFeedbacks = new Map();
+    this.pendingRecipes = new Map();
+  }
+
+  // Pending recipes (for confirmation)
+  setPendingRecipe(chatId, data) {
+    this.pendingRecipes.set(chatId, data);
+  }
+  getPendingRecipe(chatId) {
+    return this.pendingRecipes.get(chatId);
+  }
+  deletePendingRecipe(chatId) {
+    this.pendingRecipes.delete(chatId);
   }
 
   // Voice sessions
@@ -40,6 +53,17 @@ class SessionManager {
   }
   deleteOverwrite(chatId) {
     this.overwrites.delete(chatId);
+  }
+
+  // Image feedback sessions
+  setImageFeedback(chatId, data) {
+    this.imageFeedbacks.set(chatId, data);
+  }
+  getImageFeedback(chatId) {
+    return this.imageFeedbacks.get(chatId);
+  }
+  deleteImageFeedback(chatId) {
+    this.imageFeedbacks.delete(chatId);
   }
 }
 

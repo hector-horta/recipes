@@ -193,31 +193,87 @@ describe('RecipeProvider', () => {
       expect(result.safetyLevel).toBe('safe');
     });
 
-    it('should hide SIBO-related tags for non-SIBO users', () => {
+    it('should only show canonical categories and dietary highlights', () => {
       const recipe = {
         id: '1',
         title_es: 'Test',
-        tags: ['SIBO: Bajo en Fructanos', 'Saludable', 'Bajo en Fodmap']
+        tags: ['vegano', 'saludable', 'pan']
       };
       
-      const result = RecipeProvider.normalizeRecipe(recipe, { intolerances: ['egg'] });
+      const mockTagMap = {
+        'vegano': { es: 'Vegano', en: 'Vegan' },
+        'saludable': { es: 'Saludable', en: 'Healthy' },
+        'pan': { es: 'Pan', en: 'Bread' }
+      };
+      const result = RecipeProvider.normalizeRecipe(recipe, null, mockTagMap);
       const tags = result.siboAllergiesTags.map(t => t.es);
-      expect(tags).toContain('Saludable');
-      expect(tags).not.toContain('SIBO: Bajo en Fructanos');
-      expect(tags).not.toContain('Bajo en Fodmap');
+      expect(tags).toContain('Vegano');
+      expect(tags).not.toContain('Saludable');
+      expect(tags).not.toContain('Pan');
     });
 
-    it('should show SIBO-related tags for SIBO users', () => {
+    it('should map legacy SIBO/FODMAP tags to "Low FODMAP"', () => {
       const recipe = {
         id: '1',
-        title_es: 'Test',
-        tags: ['SIBO: Bajo en Fructanos', 'Saludable']
+        title_es: 'Safe Recipe',
+        tags: ['sibo_safe', 'bajo_en_fodmap']
       };
       
-      const result = RecipeProvider.normalizeRecipe(recipe, { intolerances: ['sibo'] });
+      const mockTagMap = {
+        'sibo_safe': { es: 'SIBO Safe', en: 'SIBO Safe' },
+        'bajo_en_fodmap': { es: 'Bajo en FODMAP', en: 'Low FODMAP' }
+      };
+      const result = RecipeProvider.normalizeRecipe(recipe, null, mockTagMap);
       const tags = result.siboAllergiesTags.map(t => t.es);
-      expect(tags).toContain('Saludable');
-      expect(tags).toContain('SIBO: Bajo en Fructanos');
+      expect(tags).toContain('Bajo en FODMAP');
+      expect(tags).not.toContain('SIBO Safe');
+      expect(tags).toHaveLength(1); // Only one Low FODMAP tag
+    });
+
+    it('should auto-categorize recipe based on title keywords', () => {
+      const recipe = {
+        id: '1',
+        title_es: 'Jugo de Naranja',
+        title_en: 'Orange Juice',
+        ingredients: [],
+        tags: []
+      };
+      
+      const result = RecipeProvider.normalizeRecipe(recipe, null, {});
+      const tags = result.siboAllergiesTags.map(t => t.es);
+      expect(tags).toContain('Bebestible');
+    });
+
+    it('should categorize as both Drink and Dessert if keywords match both', () => {
+      const recipe = {
+        id: '1',
+        title_es: 'Chocolate Caliente Dulce',
+        title_en: 'Sweet Hot Chocolate',
+        ingredients: [],
+        tags: []
+      };
+      
+      const result = RecipeProvider.normalizeRecipe(recipe, null, {});
+      const tags = result.siboAllergiesTags.map(t => t.es);
+      expect(tags).toContain('Bebestible');
+      expect(tags).toContain('Postre');
+    });
+
+    it('should filter out redundant "Favorito" and "Favorite" tags and unrelated tags like "Saludable"', () => {
+      const recipe = {
+        id: '1',
+        title_es: 'Ensalada',
+        tags: ['Favorito', 'Favorite', 'Saludable', 'entrada']
+      };
+      
+      const result = RecipeProvider.normalizeRecipe(recipe, null, {
+        'entrada': { es: 'Entrada', en: 'Starter Dish' }
+      });
+      const tags = result.siboAllergiesTags.map(t => t.es.toLowerCase());
+      expect(tags).toContain('entrada');
+      expect(tags).not.toContain('saludable');
+      expect(tags).not.toContain('favorito');
+      expect(tags).not.toContain('favorite');
     });
 
     it('should not trigger false positives with substring matches (e.g., "tuna" in "aceitunas")', () => {

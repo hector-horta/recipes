@@ -5,6 +5,7 @@ import { Recipe } from '../models/Recipe.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { ActivityLogger } from '../services/ActivityLogger.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { RecipeProvider } from '../services/RecipeProvider.js';
 
 // Initialize association once
 associateWithRecipe(Recipe);
@@ -22,12 +23,30 @@ router.get('/', authenticateToken, asyncHandler(async (req, res) => {
     where: { user_id: req.user.id },
     include: [{ 
       model: Recipe, 
-      as: 'recipe', 
-      attributes: ['id', 'title_es', 'title_en', 'ingredients', 'steps', 'prep_time_minutes', 'cook_time_minutes', 'sibo_risk_level', 'sibo_alerts', 'tags', 'image_url', 'image_filename'] 
+      as: 'recipe'
     }],
     order: [['created_at', 'DESC']]
   });
-  res.json(favorites);
+
+  // Load profile and tags for normalization
+  const { Profile } = await import('../models/Profile.js');
+  const { TagService } = await import('../services/TagService.js');
+  const profile = await Profile.findOne({ where: { user_id: req.user.id } });
+  const allTags = await TagService.getAllTags();
+  const tagMap = Object.fromEntries(
+    allTags.map(t => [TagService.normalizeKey(t.key), t])
+  );
+
+  const normalizedFavorites = favorites.map(f => {
+    if (!f.recipe) return f;
+    const normalized = RecipeProvider.normalizeRecipe(f.recipe.toJSON(), profile, tagMap, true);
+    return {
+      ...f.toJSON(),
+      recipe: normalized
+    };
+  });
+
+  res.json(normalizedFavorites);
 }));
 
 router.post('/', authenticateToken, asyncHandler(async (req, res) => {
@@ -42,6 +61,9 @@ router.post('/', authenticateToken, asyncHandler(async (req, res) => {
 
   if (existing) {
     await existing.destroy();
+    if (typeof RecipeProvider.clearCache === 'function') {
+      await RecipeProvider.clearCache();
+    }
     return res.json({ favorited: false, message: 'Eliminado de favoritos' });
   } else {
     const favorite = await FavoriteRecipe.create({
@@ -50,6 +72,9 @@ router.post('/', authenticateToken, asyncHandler(async (req, res) => {
       title,
       image
     });
+    if (typeof RecipeProvider.clearCache === 'function') {
+      await RecipeProvider.clearCache();
+    }
     // ── Telemetría: ADD_FAVORITE ──────────────────────────────────────────
     ActivityLogger.log('ADD_FAVORITE', { recipeId, title }, {
       userId: req.user.id,
@@ -69,6 +94,9 @@ router.delete('/:recipeId', authenticateToken, asyncHandler(async (req, res) => 
   });
 
   if (deleted) {
+    if (typeof RecipeProvider.clearCache === 'function') {
+      await RecipeProvider.clearCache();
+    }
     res.json({ message: 'Eliminado de favoritos' });
   } else {
     const error = new Error('Receta no encontrada en favoritos');

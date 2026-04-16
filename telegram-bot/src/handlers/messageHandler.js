@@ -1,7 +1,7 @@
 import { sessionManager } from '../utils/session.js';
 import { backendStore } from '../services/backendStore.js';
 import { logger } from '../utils/logger.js';
-import { formatRecipeSummary, buildInlineKeyboard } from '../utils/formatters.js';
+import { sendRecipeResult, sendDataConfirmation } from '../utils/botUI.js';
 
 /**
  * Validates basic message constraints
@@ -52,18 +52,15 @@ async function processImageGroup(bot, chatId, fileIds, statusMsgId) {
     const fileLinks = await Promise.all(fileIds.map(fid => bot.getFileLink(fid)));
     const urls = fileLinks.map(link => typeof link === 'string' ? link : link?.href || link?.toString());
 
-    const result = await backendStore.ingestImages(urls[0], urls[1]);
+    // DECOUPLED: Save=false, Image=false
+    const result = await backendStore.ingestImages(urls[0], urls[1], false, false);
 
-    if (result.conflict) {
-      return sendConflictPrompt(bot, chatId, result.recipe, statusMsgId);
+    if (statusMsgId) {
+      try { await bot.deleteMessage(chatId, statusMsgId); } catch (e) {}
     }
 
-    await bot.editMessageText(formatRecipeSummary(result.recipe), {
-      chat_id: chatId,
-      message_id: statusMsgId,
-      parse_mode: 'Markdown',
-      reply_markup: buildInlineKeyboard(result.recipe.slug)
-    });
+    sessionManager.setPendingRecipe(chatId, result.recipe);
+    await sendDataConfirmation(bot, chatId, result.recipe);
   } catch (error) {
     logger.error('Error processing image group', { chatId, error: error.message });
     bot.sendMessage(chatId, `❌ Error: ${error.message}`);
@@ -76,18 +73,14 @@ export async function processText(bot, msg) {
   
   try {
     const processingMsg = await bot.sendMessage(chatId, '🧠 Analizando receta...');
-    const result = await backendStore.ingestText(msg.text);
+    
+    // DECOUPLED: Save=false, Image=false
+    const result = await backendStore.ingestText(msg.text, 'telegram', false, false);
 
-    if (result.conflict) {
-      return sendConflictPrompt(bot, chatId, result.recipe, processingMsg.message_id);
-    }
+    try { await bot.deleteMessage(chatId, processingMsg.message_id); } catch (e) {}
 
-    await bot.editMessageText(formatRecipeSummary(result.recipe), {
-      chat_id: chatId,
-      message_id: processingMsg.message_id,
-      parse_mode: 'Markdown',
-      reply_markup: buildInlineKeyboard(result.recipe.slug)
-    });
+    sessionManager.setPendingRecipe(chatId, result.recipe);
+    await sendDataConfirmation(bot, chatId, result.recipe);
   } catch (error) {
     logger.error('Error processing text', { chatId, error: error.message });
     bot.sendMessage(chatId, `❌ Error: ${error.message}`);
@@ -101,7 +94,7 @@ export async function processVoice(bot, msg) {
     const fileLink = await bot.getFileLink(msg.voice.file_id);
     const audioUrl = typeof fileLink === 'string' ? fileLink : fileLink?.href || fileLink?.toString();
 
-    const data = await backendStore.transcribeAudio(audioUrl);
+    const data = await backendStore.transcribeAudio(audioUrl, 'es', false);
 
     sessionManager.setVoiceEdit(chatId, {
       audioUrl,
@@ -129,6 +122,25 @@ export async function processVoice(bot, msg) {
   } catch (error) {
     logger.error('Error processing voice', { chatId, error: error.message });
     bot.sendMessage(chatId, `❌ Error: ${error.message}`);
+  }
+}
+
+/**
+ * Specifically for Voice flow after confirmation: Analizes text and shows confirmation
+ */
+export async function processVoiceConfirmation(bot, chatId, text, previousMsgId) {
+  try {
+    const result = await backendStore.ingestText(text, 'audio', false, false);
+    
+    if (previousMsgId) {
+      try { await bot.deleteMessage(chatId, previousMsgId); } catch (e) {}
+    }
+
+    sessionManager.setPendingRecipe(chatId, result.recipe);
+    await sendDataConfirmation(bot, chatId, result.recipe);
+  } catch (error) {
+    logger.error('Error in voice confirmation analysis', { chatId, error: error.message });
+    bot.sendMessage(chatId, `❌ Error analizando transcripción: ${error.message}`);
   }
 }
 

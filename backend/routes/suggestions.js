@@ -30,17 +30,24 @@ async function sendTelegramSuggestion(term, userId) {
     try {
       const user = await User.findByPk(userId, { attributes: ['display_name', 'email'] });
       if (user) {
-        userInfo = `${user.display_name} (${user.email})`;
+        const name = user.display_name || 'No Name';
+        const email = user.email || 'No Email';
+        userInfo = `${name} (${email})`;
+        ActivityLogger.info(`[Suggestions] Found user for suggestion: ${userInfo}`, { userId });
+      } else {
+        ActivityLogger.warn(`[Suggestions] User ID ${userId} provided but user not found in DB`, { userId });
       }
     } catch (err) {
-      ActivityLogger.error('[Suggestions] Failed to fetch user info', err);
+      ActivityLogger.error('[Suggestions] Failed to fetch user info for userId: ' + userId, err);
     }
+  } else {
+    ActivityLogger.info('[Suggestions] Processing anonymous suggestion (no userId provided)');
   }
 
   const message =
     `👨‍🍳 *Chef Suggestion*\n\n` +
     `A user searched for *"${term}"* and wants the recipe.\n\n` +
-    `👤 ${userInfo}`;
+    `👤 *User:* ${userInfo}`;
 
   try {
     const res = await fetch(
@@ -66,15 +73,26 @@ async function sendTelegramSuggestion(term, userId) {
 }
 
 import { z } from 'zod';
+import { optionalAuthenticateToken } from '../middleware/auth.js';
 
 const suggestionSchema = z.object({
   term: z.string().trim().min(2, 'term is required (min 2 characters)'),
   userId: z.string().uuid().optional().nullable()
 });
 
-router.post('/', suggestionLimiter, asyncHandler(async (req, res) => {
-  const { term: cleanTerm, userId } = suggestionSchema.parse(req.body);
-  const validUserId = userId || null;
+router.post('/', optionalAuthenticateToken, suggestionLimiter, asyncHandler(async (req, res) => {
+  const { term: cleanTerm, userId: bodyUserId } = suggestionSchema.parse(req.body);
+  
+  // Priority: 1. Authenticated user from token, 2. provided userId in body
+  const effectiveUserId = req.user?.id || bodyUserId || null;
+  const validUserId = effectiveUserId;
+  
+  ActivityLogger.info('[Suggestions] Processing suggestion', { 
+    term: cleanTerm, 
+    userIdFromToken: req.user?.id, 
+    userIdFromBody: bodyUserId,
+    effectiveUserId 
+  });
 
   const searchLog = await SearchLog.create({
     term: cleanTerm,

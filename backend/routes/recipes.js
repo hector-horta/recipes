@@ -4,6 +4,8 @@ import { optionalAuthenticateToken } from '../middleware/auth.js';
 import { Profile } from '../models/Profile.js';
 import { ActivityLogger } from '../services/ActivityLogger.js';
 import rateLimit from 'express-rate-limit';
+import { TagService } from '../services/TagService.js';
+import { requireAdminKey } from '../middleware/auth.js';
 
 import { validateQuery } from '../middleware/validate.js';
 import { recipeQuerySchema } from '../models/validators.js';
@@ -61,6 +63,26 @@ router.get('/', optionalAuthenticateToken, recipeLimiter, validateQuery(recipeQu
   }
 
   res.json(data);
+}));
+
+/**
+ * GET /api/recipes/tags
+ * Returns all unique tags with translations.
+ * Supports public access with standard rate limiting.
+ */
+router.get('/tags', recipeLimiter, asyncHandler(async (req, res) => {
+  const tags = await TagService.getAllTags();
+  res.json(tags);
+}));
+
+/**
+ * POST /api/recipes/tags/refresh
+ * Clears the tag cache. Admin only.
+ */
+router.post('/tags/refresh', requireAdminKey, asyncHandler(async (req, res) => {
+  await TagService.invalidateCache();
+  await RecipeProvider.clearCache();
+  res.json({ message: 'Tag and recipe cache cleared successfully.' });
 }));
 
 export default router;
