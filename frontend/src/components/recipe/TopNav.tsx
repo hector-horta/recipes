@@ -6,13 +6,15 @@ import { WatiLogo } from '../WatiLogo';
 import { LanguageSelector } from '../LanguageSelector';
 import { Button } from '../ui/Button';
 import { Settings, UserCircle, LogOut, Menu, X } from 'lucide-react';
+import { trackEvent } from '../../utils/analytics';
 
 interface TopNavProps {
   onOpenLogin: () => void;
   onOpenOnboarding: () => void;
+  onLogoClick: () => void;
 }
 
-export function TopNav({ onOpenLogin, onOpenOnboarding }: TopNavProps) {
+export function TopNav({ onOpenLogin, onOpenOnboarding, onLogoClick }: TopNavProps) {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -21,9 +23,17 @@ export function TopNav({ onOpenLogin, onOpenOnboarding }: TopNavProps) {
     <nav className="sticky top-0 z-40 bg-white/70 backdrop-blur-xl border-b border-brand-sage/10 shadow-sm/5">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Logo */}
-        <div className="flex items-center">
+        <button 
+          onClick={() => {
+            trackEvent('logo_home_click', { location: 'top_nav' });
+            onLogoClick();
+          }}
+          className="flex items-center hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-mint rounded-lg px-1"
+          data-analytics="logo-home"
+          aria-label="Wati - Home"
+        >
           <WatiLogo size={140} />
-        </div>
+        </button>
 
         {/* Desktop: Language Selector + Auth Actions */}
         <div className="hidden sm:flex items-center gap-2">

@@ -25,6 +25,7 @@ interface RecipePageProps {
   filteredUnsafeCount?: number;
   filteredAllergens?: string[];
   setIncludeUnsafe?: (val: boolean) => void;
+  onLogoClick: () => void;
 }
 
 export function RecipePage({
@@ -41,7 +42,8 @@ export function RecipePage({
   refresh,
   filteredUnsafeCount = 0,
   filteredAllergens = [],
-  setIncludeUnsafe
+  setIncludeUnsafe,
+  onLogoClick
 }: RecipePageProps) {
   const { favorites, toggleFavorite, isFavorited, isLoading: favsLoading } = useFavorites();
   const [currentPage, setCurrentPage] = useState(1);
@@ -65,7 +67,11 @@ export function RecipePage({
 
   return (
     <>
-      <TopNav onOpenLogin={onOpenLogin} onOpenOnboarding={onOpenOnboarding} />
+      <TopNav 
+        onOpenLogin={onOpenLogin} 
+        onOpenOnboarding={onOpenOnboarding} 
+        onLogoClick={onLogoClick}
+      />
       <PageLayout>
         <PageHeader
           searchQuery={searchQuery}

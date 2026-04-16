@@ -6,13 +6,15 @@ import { useTranslation } from 'react-i18next';
 import { useCachedImage } from '../hooks/useCachedImage';
 import { AuthGuard } from '../components/auth/AuthGuard';
 import { useAuth } from '../AuthContext';
+import { trackEvent } from '../utils/analytics';
 
 interface RecipeDetailPageProps {
   recipe: Recipe;
   onBack: () => void;
+  onLogoClick: () => void;
 }
 
-export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
+export function RecipeDetailPage({ recipe, onBack, onLogoClick }: RecipeDetailPageProps) {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const lang = i18n.language.startsWith('en') ? 'en' : 'es';
@@ -187,7 +189,18 @@ export function RecipeDetailPage({ recipe, onBack }: RecipeDetailPageProps) {
       {/* Footer / CTA */}
       <div className="border-t border-brand-sage/10 py-16 text-center bg-brand-sage/5">
         <p className="text-brand-text-muted text-sm font-bold tracking-wide flex items-center justify-center gap-2">
-          {t('recipe.mindfulNutrition')} <span className="text-brand-teal">&bull;</span> Wati
+          {t('recipe.mindfulNutrition')} <span className="text-brand-teal">&bull;</span>{' '}
+          <button 
+            onClick={() => {
+              trackEvent('logo_home_click', { location: 'recipe_detail_footer' });
+              onLogoClick();
+            }}
+            className="hover:text-brand-teal transition-colors font-black focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-mint rounded-sm px-1"
+            data-analytics="logo-home"
+            aria-label="Wati - Home"
+          >
+            Wati
+          </button>
         </p>
       </div>
     </div>

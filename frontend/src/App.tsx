@@ -80,6 +80,15 @@ function App() {
     setActiveModal('none');
   };
 
+  const handleGoHome = () => {
+    setSelectedRecipe(null);
+    searchProps.setQuery('');
+    // Clear URL query param if any
+    const url = new URL(window.location.href);
+    url.searchParams.delete('q');
+    window.history.replaceState({}, '', url.pathname);
+  };
+
   if (!isInitialized) {
     return (
       <div className="min-h-screen bg-brand-forest flex flex-col items-center justify-center gap-4">
@@ -95,6 +104,7 @@ function App() {
         <RecipeDetailPage
           recipe={selectedRecipe}
           onBack={handleBack}
+          onLogoClick={handleGoHome}
         />
       ) : (
         <RecipePage
@@ -102,6 +112,7 @@ function App() {
           onSelectRecipe={handleSelectRecipe}
           onOpenLogin={() => setActiveModal('login')}
           onOpenOnboarding={() => setActiveModal('onboarding')}
+          onLogoClick={handleGoHome}
         />
       )}
 
