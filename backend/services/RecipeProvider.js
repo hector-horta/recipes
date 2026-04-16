@@ -4,6 +4,7 @@ import { redisClient } from '../config/redis.js';
 import { MEDICAL_TRIGGERS } from '../config/medical.js';
 import { ActivityLogger } from './ActivityLogger.js';
 import { TagService } from './TagService.js';
+import { CANONICAL_CATEGORIES, DIETARY_HIGHLIGHTS, ALL_CANONICAL_TAGS } from '../constants/tags.js';
 import crypto from 'crypto';
 
 const CACHE_TTL_SECONDS = 3600; // 1 hour
@@ -34,8 +35,27 @@ export class RecipeProvider {
       const searchTerms = [q];
       if (baseQ !== q && baseQ.length > 2) searchTerms.push(baseQ);
 
+      // Search Expansion for Canonical Tags
+      // If the query matches a canonical tag name (e.g. "principal"), 
+      // we expand the search to include the tag key and its keywords.
+      const queryLower = q.toLowerCase();
+      const expandedTerms = new Set(searchTerms);
+
+      ALL_CANONICAL_TAGS.forEach(tag => {
+        const matchesEs = tag.es.toLowerCase().includes(queryLower);
+        const matchesEn = tag.en.toLowerCase().includes(queryLower);
+        const matchesKey = tag.key.toLowerCase().includes(queryLower);
+        
+        if (matchesEs || matchesEn || matchesKey) {
+          expandedTerms.add(tag.key);
+          if (tag.keywords) {
+            tag.keywords.forEach(k => expandedTerms.add(k));
+          }
+        }
+      });
+
       const orConditions = [];
-      searchTerms.forEach(term => {
+      Array.from(expandedTerms).forEach(term => {
         orConditions.push({ title_es: { [Op.iLike]: `%${term}%` } });
         orConditions.push({ title_en: { [Op.iLike]: `%${term}%` } });
         orConditions.push(where(cast(col('tags'), 'text'), { [Op.iLike]: `%${term}%` }));
@@ -253,21 +273,6 @@ export class RecipeProvider {
     }
 
     const imageUrl = recipe.image_url || '';
-
-    const CANONICAL_CATEGORIES = [
-      { key: 'bebestible', es: 'Bebestible', en: 'Drink', keywords: ['jugo', 'batido', 'te', 'cafe', 'bebida', 'chocolate caliente', 'infusion', 'smoothie', 'juice', 'drink', 'tea', 'coffee'] },
-      { key: 'postre', es: 'Postre', en: 'Dessert', keywords: ['postre', 'dulce', 'torta', 'galleta', 'helado', 'pudin', 'mousse', 'dessert', 'sweet', 'cake', 'cookie', 'ice cream'] },
-      { key: 'entrada', es: 'Entrada', en: 'Starter Dish', keywords: ['entrada', 'sopa', 'ensalada', 'aperitivo', 'starter', 'soup', 'salad', 'appetizer'] },
-      { key: 'plato_principal', es: 'Plato Principal', en: 'Main Course', keywords: ['plato principal', 'fondo', 'almuerzo', 'cena', 'guiso', 'estofado', 'main course', 'dinner', 'lunch', 'stew'] },
-      { key: 'snack', es: 'Snack', en: 'Snack', keywords: ['snack', 'picoteo', 'tentempie', 'frutos secos', 'chips', 'snack'] },
-      { key: 'aderezo_salsa', es: 'Aderezo/Salsa', en: 'Dressing/Salsa', keywords: ['salsa', 'aderezo', 'dip', 'aliño', 'vinagreta', 'dressing', 'vinaigrette', 'sauce', 'mayonnaise', 'mayonesa', 'pesto', 'hummus'] }
-    ];
-
-    const DIETARY_HIGHLIGHTS = [
-      { key: 'vegano', es: 'Vegano', en: 'Vegan' },
-      { key: 'sin_gluten', es: 'Sin Gluten', en: 'Gluten-free' },
-      { key: 'low_fodmap', es: 'Bajo en FODMAP', en: 'Low FODMAP' }
-    ];
 
     const rawTags = recipe.tags || [];
     const processedTags = rawTags.map(t => {
