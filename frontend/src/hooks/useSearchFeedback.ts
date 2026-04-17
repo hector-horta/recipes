@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { trackEvent } from '../utils/analytics';
+import { logger } from '../utils/logger';
 
 export function useSearchFeedback() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -25,7 +25,7 @@ export function useSearchFeedback() {
       }
 
       setSubmitted(true);
-      trackEvent('suggest_to_chef', { term: term.trim() });
+      logger.track('CHEF_SUGGESTION_SENT', { term: term.trim() });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {

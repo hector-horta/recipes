@@ -21,7 +21,7 @@ interface OnboardingModalProps {
 
 export function OnboardingModal({ onClose }: OnboardingModalProps) {
   const { t } = useTranslation();
-  const { user, updateProfile } = useAuth();
+  const { user, updateUserProfile } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
   const SEVERITY_OPTIONS: { value: 'mild' | 'moderate' | 'severe' | 'anaphylactic'; label: string; activeClasses: string }[] = [
@@ -93,7 +93,7 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
         if (index > -1) updatedConditions.splice(index, 1);
       }
 
-      await updateProfile({
+      await updateUserProfile({
         intolerances,
         severities,
         conditions: updatedConditions,

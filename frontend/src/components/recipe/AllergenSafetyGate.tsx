@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ShieldAlert, ShieldOff, Search } from 'lucide-react';
-import { trackEvent } from '../../utils/analytics';
+import { logger } from '../../utils/logger';
 
 interface AllergenSafetyGateProps {
   searchTerm: string;
@@ -22,7 +22,7 @@ export function AllergenSafetyGate({
 
   // Analytics: track gate shown
   useEffect(() => {
-    trackEvent('safety_gate_shown', {
+    logger.track('SAFETY_GATE_SHOWN', {
       query: searchTerm,
       filteredCount,
       allergens: allergens.join(',')
@@ -30,7 +30,7 @@ export function AllergenSafetyGate({
   }, [searchTerm, filteredCount, allergens]);
 
   const handleOverride = () => {
-    trackEvent('safety_gate_override', {
+    logger.track('SAFETY_GATE_OVERRIDE', {
       query: searchTerm,
       filteredCount,
       allergens: allergens.join(',')
@@ -39,7 +39,7 @@ export function AllergenSafetyGate({
   };
 
   const handleDismiss = () => {
-    trackEvent('safety_gate_dismissed', {
+    logger.track('SAFETY_GATE_DISMISS', {
       query: searchTerm,
       filteredCount,
       allergens: allergens.join(',')

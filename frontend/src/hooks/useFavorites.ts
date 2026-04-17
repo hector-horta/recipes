@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../AuthContext';
-import { trackEvent } from '../utils/analytics';
+import { logger } from '../utils/logger';
 import { api, ApiError } from '../lib/api';
 
 export interface FavoriteItem {
@@ -42,12 +42,12 @@ export function useFavorites() {
     },
     onSuccess: (data, recipe) => {
       if (data?.favorited) {
-        trackEvent('recipe_favorited', {
+        logger.track('FAVORITE_ADD', {
           title: recipe.title,
           id: recipe.id
         });
       } else {
-        trackEvent('recipe_unfavorited', {
+        logger.track('FAVORITE_REMOVE', {
           title: recipe.title,
           id: recipe.id
         });

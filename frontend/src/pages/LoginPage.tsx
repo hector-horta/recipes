@@ -22,21 +22,38 @@ export function LoginPage() {
     e.preventDefault();
     setError('');
     setIsSubmitting(true);
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     try {
+      if (!email.trim() || !emailRegex.test(email.trim())) {
+        setError('Email: Ingresa un correo electrónico válido.');
+        setIsSubmitting(false);
+        return;
+      }
+
       if (isRegister) {
-        if (!displayName.trim()) { setError('Ingresa tu nombre.'); setIsSubmitting(false); return; }
-        if (password.length < 6) { setError('La contraseña debe tener al menos 6 caracteres.'); setIsSubmitting(false); return; }
-        if (!acceptedTerms) { setError('Debes aceptar la Política de Privacidad y Términos (GDPR) para continuar.'); setIsSubmitting(false); return; }
-        await register(email.trim().toLowerCase(), password, displayName.trim(), acceptedTerms);
+        if (!displayName.trim()) { setError('Nombre: Ingresa tu nombre completo.'); setIsSubmitting(false); return; }
+        if (password.length < 6) { setError('Contraseña: Debe tener al menos 6 caracteres.'); setIsSubmitting(false); return; }
+        if (!acceptedTerms) { setError('Legal: Debes aceptar la Política de Privacidad y Términos (GDPR).'); setIsSubmitting(false); return; }
+        
+        await register({ 
+          email: email.trim().toLowerCase(), 
+          password, 
+          displayName: displayName.trim(), 
+          acceptedTerms 
+        });
       } else {
-        await login(email.trim().toLowerCase(), password);
+        await login({ 
+          email: email.trim().toLowerCase(), 
+          password 
+        });
       }
       
-      // Delay to mitigate browser autofill extension crash
+      // Mitigation for browser autofill extension crash (e.g. Bitwarden/LastPass)
+      // Increasing delay to ensure extension processes the "submit" event before navigation
       setTimeout(() => {
         navigate(isRegister ? '/onboarding' : '/');
-      }, 50);
+      }, 150);
     } catch (err: any) {
       setError(err.message || 'Error inesperado.');
     } finally {
@@ -108,7 +125,25 @@ export function LoginPage() {
           )}
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form 
+            onSubmit={handleSubmit} 
+            className="space-y-5"
+            data-bwignore="true" 
+            noValidate
+          >
+            {/* 
+              Hidden username field to satisfy password managers searching for 
+              a 'username' property, preventing some extension crashes.
+            */}
+            <input 
+              type="text" 
+              name="username" 
+              autoComplete="username" 
+              className="hidden" 
+              tabIndex={-1} 
+              aria-hidden="true" 
+              defaultValue={email}
+            />
             {isRegister && (
               <Input
                 variant="glass"
@@ -127,12 +162,12 @@ export function LoginPage() {
               variant="glass"
               id="login-email"
               name="email"
-              type="email"
+              type="text"
+              inputMode="email"
               autoComplete="email"
-              placeholder="correo@ejemplo.com"
+              placeholder="Correo electrónico"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              required
               leftIcon={<Mail className="w-4.5 h-4.5" />}
             />
 
@@ -145,7 +180,6 @@ export function LoginPage() {
               placeholder="Contraseña"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              required
               leftIcon={<Lock className="w-4.5 h-4.5" />}
               rightElement={
                 <Button
