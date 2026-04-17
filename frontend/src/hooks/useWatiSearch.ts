@@ -55,8 +55,13 @@ export function useWatiSearch() {
   }, [debouncedQuery]);
 
   // Security: Basic character validation and length limit
-  const sanitizedQuery = debouncedQuery.replace(/[^\w\s\u00C0-\u00FF]/gi, '').slice(0, 100);
-  const shouldSearch = sanitizedQuery.trim().length === 0 || sanitizedQuery.trim().length >= 2;
+  const sanitizedQuery = debouncedQuery
+    .replace(/-/g, ' ')
+    .replace(/[^\w\s\u00C0-\u00FF]/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 100);
+  const shouldSearch = sanitizedQuery.length === 0 || sanitizedQuery.length >= 2;
 
   const { data, isLoading, isFetching, error } = useQuery({
     queryKey: ['recipes', sanitizedQuery, user?.id, user?.intolerances, user?.severities, includeUnsafe, refreshKey],

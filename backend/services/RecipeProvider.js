@@ -46,8 +46,9 @@ export class RecipeProvider {
         const matchesEs = tag.es.toLowerCase().includes(queryLower);
         const matchesEn = tag.en.toLowerCase().includes(queryLower);
         const matchesKey = tag.key.toLowerCase().includes(queryLower);
+        const matchesKeyword = tag.keywords?.some(k => k.toLowerCase().includes(queryLower));
         
-        if (matchesEs || matchesEn || matchesKey) {
+        if (matchesEs || matchesEn || matchesKey || matchesKeyword) {
           expandedTerms.add(tag.key);
           if (tag.keywords) {
             tag.keywords.forEach(k => expandedTerms.add(k));

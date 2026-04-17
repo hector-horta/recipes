@@ -43,8 +43,8 @@ export const CANONICAL_CATEGORIES = [
 
 export const DIETARY_HIGHLIGHTS = [
   { key: 'vegano', es: 'Vegano', en: 'Vegan' },
-  { key: 'sin_gluten', es: 'Sin Gluten', en: 'Gluten-free' },
-  { key: 'low_fodmap', es: 'Bajo en FODMAP', en: 'Low FODMAP' }
+  { key: 'sin_gluten', es: 'Sin Gluten', en: 'Gluten free', keywords: ['gluten-free', 'sin gluten'] },
+  { key: 'low_fodmap', es: 'Bajo en FODMAP', en: 'Low FODMAP', keywords: ['low-fodmap', 'sibo'] }
 ];
 
 export const ALL_CANONICAL_TAGS = [...CANONICAL_CATEGORIES, ...DIETARY_HIGHLIGHTS];
