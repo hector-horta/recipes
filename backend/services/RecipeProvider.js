@@ -1,4 +1,5 @@
 import { Op, where, cast, col } from 'sequelize';
+import { sequelize } from '../config/database.js';
 import { Recipe } from '../models/Recipe.js';
 import { redisClient } from '../config/redis.js';
 import { MEDICAL_TRIGGERS } from '../config/medical.js';
@@ -73,7 +74,8 @@ export class RecipeProvider {
       n: number,
       intolerances: userIntolerances.sort(),
       severities: userProfile?.severities || {},
-      uid: userProfile?.id || 'anonymous'
+      uid: userProfile?.id || 'anonymous',
+      rKey: params.refreshKey || ''
     };
     const cacheHash = crypto.createHash('md5').update(JSON.stringify(cachePayload)).digest('hex');
     const cacheKey = `recipes:v2:${cacheHash}`;
@@ -95,12 +97,15 @@ export class RecipeProvider {
     // Identificar si necesitamos un buffer para el filtrado post-DB
     const hasFilters = userIntolerances.length > 0;
 
-    ActivityLogger.info('Recipe search initiated', { query, number: requestedLimit, hasFilters });
+    ActivityLogger.info('Recipe search initiated', { query, number: requestedLimit, hasFilters, refreshKey: params.refreshKey });
+
+    // ORDER: Randomize if no search query, otherwise latest first
+    const order = query ? [['created_at', 'DESC']] : [sequelize.random()];
 
     // Buscamos candidatos
     const recipes = await Recipe.findAll({
       where: whereClause,
-      order: [['created_at', 'DESC']],
+      order,
       limit: hasFilters ? requestedLimit * 5 : requestedLimit
     });
 

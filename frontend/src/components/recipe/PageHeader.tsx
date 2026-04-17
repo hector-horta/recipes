@@ -1,6 +1,6 @@
 
 import { useTranslation } from 'react-i18next';
-import { Search, AlertCircle, Globe, RefreshCw, Sparkles, Loader2 } from 'lucide-react';
+import { Search, AlertCircle, Globe, Sparkles, Loader2 } from 'lucide-react';
 import { useAuth } from '../../AuthContext';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -15,9 +15,7 @@ interface PageHeaderProps {
   hasFavorites: boolean;
   isQuotaExhausted: boolean;
   showLoader: boolean;
-  isRefreshing: boolean;
   isSearching: boolean;
-  onRefresh: () => void;
   onOpenLogin: () => void;
 }
 
@@ -28,9 +26,7 @@ export function PageHeader({
   hasFavorites,
   isQuotaExhausted,
   showLoader,
-  isRefreshing,
   isSearching,
-  onRefresh,
   onOpenLogin
 }: PageHeaderProps) {
   const { t } = useTranslation();
@@ -97,18 +93,6 @@ export function PageHeader({
         </AuthGuard>
       </div>
       
-      <AuthGuard>
-        <Button 
-          variant="secondary"
-          onClick={onRefresh}
-          disabled={isRefreshing}
-          isLoading={isRefreshing}
-          leftIcon={!isRefreshing && <RefreshCw className="w-4 h-4" />}
-          className="shadow-sm"
-        >
-          {t('common.update')}
-        </Button>
-      </AuthGuard>
       </div>
 
       {!user && (

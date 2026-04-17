@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { RecipeSearchResponse } from '../types/recipe';
 import { useDebounce } from './useDebounce';
 import { useAuth } from '../AuthContext';
@@ -8,12 +8,14 @@ import { trackEvent } from '../utils/analytics';
 
 async function fetchRecipes(
   query: string,
-  includeUnsafe?: boolean
+  includeUnsafe?: boolean,
+  refreshKey?: number
 ): Promise<RecipeSearchResponse> {
   const params = new URLSearchParams();
   if (query?.trim()) params.set('query', query.trim());
-  params.set('number', '20');
+  params.set('number', '10');
   if (includeUnsafe) params.set('includeUnsafe', 'true');
+  if (refreshKey) params.set('refreshKey', refreshKey.toString());
 
   const data = await api.get<RecipeSearchResponse | any[]>(`/recipes?${params.toString()}`);
 
@@ -26,12 +28,12 @@ async function fetchRecipes(
 }
 
 export function useWatiSearch() {
-  const queryClient = useQueryClient();
   const { user } = useAuth();
   const [query, setQuery] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('q') || '';
   });
+  const [refreshKey, setRefreshKey] = useState(0);
   const [includeUnsafe, setIncludeUnsafe] = useState(false);
   const debouncedQuery = useDebounce(query, 500);
 
@@ -57,8 +59,8 @@ export function useWatiSearch() {
   const shouldSearch = sanitizedQuery.trim().length === 0 || sanitizedQuery.trim().length >= 2;
 
   const { data, isLoading, isFetching, error } = useQuery({
-    queryKey: ['recipes', sanitizedQuery, user?.id, user?.intolerances, user?.severities, includeUnsafe],
-    queryFn: () => fetchRecipes(sanitizedQuery, includeUnsafe),
+    queryKey: ['recipes', sanitizedQuery, user?.id, user?.intolerances, user?.severities, includeUnsafe, refreshKey],
+    queryFn: () => fetchRecipes(sanitizedQuery, includeUnsafe, refreshKey),
     enabled: shouldSearch,
     staleTime: 1000 * 60 * 5, // Improved performance: 5 mins cache for recipes
     gcTime: 1000 * 60 * 10,
@@ -96,8 +98,8 @@ export function useWatiSearch() {
   const isPending = isFetching && results.length === 0 && !isSearching;
 
   const refresh = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['recipes', sanitizedQuery] });
-  }, [queryClient, sanitizedQuery]);
+    setRefreshKey(prev => prev + 1);
+  }, []);
 
   return {
     query,
