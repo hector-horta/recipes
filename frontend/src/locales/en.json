@@ -52,7 +52,11 @@
     "mindfulNutrition": "Mindful Nutrition",
     "removeFavorite": "Remove from favorites",
     "addFavorite": "Add to favorites",
-    "borderlineTooltip": "Contains ingredients (e.g. Fructans) that approach your personal tolerance limit."
+    "borderlineTooltip": "Contains ingredients (e.g. Fructans) that approach your personal tolerance limit.",
+    "safety": {
+      "overrideActive": "Safety filter bypassed",
+      "overrideActiveDesc": "You are viewing recipes containing your severe allergens at your own risk."
+    }
   },
   "auth": {
     "createAccount": "Create Account",

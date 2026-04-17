@@ -76,7 +76,8 @@ export class RecipeProvider {
       intolerances: userIntolerances.sort(),
       severities: userProfile?.severities || {},
       uid: userProfile?.id || 'anonymous',
-      rKey: params.refreshKey || ''
+      rKey: params.refreshKey || '',
+      unsafe: params.includeUnsafe === 'true'
     };
     const cacheHash = crypto.createHash('md5').update(JSON.stringify(cachePayload)).digest('hex');
     const cacheKey = `recipes:v2:${cacheHash}`;

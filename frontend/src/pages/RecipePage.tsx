@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, AlertTriangle } from 'lucide-react';
 import { Recipe } from '../types/recipe';
 import { Button } from '../components/ui/Button';
 import { useFavorites } from '../hooks/useFavorites';
@@ -28,6 +28,7 @@ interface RecipePageProps {
   refresh: () => void;
   filteredUnsafeCount?: number;
   filteredAllergens?: string[];
+  includeUnsafe?: boolean;
   setIncludeUnsafe?: (val: boolean) => void;
   onLogoClick: () => void;
 }
@@ -47,6 +48,7 @@ export function RecipePage({
   filteredUnsafeCount = 0,
   filteredAllergens = [],
   setIncludeUnsafe,
+  includeUnsafe = false,
   onLogoClick
 }: RecipePageProps) {
   const { t } = useTranslation();
@@ -100,6 +102,23 @@ export function RecipePage({
 
         {!isListEmpty && (
           <>
+            {includeUnsafe && (
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-4 shadow-sm">
+                  <div className="p-2 bg-amber-100 rounded-lg text-amber-600">
+                    <AlertTriangle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-amber-900 leading-none mb-1">
+                      {t('recipe.safety.overrideActive')}
+                    </h3>
+                    <p className="text-amber-700 text-sm">
+                      {t('recipe.safety.overrideActiveDesc')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
             <RecipeGrid
               recipes={displayRecipes}
               isLoading={isLoading}

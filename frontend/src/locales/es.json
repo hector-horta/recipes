@@ -52,7 +52,11 @@
     "mindfulNutrition": "Nutrición Consciente",
     "removeFavorite": "Quitar de favoritos",
     "addFavorite": "Agregar a favoritos",
-    "borderlineTooltip": "Contiene ingredientes (ej. Fructanos) que rozan tu límite de tolerancia personal."
+    "borderlineTooltip": "Contiene ingredientes (ej. Fructanos) que rozan tu límite de tolerancia personal.",
+    "safety": {
+      "overrideActive": "Filtro de seguridad omitido",
+      "overrideActiveDesc": "Estás viendo recetas que contienen tus alérgenos severos bajo tu propio riesgo."
+    }
   },
   "auth": {
     "createAccount": "Crear Cuenta",
