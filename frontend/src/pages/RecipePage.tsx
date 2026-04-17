@@ -112,18 +112,20 @@ export function RecipePage({
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
             />
-            <div className="flex justify-center mt-12 mb-8">
-              <Button 
-                variant="secondary"
-                onClick={refresh}
-                disabled={isRefreshing}
-                isLoading={isRefreshing}
-                leftIcon={!isRefreshing && <RefreshCw className="w-4 h-4" />}
-                className="shadow-sm font-bold min-w-[200px] hover:bg-brand-sage/10 active:scale-95 transition-all hover:shadow-md"
-              >
-                {t('common.moreRecipes')}
-              </Button>
-            </div>
+            {!user && (
+              <div className="flex justify-center mt-12 mb-8">
+                <Button 
+                  variant="secondary"
+                  onClick={refresh}
+                  disabled={isRefreshing}
+                  isLoading={isRefreshing}
+                  leftIcon={!isRefreshing && <RefreshCw className="w-4 h-4" />}
+                  className="shadow-sm font-bold min-w-[200px] hover:bg-brand-sage/10 active:scale-95 transition-all hover:shadow-md"
+                >
+                  {t('common.moreRecipes')}
+                </Button>
+              </div>
+            )}
           </>
         )}
 
