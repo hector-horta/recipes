@@ -4,7 +4,7 @@ import { RecipeSearchResponse } from '../types/recipe';
 import { useDebounce } from './useDebounce';
 import { useAuth } from '../AuthContext';
 import { api, ApiError } from '../lib/api';
-import { trackEvent } from '../utils/analytics';
+import { logger } from '../utils/logger';
 
 async function fetchRecipes(
   query: string,
@@ -87,12 +87,12 @@ export function useWatiSearch() {
     if (trimmedQuery.length < 2) return;
 
     if (results.length > 0) {
-      trackEvent('search_success', {
+      logger.track('SEARCH_SUCCESS', {
         query: trimmedQuery,
         resultsCount: results.length
       });
     } else if (!isLoading && !isFetching && !error) {
-      trackEvent('search_failed', {
+      logger.track('SEARCH_FAILED', {
         query: trimmedQuery,
         resultsCount: 0
       });

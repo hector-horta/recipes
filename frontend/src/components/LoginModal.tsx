@@ -28,19 +28,26 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
     e.preventDefault();
     setError('');
     setIsSubmitting(true);
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     try {
+      if (!email.trim() || !emailRegex.test(email.trim())) {
+        setError('Email: Ingresa un correo electrónico válido.');
+        setIsSubmitting(false);
+        return;
+      }
+
       let userData = null;
       if (isRegister) {
-        if (!displayName.trim()) { setError(t('auth.nameRequired')); setIsSubmitting(false); return; }
-        if (password.length < 8) { setError(t('auth.minChars') || 'La contraseña debe tener al menos 8 caracteres'); setIsSubmitting(false); return; }
-        if (!acceptedTerms) { setError(t('auth.termsRequired')); setIsSubmitting(false); return; }
+        if (!displayName.trim()) { setError('Nombre: Ingresa tu nombre completo.'); setIsSubmitting(false); return; }
+        if (password.length < 6) { setError('Contraseña: Debe tener al menos 6 caracteres.'); setIsSubmitting(false); return; }
+        if (!acceptedTerms) { setError('Legal: Debes aceptar los Términos y Condiciones.'); setIsSubmitting(false); return; }
         userData = await register({ 
           email: email.trim().toLowerCase(), 
           password, 
           displayName: displayName.trim(), 
           acceptedTerms,
-          language: 'es' // Default language
+          language: 'es' 
         });
       } else {
         userData = await login({ 
@@ -51,7 +58,7 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
       
       setTimeout(() => {
         onLoginSuccess(userData);
-      }, 50);
+      }, 150);
     } catch (err: any) {
       setError(err.message || t('auth.unexpectedError'));
     } finally {
@@ -98,7 +105,22 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form 
+          onSubmit={handleSubmit} 
+          className="space-y-4"
+          data-bwignore="true"
+          noValidate
+        >
+          {/* Hidden username field for password manager compatibility */}
+          <input 
+            type="text" 
+            name="username" 
+            autoComplete="username" 
+            className="hidden" 
+            tabIndex={-1} 
+            aria-hidden="true" 
+            defaultValue={email}
+          />
           {isRegister && (
               <Input
                 variant="glass"
@@ -115,14 +137,14 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
 
           <Input
             variant="glass"
-            type="email"
+            type="text"
+            inputMode="email"
             name="email"
             id="login-email"
             autoComplete="email"
             placeholder={t('auth.emailPlaceholder')}
             value={email}
             onChange={e => setEmail(e.target.value)}
-            required
             leftIcon={<Mail className="w-4 h-4" />}
           />
 
@@ -135,7 +157,6 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
             placeholder={t('auth.passwordPlaceholder')}
             value={password}
             onChange={e => setPassword(e.target.value)}
-            required
             leftIcon={<Lock className="w-4 h-4" />}
             rightElement={
               <Button

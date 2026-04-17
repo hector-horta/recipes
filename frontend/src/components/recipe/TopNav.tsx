@@ -6,7 +6,7 @@ import { WatiLogo } from '../WatiLogo';
 import { LanguageSelector } from '../LanguageSelector';
 import { Button } from '../ui/Button';
 import { Settings, UserCircle, LogOut, Menu, X } from 'lucide-react';
-import { trackEvent } from '../../utils/analytics';
+import { logger } from '../../utils/logger';
 
 interface TopNavProps {
   onOpenLogin: () => void;
@@ -25,7 +25,7 @@ export function TopNav({ onOpenLogin, onOpenOnboarding, onLogoClick }: TopNavPro
         {/* Logo */}
         <button 
           onClick={() => {
-            trackEvent('logo_home_click', { location: 'top_nav' });
+            logger.track('UI_HOME_CLICK', { location: 'top_nav' });
             onLogoClick();
           }}
           className="flex items-center hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-mint rounded-lg px-1"

@@ -38,7 +38,9 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 1. **SSRF Protection**: Toda integración externa (Spoonacular, Groq, NVIDIA) debe pasar por el Proxy del Backend (`ingest.js` o `NvidiaNIM.js`). Nunca llames APIs de terceros desde el frontend.
 2. **Frontend API Client**: Prohibido usar `fetch` directo. Usar `frontend/src/lib/api.ts`.
    - Esto garantiza que `credentials: 'include'` y los headers de i18n/auth sean consistentes.
-3. **Manejo de Errores**: Nunca usar `console.log` o `console.error` directamente. Usar los métodos estáticos de `ActivityLogger` para logs estructurados y telemetría.
+3. **Manejo de Errores y Telemetría**: Nunca usar `console.log` o `console.error` directamente.
+   - **Backend**: Usar los métodos estáticos de `ActivityLogger` para logs estructurados y telemetría.
+   - **Frontend**: Usar el singleton `logger` (`frontend/src/utils/logger.ts`) para unificar logs de consola y trackeo de eventos.
 4. **Validación Zod**: Todo input externo (req.body, req.query, env vars) DEBE ser validado con Zod antes de tocar la lógica. **Usa `backend/models/validators.js`** como repositorio central de esquemas para asegurar consistencia entre rutas.
 5. **No Static URLs**: Prohibido usar URLs de API hardcodeadas en el frontend. Usar el wrapper `api` de `frontend/src/lib/api.ts` que inyecta automáticamente el `CONFIG.API_URL`.
 6. **Resiliencia Frontend**: Usa reintentos (`retry`) en hooks de búsqueda y gestión de estados de error amigables para el usuario.
@@ -601,6 +603,25 @@ interface UserProfile {
 ```
 > Acceso via `const { user, login, register, logout, updateUserProfile } = useAuth();`
 
+#### 🛡️ SPA Auth Hardening (Password Managers)
+Para evitar crashes en extensiones como **Bitwarden** o **LastPass** durante la navegación rápida post-auth, sigue este patrón en los formularios de login/register:
+
+1. **Hidden Username**: Incluye siempre un input oculto con `name="username"` y `autoComplete="username"` si el campo principal es `email`. Esto evita que la extensión busque recursivamente y falle.
+2. **BW Ignore**: Agrega `data-bwignore="true"` al tag `<form>`.
+3. **Navigation Delay**: No uses `navigate()` inmediatamente tras el éxito de la API. Usa un `setTimeout` de al menos **150ms** para dar tiempo a que la extensión procese su evento de "submit" interno.
+
+```tsx
+// Ejemplo en LoginPage.tsx
+<form data-bwignore="true">
+  <input type="text" name="username" autoComplete="username" className="hidden" aria-hidden="true" defaultValue={email} />
+  {/* ...otros inputs */}
+</form>
+
+// En el handler
+await login();
+setTimeout(() => navigate('/home'), 150);
+```
+
 #### Navegación (sin React Router)
 La app usa **navegación manual** con `useState` + `history.pushState/popstate`:
 ```typescript
@@ -711,33 +732,49 @@ Todas las brand colors están como `brand-sage`, `brand-forest`, `brand-mint`, `
 
 ---
 
-## 📊 Analytics
+## 📊 Logging & Telemetry (Frontend)
 
-### Frontend (Browser) - Abstracción Agnóstica
-Para evitar un acoplamiento fuerte con proveedores de analytics específicos (como Umami, PostHog, o Google Analytics), Wati utiliza un **patrón Facade**.
-**Nunca llames a la API del proveedor directamente** en los componentes (por ejemplo, nunca uses `window.umami.track`). En su lugar, siempre importa y utiliza la abstracción global `trackEvent`:
+### Unified Facade Pattern
+Para evitar acoplamiento con proveedores específicos y unificar la experiencia de desarrollo, Wati utiliza un **patrón Facade** centralizado en `frontend/src/utils/logger.ts`.
+
+**Nunca llames a `console.log` o APIs de proveedores directamente** (ej: `window.umami.track`). En su lugar, usa el singleton `logger`:
 
 ```typescript
-import { trackEvent } from '../utils/analytics';
+import { logger } from '../utils/logger';
 
-// Uso
-trackEvent('event_name', { key: 'value' });
+// 1. Log informativo (solo consola en dev, filtrado en prod)
+logger.info('mensaje');
+
+// 2. Telemetría Automática (Convención UPPER_SNAKE_CASE)
+// Cualquier log que use UPPER_SNAKE_CASE se mapea automáticamente a un evento de analytics.
+logger.info('AUTH_LOGIN_SUCCESS', { method: 'password' });
+
+// 3. Trackeo Explícito (sin log en consola)
+logger.track('UI_HOME_CLICK', { source: 'header' });
+
+// 4. Errores
+logger.error('Error al cargar datos', error, { originalQuery: q });
 ```
-> Si deseas agregar o cambiar el proveedor de analytics, sólo debes modificar la función en `frontend/src/utils/analytics.ts`.
 
-### Eventos Existentes
-| Evento | Cuándo | Payload |
+### Convenciones
+- **Naming**: Los eventos de telemetría DEBEN usar `UPPER_SNAKE_CASE` (ej: `SEARCH_SUCCESS`).
+- **Decoupling**: La implementación real de analytics reside en `utils/analytics.ts` y es consumida únicamente por el `logger`.
+
+### Eventos Existentes (Normalizados)
+| Evento (Normalizado) | Cuándo | Payload |
 |---|---|---|
-| `search_success` | Búsqueda ≥3 chars con resultados | `{ query, resultsCount }` |
-| `search_failed` | Búsqueda ≥3 chars sin resultados | `{ query, resultsCount: 0 }` |
-| `recipe_favorited` | Marcar como favorita | `{ title, id }` |
-| `recipe_unfavorited` | Quitar de favoritos | `{ title, id }` |
-| `suggest_to_chef` | Sugerir receta al chef | `{ term }` |
-| `safety_gate_shown` | Se muestra un cerrojo por severidad | `{ query, filteredCount, allergens }` |
-| `safety_gate_override` | El usuario decide "ver riesgo" | `{ query, filteredCount, allergens }` |
-| `safety_gate_dismissed` | El usuario rechaza continuar | `{ query, filteredCount, allergens }` |
+| `SEARCH_SUCCESS` | Búsqueda ≥3 chars con resultados | `{ query, resultsCount }` |
+| `SEARCH_FAILED` | Búsqueda ≥3 chars sin resultados | `{ query, resultsCount: 0 }` |
+| `FAVORITE_ADD` | Marcar como favorita | `{ title, id }` |
+| `FAVORITE_REMOVE` | Quitar de favoritos | `{ title, id }` |
+| `CHEF_SUGGEST_SENT` | Sugerir receta al chef | `{ term }` |
+| `SAFETY_GATE_SHOWN` | Se muestra un cerrojo por riesgo médico | `{ allergens }` |
+| `SAFETY_GATE_OVERRIDE` | El usuario decide "ver riesgo" | `{ allergens }` |
+| `SAFETY_GATE_DISMISS` | El usuario rechaza continuar | `{ allergens }` |
+| `AUTH_LOGIN_SUCCESS` | Login exitoso | `{ method: 'password' }` |
+| `UI_HOME_CLICK` | Navegación al Home | `{ source: 'logo'|'nav' }` |
 
-> **Regla**: Todo feature nuevo debe incluir al menos un evento de tracking.
+> **Regla**: Todo feature nuevo debe incluir al menos un evento de tracking descriptivo en `UPPER_SNAKE_CASE`.
 
 ### Eventos Backend (ActivityLogger)
 | Evento (action) | Cuándo | Metadata |

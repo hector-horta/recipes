@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api, ApiError } from './lib/api';
+import { logger } from './utils/logger';
 
 export interface UserProfile {
   id: string;
@@ -18,19 +19,19 @@ export interface UserProfile {
 
 interface AuthContextType {
   user: UserProfile | null;
-  loading: boolean;
+  isLoading: boolean;
   error: string | null;
   login: (credentials: any) => Promise<UserProfile>;
   register: (data: any) => Promise<UserProfile>;
   logout: () => Promise<void>;
-  updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
+  updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -38,24 +39,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const checkAuth = async () => {
+    const token = localStorage.getItem('wati_jwt');
+    if (!token) {
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const data = await api.get<UserProfile>('/auth/me');
       setUser(data);
     } catch (err) {
       setUser(null);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   const login = async (credentials: any) => {
     try {
       setError(null);
-      const data = await api.post<{ user: UserProfile }>('/auth/login', credentials);
+      logger.info('AUTH_LOGIN_ATTEMPT', { email: credentials.email });
+      const data = await api.post<{ user: UserProfile, token?: string }>('/auth/login', credentials);
       setUser(data.user);
+      if (data.token) {
+        localStorage.setItem('wati_jwt', data.token);
+      }
+      logger.info('AUTH_LOGIN_SUCCESS', { userId: data.user.id });
       return data.user;
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Error al iniciar sesión';
+      logger.error('AUTH_LOGIN_FAILED', err, { credentials });
       setError(msg);
       throw err;
     }
@@ -64,26 +77,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (data: any) => {
     try {
       setError(null);
-      const response = await api.post<{ user: UserProfile }>('/auth/register', data);
+      logger.info('AUTH_REGISTRATION_ATTEMPT', { email: data.email });
+      const response = await api.post<{ user: UserProfile, token?: string }>('/auth/register', data);
       setUser(response.user);
+      if (response.token) {
+        localStorage.setItem('wati_jwt', response.token);
+      }
+      logger.info('AUTH_REGISTRATION_SUCCESS', { userId: response.user.id });
       return response.user;
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Error al registrarse';
+      logger.error('AUTH_REGISTRATION_FAILED', err, { data });
       setError(msg);
       throw err;
     }
   };
 
   const logout = async () => {
+    localStorage.removeItem('wati_jwt');
+    setUser(null);
     try {
       await api.post('/auth/logout');
-      setUser(null);
     } catch (err) {
       console.error('Logout failed', err);
     }
   };
 
-  const updateProfile = async (updates: Partial<UserProfile>) => {
+  const updateUserProfile = async (updates: Partial<UserProfile>) => {
     try {
       setError(null);
       const updatedProfile = await api.put<UserProfile>('/auth/profile', updates);
@@ -98,7 +118,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, error, login, register, logout, updateProfile }}>
+    <AuthContext.Provider value={{ user, isLoading, error, login, register, logout, updateUserProfile }}>
       {children}
     </AuthContext.Provider>
   );
@@ -107,7 +127,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error('useAuth must be used within <AuthProvider>');
   }
   return context;
 };

@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useCachedImage } from '../hooks/useCachedImage';
 import { AuthGuard } from '../components/auth/AuthGuard';
 import { useAuth } from '../AuthContext';
-import { trackEvent } from '../utils/analytics';
+import { logger } from '../utils/logger';
 
 interface RecipeDetailPageProps {
   recipe: Recipe;
@@ -192,7 +192,7 @@ export function RecipeDetailPage({ recipe, onBack, onLogoClick }: RecipeDetailPa
           {t('recipe.mindfulNutrition')} <span className="text-brand-teal">&bull;</span>{' '}
           <button 
             onClick={() => {
-              trackEvent('logo_home_click', { location: 'recipe_detail_footer' });
+              logger.track('UI_HOME_CLICK', { location: 'recipe_detail_footer' });
               onLogoClick();
             }}
             className="hover:text-brand-teal transition-colors font-black focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-mint rounded-sm px-1"
