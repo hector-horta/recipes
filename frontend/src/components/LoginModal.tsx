@@ -245,45 +245,51 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
                 size="lg"
                 fullWidth
                 isLoading={isSubmitting}
-                rightIcon={!isSubmitting && <ArrowRight className="w-4 h-4" />}
+                className="relative"
               >
                 {view === 'register' 
                   ? t('auth.startJourney') 
                   : view === 'login' 
-                    ? t('auth.enter') 
+                    ? (
+                      <div className="relative w-full flex items-center justify-center">
+                        <span>{t('auth.enter')}</span>
+                        {!isSubmitting && <ArrowRight className="absolute right-0 w-4 h-4 opacity-70" />}
+                      </div>
+                    )
                     : t('auth.forgot.submit_button')}
               </Button>
 
               {view === 'login' && (
                 <div className="flex justify-center mt-2">
-                  <button
+                  <Button
                     type="button"
+                    variant="link"
                     onClick={() => setView('forgot-password')}
-                    className="text-xs font-extrabold text-brand-mint hover:text-white underline transition-colors"
+                    className="text-xs font-extrabold text-brand-mint hover:text-white underline transition-colors p-0 h-auto"
                   >
                     {t('auth.forgotPassword')}
-                  </button>
+                  </Button>
                 </div>
               )}
             </form>
 
             {/* Toggle */}
-            <div className="text-center text-white/70 text-xs mt-5 font-medium">
+            <div className="flex items-center justify-center gap-2 text-white/70 text-xs mt-6 font-medium">
               {view === 'forgot-password' ? (
                 <Button
                   variant="link"
                   onClick={() => setView('login')}
-                  className="text-brand-mint font-extrabold underline hover:text-white transition-colors"
+                  className="text-brand-mint font-extrabold underline hover:text-white transition-colors p-0 h-auto"
                 >
                   {t('auth.forgot.back_to_login')}
                 </Button>
               ) : (
                 <>
-                  {view === 'register' ? t('auth.haveAccount') : t('auth.noAccount')}{' '}
+                  <span className="opacity-80">{view === 'register' ? t('auth.haveAccount') : t('auth.noAccount')}</span>
                   <Button
                     variant="link"
                     onClick={() => setView(view === 'register' ? 'login' : 'register')}
-                    className="text-brand-mint font-extrabold underline hover:text-white transition-colors"
+                    className="text-brand-mint font-extrabold underline hover:text-white transition-colors p-0 h-auto"
                   >
                     {view === 'register' ? t('auth.signInLink') : t('auth.createAccountLink')}
                   </Button>
