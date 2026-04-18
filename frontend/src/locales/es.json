@@ -83,7 +83,7 @@
     "termsRequired": "Debes aceptar la Política de Privacidad y Términos (GDPR) para continuar.",
     "unexpectedError": "Error inesperado.",
     "dataStored": "Datos almacenados localmente. Cifrado AES-256.",
-    "forgotPassword": "¿Olvidaste tu contraseña?",
+    "forgotPassword": "¿Olvidaste tu Contraseña?",
     "verify": {
       "verifying_title": "Verificando tu correo",
       "verifying_desc": "Por favor espera mientras confirmamos tu identidad.",
@@ -97,7 +97,8 @@
       "resend_success": "¡Nuevo correo de verificación enviado!",
       "resend_failed": "Error al reenviar el correo. Inténtalo más tarde.",
       "go_home": "Volver al Inicio",
-      "restricted_action": "Verifica tu correo para guardar favoritos."
+      "restricted_action": "Verifica tu correo para guardar favoritos.",
+      "verify_account": "Verificar Cuenta"
     },
     "reset": {
       "title": "Restablecer Contraseña",
@@ -118,7 +119,7 @@
       "success_toast": "¡Contraseña restablecida con éxito!"
     },
     "forgot": {
-      "title": "¿Olvidaste tu contraseña?",
+      "title": "¿Olvidaste tu Contraseña?",
       "desc": "Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña.",
       "email_label": "Correo Electrónico",
       "submit_button": "Enviar Enlace de Restablecimiento",

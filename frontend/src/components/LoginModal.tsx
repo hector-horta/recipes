@@ -223,17 +223,6 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
                 />
               )}
 
-              {view === 'login' && (
-                <div className="flex justify-end pr-2">
-                  <button
-                    type="button"
-                    onClick={() => setView('forgot-password')}
-                    className="text-[10px] font-bold text-brand-mint/60 hover:text-brand-mint uppercase tracking-widest transition-colors"
-                  >
-                    {t('auth.forgotPassword')}
-                  </button>
-                </div>
-              )}
 
               {view === 'register' && (
                 <div className="flex items-start gap-3">
@@ -264,6 +253,18 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
                     ? t('auth.enter') 
                     : t('auth.forgot.submit_button')}
               </Button>
+
+              {view === 'login' && (
+                <div className="flex justify-center mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setView('forgot-password')}
+                    className="text-xs font-extrabold text-brand-mint hover:text-white underline transition-colors"
+                  >
+                    {t('auth.forgotPassword')}
+                  </button>
+                </div>
+              )}
             </form>
 
             {/* Toggle */}

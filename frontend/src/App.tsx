@@ -12,7 +12,7 @@ import { SecurityScrubber } from './api/SecurityScrubber';
 import { useWatiSearch } from './hooks/useWatiSearch';
 import { VerifyEmailPage } from './pages/VerifyEmailPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
-import { VerificationBanner } from './components/VerificationBanner';
+
 
 // ── App Component ──────────────────────────────────────────
 export type ModalState = 'none' | 'login' | 'onboarding';
@@ -151,7 +151,7 @@ function App() {
 
   return (
     <>
-      <VerificationBanner />
+
       {renderContent()}
 
       {activeModal === 'login' && (

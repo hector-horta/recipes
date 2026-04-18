@@ -84,11 +84,7 @@ export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite, o
                 : 'bg-white/80 text-slate-500 hover:text-red-500 hover:bg-white'
             }`}
           >
-            {user && !isVerified ? (
-              <Lock className="w-4 h-4 text-slate-400" />
-            ) : (
-              <Heart className={`w-4 h-4 ${isFavorited ? 'fill-current' : ''}`} />
-            )}
+            <Heart className={`w-4 h-4 ${isFavorited ? 'fill-current' : ''}`} />
           </Button>
         </AuthGuard>
 
