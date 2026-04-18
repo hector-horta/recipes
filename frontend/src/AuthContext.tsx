@@ -14,6 +14,7 @@ export interface UserProfile {
   language: string;
   severities?: Record<string, string>;
   conditions?: string[];
+  is_verified: boolean;
   createdAt?: string;
 }
 
@@ -25,6 +26,8 @@ interface AuthContextType {
   register: (data: any) => Promise<UserProfile>;
   logout: () => Promise<void>;
   updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;
+  refreshUser: () => Promise<void>;
+  is_verified: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -117,8 +120,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const refreshUser = async () => {
+    try {
+      const data = await api.get<UserProfile>('/auth/me');
+      setUser(data);
+    } catch (err) {
+      logger.error('AUTH_REFRESH_FAILED', err);
+    }
+  };
+
+  const is_verified = !!user?.is_verified;
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, error, login, register, logout, updateUserProfile }}>
+    <AuthContext.Provider value={{ user, isLoading, error, login, register, logout, updateUserProfile, refreshUser, is_verified }}>
       {children}
     </AuthContext.Provider>
   );

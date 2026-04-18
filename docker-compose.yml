@@ -53,8 +53,7 @@ services:
       - ingest_logs:/app/ingest_logs
       - public_recipes:/app/public/recipes
     environment:
-      - NODE_ENV=production
-      - FRONTEND_URL=http://localhost:5173
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost}
       - POSTGRES_HOST=postgres
       - HCP_CLIENT_ID=${HCP_CLIENT_ID}
       - HCP_CLIENT_SECRET=${HCP_CLIENT_SECRET}

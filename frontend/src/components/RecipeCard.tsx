@@ -1,10 +1,11 @@
-import { Clock, Heart } from 'lucide-react';
+import { Clock, Heart, Lock } from 'lucide-react';
 import { Recipe } from '../types/recipe';
 import { useTranslation } from 'react-i18next';
 import { Button } from './ui/Button';
 import { useCachedImage } from '../hooks/useCachedImage';
 import { AuthGuard } from './auth/AuthGuard';
 import { useAuth } from '../AuthContext';
+import { useToast } from '../ToastContext';
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -17,9 +18,11 @@ interface RecipeCardProps {
 export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite, onTagClick }: RecipeCardProps) {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const lang = i18n.language.startsWith('en') ? 'en' : 'es';
   const displayTitle = lang === 'en' && recipe.titleEn ? recipe.titleEn : recipe.title;
   const hasAnyIntolerance = (user?.intolerances?.length || 0) > 0;
+  const isVerified = user?.is_verified ?? false;
   const { imageSrc, loading } = useCachedImage(recipe.imageUrl);
 
   const safetyColor = recipe.safetyLevel === 'safe' 
@@ -69,6 +72,10 @@ export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite, o
             size="icon"
             onClick={(e) => {
               e.stopPropagation();
+              if (user && !isVerified) {
+                showToast(t('auth.verify.restricted_action'), 'info');
+                return;
+              }
               onToggleFavorite?.(e);
             }}
             className={`absolute top-4 right-4 backdrop-blur-md transition-all shadow-sm border border-white/20 active:scale-90 ${
@@ -77,7 +84,11 @@ export function RecipeCard({ recipe, onCookNow, isFavorited, onToggleFavorite, o
                 : 'bg-white/80 text-slate-500 hover:text-red-500 hover:bg-white'
             }`}
           >
-            <Heart className={`w-4 h-4 ${isFavorited ? 'fill-current' : ''}`} />
+            {user && !isVerified ? (
+              <Lock className="w-4 h-4 text-slate-400" />
+            ) : (
+              <Heart className={`w-4 h-4 ${isFavorited ? 'fill-current' : ''}`} />
+            )}
           </Button>
         </AuthGuard>
 

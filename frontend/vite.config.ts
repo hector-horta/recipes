@@ -15,6 +15,10 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       allowedHosts: true,
       proxy: {
+        '/api/': {
+          target: apiHost,
+          changeOrigin: true
+        },
         '/public/recipes/': {
           target: apiHost,
           changeOrigin: true

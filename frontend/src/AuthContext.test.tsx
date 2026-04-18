@@ -130,6 +130,7 @@ describe('AuthContext', () => {
         expect(result.current).toHaveProperty('register');
         expect(result.current).toHaveProperty('logout');
         expect(result.current).toHaveProperty('updateUserProfile');
+        expect(result.current).toHaveProperty('is_verified');
     });
 
     it('logout should call queryClient.clear', () => {

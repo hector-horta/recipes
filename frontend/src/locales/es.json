@@ -9,6 +9,12 @@
     "searching": "Buscando...",
     "min": "min"
   },
+  "verificationBanner": {
+    "title": "Correo no verificado",
+    "desc": "Por favor verifica tu correo para desbloquear todas las funciones como guardar favoritos.",
+    "button": "Reenviar correo",
+    "sent": "¡Correo de verificación enviado!"
+  },
   "safetyGate": {
     "title": "Recetas ocultas por tu seguridad",
     "desc": "Hemos ocultado {{count}} receta(s) porque contienen {{allergens}}, los cuales marcaste como alergia severa o anafilaxia.",
@@ -76,7 +82,50 @@
     "nameRequired": "Ingresa tu nombre.",
     "termsRequired": "Debes aceptar la Política de Privacidad y Términos (GDPR) para continuar.",
     "unexpectedError": "Error inesperado.",
-    "dataStored": "Datos almacenados localmente. Cifrado AES-256."
+    "dataStored": "Datos almacenados localmente. Cifrado AES-256.",
+    "forgotPassword": "¿Olvidaste tu contraseña?",
+    "verify": {
+      "verifying_title": "Verificando tu correo",
+      "verifying_desc": "Por favor espera mientras confirmamos tu identidad.",
+      "success_title": "¡Correo Verificado!",
+      "success_desc": "Tu cuenta está ahora totalmente activa. Redirigiéndote al inicio...",
+      "success_toast": "¡Correo verificado con éxito!",
+      "error_title": "Verificación Fallida",
+      "invalid_link": "El enlace es inválido o ha expirado.",
+      "failed": "No pudimos verificar tu correo en este momento.",
+      "resend_button": "Reenviar Correo de Verificación",
+      "resend_success": "¡Nuevo correo de verificación enviado!",
+      "resend_failed": "Error al reenviar el correo. Inténtalo más tarde.",
+      "go_home": "Volver al Inicio",
+      "restricted_action": "Verifica tu correo para guardar favoritos."
+    },
+    "reset": {
+      "title": "Restablecer Contraseña",
+      "subtitle": "Establece una nueva contraseña segura para tu cuenta de Wati.",
+      "new_password": "Nueva Contraseña",
+      "confirm_password": "Confirmar Nueva Contraseña",
+      "submit_button": "Restablecer Contraseña",
+      "success_title": "¡Contraseña Actualizada!",
+      "success_desc": "Tu contraseña ha sido cambiada con éxito.",
+      "success_desc_login": "Ya puedes iniciar sesión con tus nuevas credenciales.",
+      "go_to_login": "Iniciar Sesión Ahora",
+      "go_home": "Volver al Inicio",
+      "mismatch": "Las contraseñas no coinciden.",
+      "too_short": "La contraseña debe tener al menos 8 caracteres.",
+      "invalid_token": "El token de restablecimiento falta o es inválido.",
+      "invalid_link_title": "Enlace de Restablecimiento Inválido",
+      "invalid_link_desc": "Este enlace de restablecimiento de contraseña es inválido o ha expirado.",
+      "success_toast": "¡Contraseña restablecida con éxito!"
+    },
+    "forgot": {
+      "title": "¿Olvidaste tu contraseña?",
+      "desc": "Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña.",
+      "email_label": "Correo Electrónico",
+      "submit_button": "Enviar Enlace de Restablecimiento",
+      "back_to_login": "Volver al inicio de sesión",
+      "success_title": "Correo Enviado",
+      "success_desc": "Si existe una cuenta para {{email}}, recibirás un enlace de restablecimiento pronto."
+    }
   },
   "onboarding": {
     "whatToAvoid": "¿Qué alimentos debes evitar?",
