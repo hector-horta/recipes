@@ -10,6 +10,9 @@ import { MedicalRegistry } from './api/MedicalRegistry';
 import { SecurityScrubber } from './api/SecurityScrubber';
 
 import { useWatiSearch } from './hooks/useWatiSearch';
+import { VerifyEmailPage } from './pages/VerifyEmailPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
+
 
 // ── App Component ──────────────────────────────────────────
 export type ModalState = 'none' | 'login' | 'onboarding';
@@ -19,6 +22,9 @@ function App() {
   const { user } = useAuth();
   const searchProps = useWatiSearch();
   const [isInitialized, setIsInitialized] = React.useState(false);
+
+  // Simple routing state
+  const [currentPath, setCurrentPath] = useState(window.location.pathname);
 
   useEffect(() => {
     async function initMedicalSystems() {
@@ -33,12 +39,14 @@ function App() {
     }
     initMedicalSystems();
   }, []);
+
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [activeModal, setActiveModal] = useState<ModalState>('none');
 
-  // Handle browser back/forward buttons
+  // Handle browser back/forward buttons and deep links
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
+      setCurrentPath(window.location.pathname);
       const recipeId = event.state?.recipeId;
       if (recipeId) {
         const stored = sessionStorage.getItem(`recipe_${recipeId}`);
@@ -52,6 +60,18 @@ function App() {
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Handle auto-open login from query param
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('login') === 'true') {
+      setActiveModal('login');
+      // Clean up URL
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete('login');
+      window.history.replaceState({}, '', newUrl.pathname);
+    }
   }, []);
 
   const handleSelectRecipe = (recipe: Recipe) => {
@@ -83,10 +103,11 @@ function App() {
   const handleGoHome = () => {
     setSelectedRecipe(null);
     searchProps.setQuery('');
+    setCurrentPath('/');
     // Clear URL query param if any
     const url = new URL(window.location.href);
     url.searchParams.delete('q');
-    window.history.replaceState({}, '', url.pathname);
+    window.history.pushState({}, '', '/');
   };
 
   if (!isInitialized) {
@@ -98,23 +119,40 @@ function App() {
     );
   }
 
-  return (
-    <>
-      {selectedRecipe ? (
+  // Route Rendering logic
+  const renderContent = () => {
+    if (currentPath === '/verify') {
+      return <VerifyEmailPage />;
+    }
+    if (currentPath === '/reset-password') {
+      return <ResetPasswordPage />;
+    }
+
+    if (selectedRecipe) {
+      return (
         <RecipeDetailPage
           recipe={selectedRecipe}
           onBack={handleBack}
           onLogoClick={handleGoHome}
         />
-      ) : (
-        <RecipePage
-          {...searchProps}
-          onSelectRecipe={handleSelectRecipe}
-          onOpenLogin={() => setActiveModal('login')}
-          onOpenOnboarding={() => setActiveModal('onboarding')}
-          onLogoClick={handleGoHome}
-        />
-      )}
+      );
+    }
+
+    return (
+      <RecipePage
+        {...searchProps}
+        onSelectRecipe={handleSelectRecipe}
+        onOpenLogin={() => setActiveModal('login')}
+        onOpenOnboarding={() => setActiveModal('onboarding')}
+        onLogoClick={handleGoHome}
+      />
+    );
+  };
+
+  return (
+    <>
+
+      {renderContent()}
 
       {activeModal === 'login' && (
         <LoginModal

@@ -14,6 +14,8 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   FRONTEND_URL: z.string().default('http://localhost:5173'),
   JWT_SECRET: z.string().min(1, 'JWT_SECRET is required'),
+  JWT_VERIFY_SECRET: z.string().optional(),
+  JWT_RESET_SECRET: z.string().optional(),
   DATABASE_URL: z.string().optional(),
   REDIS_URL: z.string().optional(),
 
@@ -22,6 +24,8 @@ const envSchema = z.object({
   SPOONACULAR_API_KEY: z.string().optional(),
   NVIDIA_API_KEY: z.string().optional(),
   GROQ_API_KEY: z.string().optional(),
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().default('Wati <noreply@wati.com>'),
   
   // Telegram Integration
   TELEGRAM_BOT_TOKEN: z.string().optional(),

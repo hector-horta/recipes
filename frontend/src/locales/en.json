@@ -9,6 +9,12 @@
     "searching": "Searching...",
     "min": "min"
   },
+  "verificationBanner": {
+    "title": "Email not verified",
+    "desc": "Please verify your email to unlock all features like saving favorites.",
+    "button": "Resend Email",
+    "sent": "Verification email sent!"
+  },
   "safetyGate": {
     "title": "Recipes hidden for your safety",
     "desc": "We have hidden {{count}} recipe(s) because they contain {{allergens}}, which you marked as a severe or anaphylactic allergy.",
@@ -76,7 +82,50 @@
     "nameRequired": "Enter your name.",
     "termsRequired": "You must accept the Privacy Policy and Terms (GDPR) to continue.",
     "unexpectedError": "Unexpected error.",
-    "dataStored": "Data stored locally. AES-256 encryption."
+    "dataStored": "Data stored locally. AES-256 encryption.",
+    "forgotPassword": "Forgot password?",
+    "verify": {
+      "verifying_title": "Verifying your email",
+      "verifying_desc": "Please wait while we confirm your identity.",
+      "success_title": "Email Verified!",
+      "success_desc": "Your account is now fully active. Redirecting you to home...",
+      "success_toast": "Email verified successfully!",
+      "error_title": "Verification Failed",
+      "invalid_link": "The link is invalid or has expired.",
+      "failed": "Could not verify your email at this time.",
+      "resend_button": "Resend Verification Email",
+      "resend_success": "New verification email sent!",
+      "resend_failed": "Failed to resend email. Try again later.",
+      "go_home": "Back to Home",
+      "restricted_action": "Verify your email to save favorites."
+    },
+    "reset": {
+      "title": "Reset Password",
+      "subtitle": "Securely set a new password for your Wati account.",
+      "new_password": "New Password",
+      "confirm_password": "Confirm New Password",
+      "submit_button": "Reset Password",
+      "success_title": "Password Updated!",
+      "success_desc": "Your password has been changed successfully.",
+      "success_desc_login": "You can now sign in with your new credentials.",
+      "go_to_login": "Sign In Now",
+      "go_home": "Back to Home",
+      "mismatch": "Passwords do not match.",
+      "too_short": "Password must be at least 8 characters.",
+      "invalid_token": "Reset token is missing or invalid.",
+      "invalid_link_title": "Invalid Reset Link",
+      "invalid_link_desc": "This password reset link is invalid or has expired.",
+      "success_toast": "Password reset successfully!"
+    },
+    "forgot": {
+      "title": "Forgot Password",
+      "desc": "Enter your email and we'll send you a link to reset your password.",
+      "email_label": "Email Address",
+      "submit_button": "Send Reset Link",
+      "back_to_login": "Back to login",
+      "success_title": "Email Sent",
+      "success_desc": "If an account exists for {{email}}, you will receive a reset link shortly."
+    }
   },
   "onboarding": {
     "whatToAvoid": "What foods should you avoid?",

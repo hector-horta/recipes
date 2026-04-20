@@ -1,7 +1,9 @@
-
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Search, AlertCircle, Globe, Sparkles, Loader2 } from 'lucide-react';
+import { Search, AlertCircle, Globe, Sparkles, Loader2, Mail } from 'lucide-react';
 import { useAuth } from '../../AuthContext';
+import { useToast } from '../../ToastContext';
+import { api } from '../../lib/api';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { AuthGuard } from '../auth/AuthGuard';
@@ -30,14 +32,59 @@ export function PageHeader({
   onOpenLogin
 }: PageHeaderProps) {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, is_verified: isVerifiedUser } = useAuth();
+  const { showToast } = useToast();
+
+  const [resending, setResending] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+
+  useEffect(() => {
+    if (countdown <= 0) return;
+    const timer = setInterval(() => {
+      setCountdown((prev) => prev - 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [countdown]);
+
+  const handleResend = async () => {
+    if (countdown > 0) return;
+    setResending(true);
+    try {
+      await api.post('/auth/resend-verification');
+      showToast(t('auth.verify.resend_success'), 'success');
+      setCountdown(60);
+    } catch (err: any) {
+      showToast(err.response?.data?.message || t('auth.verify.resend_failed'), 'error');
+    } finally {
+      setResending(false);
+    }
+  };
 
   return (
     <>
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-12">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-8">
       <div className="text-center sm:text-left">
-        <h1 className="text-4xl sm:text-5xl font-extrabold text-brand-forest tracking-tight mb-4">
-          {user ? t('home.greeting', { name: user.displayName.split(' ')[0] }) : t('home.defaultGreeting')}
+        <h1 className="text-4xl sm:text-5xl font-extrabold text-brand-forest tracking-tight mb-4 flex flex-col sm:flex-row items-center gap-4 leading-tight">
+          <span>{user ? t('home.greeting', { name: user.displayName.split(' ')[0] }) : t('home.defaultGreeting')}</span>
+          {user && !isVerifiedUser && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleResend}
+              disabled={resending || countdown > 0}
+              className="rounded-full px-4 py-1.5 h-auto text-[10px] font-black uppercase tracking-widest shadow-lg shadow-brand-mint/20 hover:shadow-brand-mint/40 items-center gap-2 inline-flex translate-y-[4px]"
+            >
+              {resending ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Mail className="w-3 h-3" />
+              )}
+              {countdown > 0 
+                ? `${countdown}s` 
+                : t('auth.verify.verify_account')
+              }
+            </Button>
+          )}
         </h1>
         <p className="text-brand-text-muted font-medium">
           {isSearchActive 
@@ -96,7 +143,7 @@ export function PageHeader({
       </div>
 
       {!user && (
-        <div className="w-full bg-gradient-to-r from-brand-forest/5 to-brand-mint/10 border border-brand-sage/20 rounded-3xl py-8 px-6 sm:px-10 mb-12 shadow-sm animate-fade-in">
+        <div className="w-full bg-gradient-to-r from-brand-forest/5 to-brand-mint/10 border border-brand-sage/20 rounded-3xl py-8 px-6 sm:px-10 mb-8 shadow-sm animate-fade-in">
           <div className="flex flex-col md:flex-row items-center justify-between gap-8 text-center md:text-left">
             <div className="flex-1 max-w-3xl">
               <h3 className="font-black text-brand-forest flex flex-col md:flex-row items-center md:justify-start gap-3 text-xl sm:text-2xl mb-4">

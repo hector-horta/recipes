@@ -29,6 +29,11 @@ export const User = sequelize.define('User', {
     allowNull: false,
     defaultValue: true
   },
+  is_verified: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
+  },
   accepted_terms_at: {
     type: DataTypes.DATE,
     allowNull: false

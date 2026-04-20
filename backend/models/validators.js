@@ -48,3 +48,14 @@ export const tagSchema = z.object({
 
 export const tagUpsertSchema = z.array(tagSchema);
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().email('Debe ser un email válido')
+});
+
+export const resetPasswordSchema = z.object({
+  password: z.string()
+    .min(8, 'La contraseña debe tener al menos 8 caracteres')
+    .regex(/[A-Z]/, 'La contraseña debe tener al menos una mayúscula')
+    .regex(/[0-9]/, 'La contraseña debe tener al menos un número')
+});
+

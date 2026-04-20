@@ -21,7 +21,7 @@ export function TopNav({ onOpenLogin, onOpenOnboarding, onLogoClick }: TopNavPro
 
   return (
     <nav className="sticky top-0 z-40 bg-white/70 backdrop-blur-xl border-b border-brand-sage/10 shadow-sm/5">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
         {/* Logo */}
         <button 
           onClick={() => {
@@ -32,7 +32,7 @@ export function TopNav({ onOpenLogin, onOpenOnboarding, onLogoClick }: TopNavPro
           data-analytics="logo-home"
           aria-label="Wati - Home"
         >
-          <WatiLogo size={140} />
+          <WatiLogo size={124} />
         </button>
 
         {/* Desktop: Language Selector + Auth Actions */}

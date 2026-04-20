@@ -44,6 +44,8 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 4. **Validación Zod**: Todo input externo (req.body, req.query, env vars) DEBE ser validado con Zod antes de tocar la lógica. **Usa `backend/models/validators.js`** como repositorio central de esquemas para asegurar consistencia entre rutas.
 5. **No Static URLs**: Prohibido usar URLs de API hardcodeadas en el frontend. Usar el wrapper `api` de `frontend/src/lib/api.ts` que inyecta automáticamente el `CONFIG.API_URL`.
 6. **Resiliencia Frontend**: Usa reintentos (`retry`) en hooks de búsqueda y gestión de estados de error amigables para el usuario.
+7. **Auth Rule**: Wati usa **Hybrid Auth**. Los usuarios se autentican con contraseña, pero las funcionalidades core (como agregar a favoritos) están **soft-gated** y requieren validación de correo vía un link JWT.
+8. **External Integrations Rule**: Todos los servicios de terceros (como Resend) DEBEN estar abstraídos detrás de una **IEmailService Facade**. La lógica de negocio nunca debe interactuar directamente con SDKs externos.
 
 ---
 
@@ -91,7 +93,8 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 │   │   ├── ActivityLogger.js     # Telemetría + alertas Telegram (fire-and-forget)
 │   │   ├── RecipeProvider.js     # Búsqueda en DB + caché Redis + filtrado por intolerancias
 │   │   ├── NvidiaNIM.js          # OCR (Llama 4), estructurar recetas, generar imágenes (SDXL)
-│   │   └── GroqWhisper.js        # Transcripción de audio
+│   │   ├── GroqWhisper.js        # Transcripción de audio
+│   │   └── IEmailService.js      # Facade de correos (Dev/Resend)
 │   ├── utils/
 │   │   ├── tagTranslations.js    # TAG_TRANSLATIONS map, normalizeTag(), normalizeTags()
 │   │   ├── ingestSanitizer.js    # sanitizeStructuredRecipe() — mapea output LLM a ENUMs/tipos DB
