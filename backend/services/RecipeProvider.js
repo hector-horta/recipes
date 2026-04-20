@@ -12,7 +12,7 @@ const CACHE_TTL_SECONDS = 3600; // 1 hour
 
 export class RecipeProvider {
   static async getRecipes(params, userProfile) {
-    let { query, number = 10 } = params;
+    let { query, number = 10, offset = 0 } = params;
     
     // Fetch tags for translation
     const allTags = await TagService.getAllTags();
@@ -70,9 +70,12 @@ export class RecipeProvider {
     const userIntolerances = userProfile?.intolerances || [];
     const hasSiboFilter = userIntolerances.some(i => i.toLowerCase() === 'sibo');
 
+    const parsedOffset = Math.max(parseInt(offset, 10) || 0, 0);
+
     const cachePayload = {
       q: query || '',
       n: number,
+      o: parsedOffset,
       intolerances: userIntolerances.sort(),
       severities: userProfile?.severities || {},
       uid: userProfile?.id || 'anonymous',
@@ -99,15 +102,19 @@ export class RecipeProvider {
     // Identificar si necesitamos un buffer para el filtrado post-DB
     const hasFilters = userIntolerances.length > 0;
 
-    ActivityLogger.info('Recipe search initiated', { query, number: requestedLimit, hasFilters, refreshKey: params.refreshKey });
+    ActivityLogger.info('Recipe search initiated', { query, number: requestedLimit, offset: parsedOffset, hasFilters, refreshKey: params.refreshKey });
 
     // ORDER: Randomize if no search query, otherwise latest first
-    const order = query ? [['created_at', 'DESC']] : [sequelize.random()];
+    const order = query ? [['created_at', 'DESC']] : [['created_at', 'DESC']];
 
-    // Buscamos candidatos
+    // Get total count for pagination
+    const totalCount = await Recipe.count({ where: whereClause });
+
+    // Buscamos candidatos con offset para paginación server-side
     const recipes = await Recipe.findAll({
       where: whereClause,
       order,
+      offset: hasFilters ? 0 : parsedOffset,
       limit: hasFilters ? requestedLimit * 5 : requestedLimit
     });
 
@@ -154,6 +161,7 @@ export class RecipeProvider {
 
     const response = {
       recipes: results,
+      total: totalCount,
       filteredUnsafeCount,
       filteredAllergens: [...filteredAllergenSet]
     };

@@ -1,10 +1,8 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw, AlertTriangle } from 'lucide-react';
 import { Recipe } from '../types/recipe';
 import { Button } from '../components/ui/Button';
 import { useFavorites } from '../hooks/useFavorites';
-import { useMergedDisplayRecipes } from '../hooks/useMergedDisplayRecipes';
 import { TopNav } from '../components/recipe/TopNav';
 import { PageHeader } from '../components/recipe/PageHeader';
 import { RecipeGrid } from '../components/recipe/RecipeGrid';
@@ -31,6 +29,9 @@ interface RecipePageProps {
   includeUnsafe?: boolean;
   setIncludeUnsafe?: (val: boolean) => void;
   onLogoClick: () => void;
+  totalPages?: number;
+  currentPage?: number;
+  setCurrentPage?: (page: number) => void;
 }
 
 export function RecipePage({
@@ -49,13 +50,14 @@ export function RecipePage({
   filteredAllergens = [],
   setIncludeUnsafe,
   includeUnsafe = false,
-  onLogoClick
+  onLogoClick,
+  totalPages = 1,
+  currentPage = 1,
+  setCurrentPage
 }: RecipePageProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { favorites, toggleFavorite, isFavorited, isLoading: favsLoading } = useFavorites();
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
 
   const handleSelectRecipeClick = (recipe: Recipe) => {
     if (!user) {
@@ -66,13 +68,12 @@ export function RecipePage({
   };
 
   const isSearchActive = searchQuery.trim().length >= 3;
-  const { displayRecipes, totalPages } = useMergedDisplayRecipes({
-    recipes,
-    favorites,
-    isSearchActive,
-    currentPage,
-    itemsPerPage
-  });
+
+  // Mark favorites in the server-provided recipes
+  const displayRecipes = recipes.map(r => ({
+    ...r,
+    isFavorite: isFavorited(r.id)
+  }));
 
   const isLoading = (hookLoading || favsLoading || isPending) && displayRecipes.length === 0;
   const isRefreshing = (hookLoading || isPending) && displayRecipes.length > 0;
@@ -80,6 +81,11 @@ export function RecipePage({
   const isListEmpty = !isLoading && !isRefreshing && displayRecipes.length === 0;
   const showSafetyGate = isSearchActive && isListEmpty && filteredUnsafeCount > 0;
   const showSearchFeedback = isSearchActive && isListEmpty && !showSafetyGate;
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage?.(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <>
@@ -164,8 +170,8 @@ export function RecipePage({
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
-          onPageChange={setCurrentPage}
-          hidden={!user || isSearchActive || isListEmpty}
+          onPageChange={handlePageChange}
+          hidden={!user || isSearchActive || isListEmpty || totalPages <= 1}
         />
       </PageLayout>
     </>

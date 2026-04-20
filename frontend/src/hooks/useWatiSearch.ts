@@ -6,14 +6,18 @@ import { useAuth } from '../AuthContext';
 import { api, ApiError } from '../lib/api';
 import { logger } from '../utils/logger';
 
+const ITEMS_PER_PAGE = 10;
+
 async function fetchRecipes(
   query: string,
   includeUnsafe?: boolean,
-  refreshKey?: number
+  refreshKey?: number,
+  offset?: number
 ): Promise<RecipeSearchResponse> {
   const params = new URLSearchParams();
   if (query?.trim()) params.set('query', query.trim());
-  params.set('number', '10');
+  params.set('number', ITEMS_PER_PAGE.toString());
+  if (offset && offset > 0) params.set('offset', offset.toString());
   if (includeUnsafe) params.set('includeUnsafe', 'true');
   if (refreshKey) params.set('refreshKey', refreshKey.toString());
 
@@ -21,7 +25,7 @@ async function fetchRecipes(
 
   // Backwards-compatible: if the backend returns a plain array (no auth), wrap it
   if (Array.isArray(data)) {
-    return { recipes: data, filteredUnsafeCount: 0, filteredAllergens: [] };
+    return { recipes: data, total: data.length, filteredUnsafeCount: 0, filteredAllergens: [] };
   }
 
   return data as RecipeSearchResponse;
@@ -35,6 +39,7 @@ export function useWatiSearch() {
   });
   const [refreshKey, setRefreshKey] = useState(0);
   const [includeUnsafe, setIncludeUnsafe] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const debouncedQuery = useDebounce(query, 500);
 
   // Sync URL with query results when they change significantly
@@ -49,9 +54,10 @@ export function useWatiSearch() {
     window.history.replaceState({ ...window.history.state }, '', newUrl);
   }, [debouncedQuery]);
 
-  // Reset override when search query changes
+  // Reset override and page when search query changes
   useEffect(() => {
     setIncludeUnsafe(false);
+    setCurrentPage(1);
   }, [debouncedQuery]);
 
   // Security: Basic character validation and length limit
@@ -63,9 +69,11 @@ export function useWatiSearch() {
     .slice(0, 100);
   const shouldSearch = sanitizedQuery.length === 0 || sanitizedQuery.length >= 2;
 
+  const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+
   const { data, isLoading, isFetching, error } = useQuery({
-    queryKey: ['recipes', sanitizedQuery, user?.id, user?.intolerances, user?.severities, includeUnsafe, refreshKey],
-    queryFn: () => fetchRecipes(sanitizedQuery, includeUnsafe, refreshKey),
+    queryKey: ['recipes', sanitizedQuery, user?.id, user?.intolerances, user?.severities, includeUnsafe, refreshKey, currentPage],
+    queryFn: () => fetchRecipes(sanitizedQuery, includeUnsafe, refreshKey, offset),
     enabled: shouldSearch,
     staleTime: 1000 * 60 * 5, // Improved performance: 5 mins cache for recipes
     gcTime: 1000 * 60 * 10,
@@ -78,8 +86,10 @@ export function useWatiSearch() {
   });
 
   const results = data?.recipes ?? [];
+  const total = data?.total ?? 0;
   const filteredUnsafeCount = data?.filteredUnsafeCount ?? 0;
   const filteredAllergens = data?.filteredAllergens ?? [];
+  const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
 
   // Event Tracking: search_success / search_failed
   useEffect(() => {
@@ -119,6 +129,11 @@ export function useWatiSearch() {
     filteredUnsafeCount,
     filteredAllergens,
     includeUnsafe,
-    setIncludeUnsafe
+    setIncludeUnsafe,
+    total,
+    totalPages,
+    currentPage,
+    setCurrentPage
   };
 }
+

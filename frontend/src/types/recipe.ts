@@ -33,6 +33,7 @@ export interface Recipe {
 
 export interface RecipeSearchResponse {
   recipes: Recipe[];
+  total: number;
   filteredUnsafeCount: number;
   filteredAllergens: string[];
 }
