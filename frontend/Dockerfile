@@ -21,6 +21,8 @@ CMD ["sh", "-c", "npm install --include=optional && chown -R nodeapp:nodejs /app
 
 # ── Production build (optional) ─────────────────────────────────────────────
 FROM base AS build
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
 USER root
 RUN npm install --include=optional && npm run build
 

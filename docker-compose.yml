@@ -10,32 +10,8 @@ services:
     volumes:
       - ./nginx/certs_new:/etc/nginx/certs:ro
     depends_on:
-      - frontend
       - backend
     restart: always
-    networks:
-      - app-network
-
-  # ── Frontend (Vite + React) ─────────────────────────────────────────────
-  frontend:
-    build:
-      context: ./frontend
-      target: base
-    ports:
-      - "5173:5173"
-    volumes:
-      - ./frontend:/app:cached # source code hot-reload (cached for macOS performance)
-      - frontend_node_modules:/app/node_modules # named volume: cross-platform node_modules
-    env_file:
-      - .env
-    environment:
-      - NODE_ENV=development
-    depends_on:
-      - postgres
-      - redis
-    restart: unless-stopped
-    stdin_open: true
-    tty: true
     networks:
       - app-network
 
@@ -149,6 +125,8 @@ services:
   # Login requerido: usuario y contraseña definidos en .env
   dozzle:
     image: amir20/dozzle:latest
+    ports:
+      - "8080:8080"
     environment:
       DOZZLE_USERNAME: ${DOZZLE_USERNAME:-admin}
       DOZZLE_PASSWORD: ${DOZZLE_PASSWORD:-change_me_in_env_file}

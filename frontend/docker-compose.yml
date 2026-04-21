@@ -1,0 +1,12 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+      args:
+        # Reemplaza esta URL con la dirección real de tu Backend
+        - VITE_API_URL=${VITE_API_URL:-http://localhost/api}
+    ports:
+      - "80:80"
+    restart: always
