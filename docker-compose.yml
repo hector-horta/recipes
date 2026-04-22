@@ -8,6 +8,8 @@ services:
       - "80:80"
       - "443:443"
     volumes:
+      - ./nginx/nginx.conf:/opt/nginx/nginx-conf/nginx.conf:ro
+      - ./nginx/mime.types:/opt/nginx/nginx-conf/mime.types:ro
       - ./nginx/certs_new:/etc/nginx/certs:ro
     depends_on:
       - backend
@@ -109,6 +111,8 @@ services:
   # y agrégalo en .env como UMAMI_WEBSITE_ID y en frontend/index.html.
   umami:
     image: ghcr.io/umami-software/umami:postgresql-latest
+    ports:
+      - "3000:3000"
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-wati_user}:${POSTGRES_PASSWORD}@postgres:5432/umami_db
       DATABASE_TYPE: postgresql
@@ -130,9 +134,11 @@ services:
     environment:
       DOZZLE_USERNAME: ${DOZZLE_USERNAME:-admin}
       DOZZLE_PASSWORD: ${DOZZLE_PASSWORD:-change_me_in_env_file}
+      DOZZLE_AUTH_PROVIDER: "simple"
       DOZZLE_NO_ANALYTICS: "true"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./users.yml:/data/users.yml
     restart: unless-stopped
     networks:
       - app-network
