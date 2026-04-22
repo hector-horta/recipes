@@ -6,7 +6,6 @@ import { WatiLogo } from './WatiLogo';
 import { Button } from './ui/Button';
 import { X, ChevronRight, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { CONFIG } from '../config';
 
 interface IntoleranceItem {
   id: string;
@@ -47,7 +46,7 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
 
   const [selectedIds, setSelectedIds] = useState<string[]>(user?.intolerances || []);
   const [severities, setSeverities] = useState<Record<string, 'mild' | 'moderate' | 'severe' | 'anaphylactic'>>(user?.severities || {});
-  const [conditions, setConditions] = useState<string[]>(user?.conditions || []);
+  const [conditions] = useState<string[]>(user?.conditions || []);
   const [step, setStep] = useState<'select' | 'severity'>('select');
   const [isSaving, setIsSaving] = useState(false);
 

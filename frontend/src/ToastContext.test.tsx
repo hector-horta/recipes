@@ -91,7 +91,7 @@ describe('ToastContext', () => {
     const TestComponent = () => {
       const { showToast } = useToast();
       return (
-        <button onClick={() => showToast('Manual Dismiss', 'warning')}>
+        <button onClick={() => showToast('Manual Dismiss', 'error')}>
           Show
         </button>
       );
@@ -120,8 +120,8 @@ describe('ToastContext', () => {
       const { showToast } = useToast();
       return (
         <button onClick={() => {
-          showToast('Toast 1');
-          showToast('Toast 2');
+          showToast('Toast 1', 'info');
+          showToast('Toast 2', 'info');
         }}>
           Show Multi
         </button>

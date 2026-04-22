@@ -38,7 +38,7 @@ describe('useDebounce', () => {
     });
 
     it('should use default delay of 300ms', () => {
-        const { result, rerender } = renderHook(({ value }) => useDebounce(value), {
+        const { result, rerender } = renderHook(({ value }) => useDebounce(value, 300), {
             initialProps: { value: 'initial' }
         });
 

@@ -12,7 +12,7 @@ export interface UserProfile {
   daily_calories?: number;
   onboarding_completed: boolean;
   language: string;
-  severities?: Record<string, string>;
+  severities?: Record<string, 'mild' | 'moderate' | 'severe' | 'anaphylactic'>;
   conditions?: string[];
   is_verified: boolean;
   createdAt?: string;

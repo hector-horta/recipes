@@ -72,7 +72,7 @@ export function OnboardingPage() {
         daily_calories: dailyCalories,
         intolerances,
         severities,
-        onboardingComplete: true
+        onboarding_completed: true
       });
       navigate('/');
     } catch (err) {

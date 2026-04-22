@@ -2,8 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthGuard } from './AuthGuard';
-import { AuthProvider, useAuth } from '../../AuthContext';
-
+import { AuthProvider } from '../../AuthContext';
 const createQueryClient = () => new QueryClient({
     defaultOptions: {
         queries: { retry: false },

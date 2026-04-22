@@ -123,7 +123,7 @@ describe('imageCache', () => {
                 blob: async () => mockBlob
             });
 
-            const result = await getImageSource('https://example.com/img.jpg');
+            await getImageSource('https://example.com/img.jpg');
 
             expect(db.cachedImages.put).toHaveBeenCalled();
         });

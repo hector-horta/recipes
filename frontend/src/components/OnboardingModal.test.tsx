@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { OnboardingModal } from './OnboardingModal';
-import { AuthProvider } from '../AuthContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 vi.mock('react-i18next', () => ({
@@ -62,7 +61,7 @@ const queryClient = new QueryClient({
 const renderOnboarding = () => {
     return render(
         <QueryClientProvider client={queryClient}>
-            <OnboardingModal isOpen={true} onClose={vi.fn()} />
+            <OnboardingModal onClose={vi.fn()} />
         </QueryClientProvider>
     );
 };

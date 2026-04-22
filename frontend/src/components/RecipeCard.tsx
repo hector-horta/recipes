@@ -1,4 +1,4 @@
-import { Clock, Heart, Lock } from 'lucide-react';
+import { Clock, Heart } from 'lucide-react';
 import { Recipe } from '../types/recipe';
 import { useTranslation } from 'react-i18next';
 import { Button } from './ui/Button';
