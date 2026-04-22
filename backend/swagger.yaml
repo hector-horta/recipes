@@ -1,0 +1,537 @@
+openapi: 3.0.0
+info:
+  title: Wati Health API
+  description: Wati Health Recipe and Medical AI Platform Backend API
+  version: 1.0.0
+servers:
+  - url: http://localhost:5001
+    description: Local server
+  - url: https://api.wati.health
+    description: Production server
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    adminApiKey:
+      type: apiKey
+      in: header
+      name: X-Admin-Key
+paths:
+  /api/status:
+    get:
+      tags:
+        - Status
+      summary: API Healthcheck
+      responses:
+        '200':
+          description: Server status
+          content:
+            application/json:
+              example:
+                status: ok
+                message: Backend is running!
+                version: 1.0.0
+  /api/medical/catalog:
+    get:
+      tags:
+        - Medical
+      summary: Get intolerance catalog
+      responses:
+        '200':
+          description: Returns medical intolerances
+  /api/medical/triggers:
+    get:
+      tags:
+        - Medical
+      summary: Get medical triggers
+      responses:
+        '200':
+          description: Returns medical triggers
+  /api/auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - displayName
+                - acceptedTerms
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+                displayName:
+                  type: string
+                acceptedTerms:
+                  type: boolean
+                language:
+                  type: string
+      responses:
+        '201':
+          description: User created
+        '400':
+          description: Validation error
+        '409':
+          description: Email already in use
+  /api/auth/login:
+    post:
+      tags:
+        - Auth
+      summary: User login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Logged in successfully
+        '401':
+          description: Invalid credentials
+  /api/auth/resend-verification:
+    post:
+      tags:
+        - Auth
+      summary: Resend verification email
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Verification email sent
+  /api/auth/verify:
+    post:
+      tags:
+        - Auth
+      summary: Verify account using token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+      responses:
+        '200':
+          description: Account verified successfully
+        '400':
+          description: Invalid token
+  /api/auth/forgot-password:
+    post:
+      tags:
+        - Auth
+      summary: Request password reset email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+      responses:
+        '200':
+          description: Reset email sent (if user exists)
+  /api/auth/reset-password:
+    post:
+      tags:
+        - Auth
+      summary: Reset password using token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+                - password
+              properties:
+                token:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Password updated
+        '400':
+          description: Invalid token or password
+  /api/auth/logout:
+    post:
+      tags:
+        - Auth
+      summary: User logout
+      responses:
+        '200':
+          description: Logged out
+  /api/auth/me:
+    get:
+      tags:
+        - Auth
+      summary: Get current user profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user info
+    put:
+      tags:
+        - Auth
+      summary: Update user profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Profile updated
+    delete:
+      tags:
+        - Auth
+      summary: Delete user account (GDPR)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Account deleted
+  /api/recipes:
+    get:
+      tags:
+        - Recipes
+      summary: Search and list recipes
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: query
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: limit
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of recipes
+  /api/recipes/tags:
+    get:
+      tags:
+        - Recipes
+      summary: Get all unique tags
+      responses:
+        '200':
+          description: List of tags
+  /api/recipes/tags/refresh:
+    post:
+      tags:
+        - Recipes
+      summary: Clear tag and recipe caches
+      security:
+        - adminApiKey: []
+      responses:
+        '200':
+          description: Caches cleared
+  /api/favorites:
+    get:
+      tags:
+        - Favorites
+      summary: Get user favorite recipes
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of favorite recipes
+    post:
+      tags:
+        - Favorites
+      summary: Toggle favorite status
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - recipeId
+                - title
+              properties:
+                recipeId:
+                  type: string
+                title:
+                  type: string
+                image:
+                  type: string
+      responses:
+        '201':
+          description: Favorited
+        '200':
+          description: Unfavorited
+  /api/favorites/{recipeId}:
+    delete:
+      tags:
+        - Favorites
+      summary: Remove recipe from favorites
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: recipeId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Removed from favorites
+  /api/suggestions:
+    post:
+      tags:
+        - Suggestions
+      summary: Suggest a new recipe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - term
+              properties:
+                term:
+                  type: string
+                userId:
+                  type: string
+      responses:
+        '201':
+          description: Suggestion recorded
+  /admin/stats:
+    get:
+      tags:
+        - Admin
+      summary: Get suggestion stats
+      security:
+        - adminApiKey: []
+      responses:
+        '200':
+          description: Suggestion statistics
+  /api/ingest/image:
+    post:
+      tags:
+        - Ingest
+      summary: Ingest recipe from a single image URL
+      security:
+        - adminApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - imageUrl
+              properties:
+                imageUrl:
+                  type: string
+                generateImage:
+                  type: boolean
+                saveToDb:
+                  type: boolean
+      responses:
+        '200':
+          description: Recipe processed
+  /api/ingest/images:
+    post:
+      tags:
+        - Ingest
+      summary: Ingest recipe from two image URLs
+      security:
+        - adminApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - imageUrl1
+                - imageUrl2
+              properties:
+                imageUrl1:
+                  type: string
+                imageUrl2:
+                  type: string
+                generateImage:
+                  type: boolean
+                saveToDb:
+                  type: boolean
+      responses:
+        '200':
+          description: Recipe processed
+  /api/ingest/text:
+    post:
+      tags:
+        - Ingest
+      summary: Ingest recipe from text
+      security:
+        - adminApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+              properties:
+                text:
+                  type: string
+                generateImage:
+                  type: boolean
+                saveToDb:
+                  type: boolean
+                sourceType:
+                  type: string
+                sourceReference:
+                  type: string
+      responses:
+        '200':
+          description: Recipe processed
+  /api/ingest/transcribe:
+    post:
+      tags:
+        - Ingest
+      summary: Transcribe audio to text
+      security:
+        - adminApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - audioUrl
+              properties:
+                audioUrl:
+                  type: string
+                language:
+                  type: string
+      responses:
+        '200':
+          description: Transcription
+  /api/ingest/voice:
+    post:
+      tags:
+        - Ingest
+      summary: Ingest recipe from voice note
+      security:
+        - adminApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - audioUrl
+              properties:
+                audioUrl:
+                  type: string
+                language:
+                  type: string
+                saveToDb:
+                  type: boolean
+      responses:
+        '200':
+          description: Recipe processed
+  /api/ingest/{slug}/{action}:
+    post:
+      tags:
+        - Ingest
+      summary: Action on ingested recipe (publish, post, csv, curl, refresh-image)
+      security:
+        - adminApiKey: []
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: action
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Action performed
+  /api/ingest/save:
+    post:
+      tags:
+        - Ingest
+      summary: Save or update recipe
+      security:
+        - adminApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title_es
+                - title_en
+              properties:
+                title_es:
+                  type: string
+                title_en:
+                  type: string
+      responses:
+        '200':
+          description: Recipe updated
+        '201':
+          description: Recipe created
+  /api/ingest/logs:
+    get:
+      tags:
+        - Ingest
+      summary: Get ingestion logs
+      security:
+        - adminApiKey: []
+      responses:
+        '200':
+          description: Ingestion logs

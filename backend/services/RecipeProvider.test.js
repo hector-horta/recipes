@@ -15,7 +15,8 @@ vi.mock('../config/redis.js', () => ({
 
 vi.mock('../models/Recipe.js', () => ({
   Recipe: {
-    findAll: vi.fn()
+    findAll: vi.fn(),
+    count: vi.fn()
   }
 }));
 

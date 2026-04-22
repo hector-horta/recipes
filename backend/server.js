@@ -23,6 +23,8 @@ import { ActivityLogger } from './services/ActivityLogger.js';
 
 import path from 'path';
 import { fileURLToPath } from 'url';
+import swaggerUi from 'swagger-ui-express';
+import yamljs from 'yamljs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,6 +60,10 @@ app.use('/api/ingest', ingestRoutes);
 app.use('/admin', adminRoutes);
 app.use('/api/suggestions', suggestionRoutes);
 app.use('/api/recipes', recipeRoutes);
+
+// Swagger API Documentation
+const swaggerDocument = yamljs.load(path.join(__dirname, 'swagger.yaml'));
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 import { MEDICAL_TRIGGERS, INTOLERANCE_CATALOG } from './config/medical.js';
 

@@ -387,6 +387,15 @@ import miFeatureRoutes from './routes/miFeature.js';
 app.use('/api/mi-feature', miFeatureRoutes);
 ```
 
+#### Documentación con Swagger (OpenAPI)
+Todo nuevo endpoint **DEBE** ser documentado en el archivo `backend/swagger.yaml`.
+La documentación debe seguir el estándar OpenAPI 3.0, definiendo:
+- Method y Path.
+- Tags y Summary.
+- Parámetros (Query, Path, Body) con esquemas correspondientes.
+- Respuestas exitosas (200, 201) y de error (400, 401, 404, 409, 500).
+- Requisitos de seguridad (e.g., `bearerAuth`, `adminApiKey`) si la ruta está protegida.
+
 #### Validación con Zod
 ```javascript
 // En models/validators.js — definir el schema
