@@ -4,7 +4,9 @@ import { SecurityScrubber } from './SecurityScrubber';
 import { db } from '../db/db';
 import { cacheRecipeImages } from '../utils/imageCache';
 
-const API_DOMAIN = '';
+import { CONFIG } from '../config';
+
+const API_DOMAIN = CONFIG.BASE_URL;
 
 console.log(`[PrivacyProxy] Initialized: Domain=${API_DOMAIN}`);
 

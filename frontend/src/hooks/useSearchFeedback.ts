@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { logger } from '../utils/logger';
+import { api } from '../lib/api';
 
 export function useSearchFeedback() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -13,16 +14,7 @@ export function useSearchFeedback() {
     setError(null);
 
     try {
-      const res = await fetch('/api/suggestions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ term: term.trim(), userId })
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to submit suggestion');
-      }
+      await api.post('/suggestions', { term: term.trim(), userId });
 
       setSubmitted(true);
       logger.track('CHEF_SUGGESTION_SENT', { term: term.trim() });
