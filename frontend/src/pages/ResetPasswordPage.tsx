@@ -32,7 +32,17 @@ export function ResetPasswordPage() {
     }
 
     if (password.length < 8) {
-      showToast(t('auth.reset.too_short'), 'error');
+      showToast('La contraseña debe tener al menos 8 caracteres', 'error');
+      return;
+    }
+
+    if (!/[A-Z]/.test(password)) {
+      showToast('La contraseña debe tener al menos una mayúscula', 'error');
+      return;
+    }
+
+    if (!/[0-9]/.test(password)) {
+      showToast('La contraseña debe tener al menos un número', 'error');
       return;
     }
 
@@ -44,7 +54,7 @@ export function ResetPasswordPage() {
       // The user wants to redirect to login modal (or home where login modal can be opened)
       // We'll show a success state first
     } catch (err: any) {
-      showToast(err.response?.data?.message || t('auth.reset.failed'), 'error');
+      showToast(err.response?.data?.error || err.response?.data?.message || t('auth.reset.failed'), 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -121,6 +131,9 @@ export function ResetPasswordPage() {
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
+              <p className="text-[10px] text-brand-forest/50 font-medium px-2 pt-1">
+                Debe contener al menos 8 caracteres, una mayúscula y un número.
+              </p>
             </div>
 
             <div className="space-y-2">

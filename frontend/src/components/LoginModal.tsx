@@ -51,7 +51,9 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
       let userData = null;
       if (view === 'register') {
         if (!displayName.trim()) { setError('Nombre: Ingresa tu nombre completo.'); setIsSubmitting(false); return; }
-        if (password.length < 6) { setError('Contraseña: Debe tener al menos 6 caracteres.'); setIsSubmitting(false); return; }
+        if (password.length < 8) { setError('Contraseña: Debe tener al menos 8 caracteres.'); setIsSubmitting(false); return; }
+        if (!/[A-Z]/.test(password)) { setError('Contraseña: Debe tener al menos una mayúscula.'); setIsSubmitting(false); return; }
+        if (!/[0-9]/.test(password)) { setError('Contraseña: Debe tener al menos un número.'); setIsSubmitting(false); return; }
         if (!acceptedTerms) { setError('Legal: Debes aceptar los Términos y Condiciones.'); setIsSubmitting(false); return; }
         userData = await register({ 
           email: email.trim().toLowerCase(), 
@@ -71,7 +73,7 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
         onLoginSuccess(userData);
       }, 150);
     } catch (err: any) {
-      setError(err.response?.data?.message || err.message || t('auth.unexpectedError'));
+      setError(err.response?.data?.error || err.response?.data?.message || err.message || t('auth.unexpectedError'));
     } finally {
       if (view !== 'forgot-password' || !isForgotSuccess) {
         setIsSubmitting(false);
@@ -199,28 +201,35 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
               />
 
               {view !== 'forgot-password' && (
-                <Input
-                  variant="glass"
-                  type={showPassword ? 'text' : 'password'}
-                  name="password"
-                  id="login-password"
-                  autoComplete={view === 'register' ? 'new-password' : 'current-password'}
-                  placeholder={t('auth.passwordPlaceholder')}
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  leftIcon={<Lock className="w-4 h-4" />}
-                  rightElement={
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="text-white/40 hover:text-white transition-colors"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </Button>
-                  }
-                />
+                <div className="space-y-1">
+                  <Input
+                    variant="glass"
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    id="login-password"
+                    autoComplete={view === 'register' ? 'new-password' : 'current-password'}
+                    placeholder={t('auth.passwordPlaceholder')}
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    leftIcon={<Lock className="w-4 h-4" />}
+                    rightElement={
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="text-white/40 hover:text-white transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </Button>
+                    }
+                  />
+                  {view === 'register' && (
+                    <p className="text-[10px] text-white/50 font-medium px-2 text-left">
+                      Debe contener al menos 8 caracteres, una mayúscula y un número.
+                    </p>
+                  )}
+                </div>
               )}
 
 

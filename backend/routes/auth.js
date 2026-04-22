@@ -270,8 +270,10 @@ router.post('/reset-password', asyncHandler(async (req, res) => {
 
   const parseResult = resetPasswordSchema.safeParse({ password });
   if (!parseResult.success) {
-    const error = new Error('Password inválido');
+    const errorMessage = parseResult.error.errors.map(e => e.message).join('. ');
+    const error = new Error(errorMessage || 'Password inválido');
     error.status = 400;
+    error.name = 'ZodError';
     error.errors = parseResult.error.errors;
     throw error;
   }
