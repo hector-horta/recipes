@@ -35,3 +35,6 @@ backend/public/
 
 # Scratch scripts (ephemeral debug/diagnostic scripts, delete before committing)
 backend/scratch/
+
+# Frontend build files
+frontend/dist/
