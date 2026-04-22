@@ -1,13 +1,26 @@
 import { db } from '../db/db';
 import { Recipe } from '../types/recipe';
 
-const ALLOWED_IMAGE_DOMAINS = ['localhost', 'res.cloudinary.com', 'images.unsplash.com', 'spoonacular.com'];
+import { CONFIG } from '../config';
+
+const ALLOWED_IMAGE_DOMAINS = ['localhost', 'res.cloudinary.com', 'images.unsplash.com', 'spoonacular.com', 'wati.health'];
 
 function isValidImageUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
     // Allow local data/blob URLs or specific trusted domains
     if (parsed.protocol === 'data:' || parsed.protocol === 'blob:') return true;
+    
+    // Check if it matches the configured API domain
+    try {
+      if (CONFIG.BASE_URL) {
+        const baseParsed = new URL(CONFIG.BASE_URL);
+        if (parsed.hostname === baseParsed.hostname) return true;
+      }
+    } catch {
+      // Ignore if BASE_URL is relative or invalid
+    }
+
     return ALLOWED_IMAGE_DOMAINS.some(domain => parsed.hostname.endsWith(domain));
   } catch {
     return false;
@@ -15,21 +28,26 @@ function isValidImageUrl(url: string): boolean {
 }
 
 export async function cacheImage(url: string): Promise<string | null> {
-  if (!url || !isValidImageUrl(url)) return null;
+  if (!url) return null;
+  let target = url;
+  if (target.startsWith('/public/')) {
+    target = `${CONFIG.BASE_URL}${target}`;
+  }
+  if (!isValidImageUrl(target)) return null;
 
   try {
-    const cached = await db.cachedImages.get(url);
+    const cached = await db.cachedImages.get(target);
     if (cached) {
       return cached.base64;
     }
 
-    const response = await fetch(url, { mode: 'cors' });
+    const response = await fetch(target, { mode: 'cors' });
     if (!response.ok) return null;
 
     const blob = await response.blob();
     const base64 = await blobToBase64(blob);
 
-    await db.cachedImages.put({ url, base64, timestamp: Date.now() });
+    await db.cachedImages.put({ url: target, base64, timestamp: Date.now() });
     return base64;
   } catch (err) {
     console.warn('[ImageCache] Failed to cache image:', err);
@@ -38,10 +56,15 @@ export async function cacheImage(url: string): Promise<string | null> {
 }
 
 export async function getCachedImage(url: string): Promise<string | null> {
-  if (!url || !isValidImageUrl(url)) return null;
+  if (!url) return null;
+  let target = url;
+  if (target.startsWith('/public/')) {
+    target = `${CONFIG.BASE_URL}${target}`;
+  }
+  if (!isValidImageUrl(target)) return null;
 
   try {
-    const cached = await db.cachedImages.get(url);
+    const cached = await db.cachedImages.get(target);
     return cached?.base64 || null;
   } catch (err) {
     console.warn('[ImageCache] Failed to retrieve cached image:', err);
@@ -51,19 +74,23 @@ export async function getCachedImage(url: string): Promise<string | null> {
 
 export async function getImageSource(url: string): Promise<string> {
   if (!url) return '';
-  if (!isValidImageUrl(url)) return url; // Fallback to raw URL if invalid for caching
+  let target = url;
+  if (target.startsWith('/public/')) {
+    target = `${CONFIG.BASE_URL}${target}`;
+  }
+  if (!isValidImageUrl(target)) return target; // Fallback to raw URL if invalid for caching
 
-  const cached = await getCachedImage(url);
+  const cached = await getCachedImage(target);
   if (cached) return cached;
 
   try {
-    const base64 = await cacheImage(url);
+    const base64 = await cacheImage(target);
     if (base64) return base64;
   } catch {
     // Fall back to original URL if caching fails
   }
 
-  return url;
+  return target;
 }
 
 export async function cacheRecipeImages(recipes: Recipe[]): Promise<void> {

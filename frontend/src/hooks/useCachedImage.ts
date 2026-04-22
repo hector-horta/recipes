@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getCachedImage, cacheImage } from '../utils/imageCache';
+import { CONFIG } from '../config';
 
 export function useCachedImage(url: string | undefined) {
   const [imageSrc, setImageSrc] = useState<string>(url || '');
@@ -14,7 +15,12 @@ export function useCachedImage(url: string | undefined) {
     let cancelled = false;
 
     async function load() {
-      const target = url!;
+      let target = url!;
+      // Resolve relative paths using the backend API domain
+      if (target.startsWith('/public/')) {
+        target = `${CONFIG.BASE_URL}${target}`;
+      }
+      
       setLoading(true);
       try {
         const cached = await getCachedImage(target);
