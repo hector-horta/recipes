@@ -125,3 +125,5 @@ export class ActivityLogger {
     }, { failedSearch: false });
   }
 }
+
+export default ActivityLogger;

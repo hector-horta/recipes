@@ -3,7 +3,6 @@ import { ActivityLogger } from './ActivityLogger.js';
 import { withRetry } from '../utils/retry.js';
 
 const NVIDIA_API_BASE = 'https://integrate.api.nvidia.com/v1';
-const NVIDIA_GENAI_BASE = 'https://ai.api.nvidia.com/v1/genai';
 
 export async function nvidiaChatRequest(body, apiKey) {
   return withRetry(async () => {
@@ -26,28 +25,6 @@ export async function nvidiaChatRequest(body, apiKey) {
     const data = await res.json();
     return data.choices?.[0]?.message?.content || '';
   }, { serviceName: 'NVIDIA Chat' });
-}
-
-async function nvidiaImageRequest(body, apiKey) {
-  return withRetry(async () => {
-    const res = await fetch(`${NVIDIA_GENAI_BASE}/stabilityai/stable-diffusion-xl`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify(body)
-    });
-
-    if (!res.ok) {
-      const errText = await res.text().catch(() => '');
-      const error = new Error(`NVIDIA SDXL error (${res.status}): ${errText}`);
-      error.status = res.status;
-      throw error;
-    }
-
-    return res.json();
-  }, { serviceName: 'NVIDIA Image' });
 }
 
 async function downloadImageAsBase64(imageUrl) {
@@ -190,49 +167,40 @@ CRITICAL RULES:
   }
 }
 
+import geminiService from './GeminiService.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename_nim = fileURLToPath(import.meta.url);
+const __dirname_nim = path.dirname(__filename_nim);
+
 export async function generateRecipeImage(prompt, apiKey, feedback = '') {
-  return withRetry(async () => {
-    const decoratedPrompt = `Professional editorial food photography of ${prompt}, 8k, macro lens, soft natural lighting, high-end restaurant plating, vibrant colors, shallow depth of field${feedback ? `, ${feedback}` : ''}`;
-
-    const response = await nvidiaImageRequest({
-      text_prompts: [{ text: decoratedPrompt }],
-      height: 1024,
-      width: 1024,
-      cfg_scale: 7,
-      steps: 30
-    }, apiKey);
-
-    const imageData = response.artifacts?.[0]?.base64;
-    if (!imageData) {
-      throw new Error('No image data returned from SDXL');
+  try {
+    const imageBuffer = await geminiService.generateRecipeImage(prompt, feedback);
+    
+    if (imageBuffer) {
+      const filename = `recipe-${Date.now()}.jpg`;
+      const publicPath = path.join(__dirname_nim, '..', 'public', 'recipes', filename);
+      
+      // Ensure directory exists
+      const dir = path.dirname(publicPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      
+      fs.writeFileSync(publicPath, imageBuffer);
+      
+      return {
+        url: `/recipes/${filename}`,
+        filename: filename
+      };
     }
-
-    const fs = await import('fs');
-    const path = await import('path');
-    const { fileURLToPath } = await import('url');
-
-    const __filename = fileURLToPath(import.meta.url);
-    const __dirname = path.dirname(__filename);
-
-    const recipesDir = path.join(__dirname, '..', 'public', 'recipes');
-    if (!fs.existsSync(recipesDir)) {
-      fs.mkdirSync(recipesDir, { recursive: true });
-    }
-
-    const filename = `${Date.now()}.jpg`;
-    const filepath = path.join(recipesDir, filename);
-
-    const buffer = Buffer.from(imageData, 'base64');
-    fs.writeFileSync(filepath, buffer);
-
-    ActivityLogger.info('SDXL Image saved', { filename, prompt: prompt.slice(0, 50) });
-
-    return {
-      filename,
-      url: `/public/recipes/${filename}`,
-      filepath
-    };
-  }, { serviceName: 'NVIDIA Image (Full)' });
+  } catch (error) {
+    ActivityLogger.error('Gemini image generation failed', { error: error.message });
+  }
+  
+  return { url: null, filename: null };
 }
 
 /**
