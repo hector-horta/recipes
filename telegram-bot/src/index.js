@@ -5,7 +5,8 @@ import { processImage, processText, processVoice } from './handlers/messageHandl
 import { handleCallback } from './handlers/callbackHandler.js';
 import { handleStart, handleLogs } from './handlers/commandHandler.js';
 import { sessionManager } from './utils/session.js';
-import { sendRecipeResult } from './utils/botUI.js';
+import { sendRecipeResult, sendImageFeedback } from './utils/botUI.js';
+import { backendStore } from './services/backendStore.js';
 
 async function init() {
   try {
