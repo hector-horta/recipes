@@ -25,7 +25,10 @@ export const corsOptions = {
     if (isLocalhost || isLocalNetwork || isCloudflarePages) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      const error = new Error('Not allowed by CORS');
+      error.status = 403;
+      error.code = 'CORS_FORBIDDEN';
+      callback(error);
     }
   },
   credentials: true,

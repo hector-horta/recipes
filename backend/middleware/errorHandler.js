@@ -22,6 +22,9 @@ export const errorHandler = (err, req, res, next) => {
     status = 400;
     code = 'VALIDATION_ERROR';
     details = err.errors;
+  } else if (err.message === 'Not allowed by CORS') {
+    status = 403;
+    code = 'CORS_FORBIDDEN';
   }
   
   const isFatal = status >= 500;
@@ -36,15 +39,21 @@ export const errorHandler = (err, req, res, next) => {
     });
   }
 
-  // Log structured error
-  ActivityLogger.error(`Request Failed: ${req.method} ${req.url}`, err, {
+  const logContext = {
     status,
     ip: req.ip,
     userId: req.user?.id,
     code,
     details: details ? JSON.stringify(details) : undefined,
     body: sanitizedBody
-  });
+  };
+
+  // Log structured error: .error for fatals (persisted), .warn for user errors (console only)
+  if (status >= 500) {
+    ActivityLogger.error(`Request Failed: ${req.method} ${req.url}`, err, logContext);
+  } else {
+    ActivityLogger.warn(`Request Failed: ${req.method} ${req.url} (${err.message})`, logContext);
+  }
 
   // Alert on critical failures
   const isNvidiaError = err.message?.includes('NVIDIA') || err.message?.includes('SDXL');
