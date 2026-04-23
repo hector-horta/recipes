@@ -205,6 +205,7 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 | `password_hash` | STRING | NOT NULL |
 | `display_name` | STRING | NOT NULL |
 | `is_active` | BOOLEAN | NOT NULL, default: true |
+| `is_verified` | BOOLEAN | NOT NULL, default: false |
 | `accepted_terms_at` | DATE | NOT NULL |
 | `data_exported_at` | DATE | nullable |
 | `created_at` | DATE | auto |
@@ -222,6 +223,7 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 | `daily_calories` | INTEGER | nullable, default: 2000 |
 | `onboarding_completed` | BOOLEAN | default: false |
 | `language` | STRING(5) | default: 'en' |
+| `severities` | JSONB | default: {} |
 
 **Asociaciones**: `User.hasOne(Profile)`, `Profile.belongsTo(User)`
 
@@ -297,6 +299,18 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 
 > **Nota**: `timestamps: false` — no tiene created_at/updated_at.
 
+### `tags` (Diccionario de traducciones)
+| Column | Type | Constraints |
+|---|---|---|
+| `id` | UUID | PK |
+| `key` | STRING | NOT NULL, UNIQUE |
+| `es` | STRING | NOT NULL |
+| `en` | STRING | NOT NULL |
+| `created_at` | DATE | auto |
+| `updated_at` | DATE | auto |
+
+> **Nota**: Se utiliza como diccionario centralizado para `normalizeTags()`. Las recetas aún guardan tags desnormalizados en JSONB por performance de lectura.
+
 ### `activity_logs`
 | Column | Type | Constraints |
 |---|---|---|
@@ -313,6 +327,8 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 ---
 
 ## 🔌 API Reference (Backend Endpoints)
+
+> **⚠️ IMPORTANTE**: El archivo **`backend/swagger.yaml`** es la fuente de verdad técnica para los endpoints. Esta sección es un resumen informativo.
 
 ### Rutas Registradas en `server.js`
 

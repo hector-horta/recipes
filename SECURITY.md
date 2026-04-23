@@ -3,6 +3,7 @@
 ## Authentication & Session Management
 - **Stateless Sessions (JWT)**: We use JSON Web Tokens (JWT) for authentication.
 - **Secure Persistence**: Tokens are stored in **HttpOnly, Secure, and Lax** cookies. This prevents JavaScript-based session hijacking (XSS protection).
+- **Hybrid Verification**: Core features are soft-gated and require email verification via Magic Links (JWT) sent via Resend.
 - **Credentials**: The frontend uses `credentials: 'include'` for all cross-origin or same-origin authenticated requests.
 
 ## CSRF (Cross-Site Request Forgery)
