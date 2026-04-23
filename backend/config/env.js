@@ -23,6 +23,8 @@ const envSchema = z.object({
   API_KEY: z.string().optional(),
   SPOONACULAR_API_KEY: z.string().optional(),
   NVIDIA_API_KEY: z.string().optional(),
+  GEMINI_API_KEY: z.string().optional(),
+  GEMINI_IMAGE_MODEL: z.string().default('imagen-4.0-generate-001'),
   GROQ_API_KEY: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().default('Wati <noreply@wati.com>'),
