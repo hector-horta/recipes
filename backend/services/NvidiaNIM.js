@@ -192,7 +192,7 @@ export async function generateRecipeImage(prompt, apiKey, feedback = '') {
       fs.writeFileSync(publicPath, imageBuffer);
       
       return {
-        url: `/recipes/${filename}`,
+        url: `/public/recipes/${filename}`,
         filename: filename
       };
     }
