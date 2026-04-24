@@ -132,10 +132,8 @@ services:
     ports:
       - "8080:8080"
     environment:
-      DOZZLE_USERNAME: ${DOZZLE_USERNAME:-admin}
-      DOZZLE_PASSWORD: ${DOZZLE_PASSWORD:-change_me_in_env_file}
-      DOZZLE_AUTH_PROVIDER: "simple"
-      DOZZLE_NO_ANALYTICS: "true"
+      - DOZZLE_AUTH_PROVIDER=simple
+      - DOZZLE_NO_ANALYTICS=true
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./users.yml:/data/users.yml
