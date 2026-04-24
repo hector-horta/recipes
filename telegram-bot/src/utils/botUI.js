@@ -43,7 +43,9 @@ export async function sendImageFeedback(bot, chatId, recipe, previousMsgId = nul
   
   let imageBuffer = null;
   if (recipe.image_url) {
-    const imageUrl = `${config.BACKEND_URL}${recipe.image_url}`;
+    const baseUrl = config.BACKEND_URL.replace(/\/$/, '');
+    const imagePath = recipe.image_url.replace(/^\//, '');
+    const imageUrl = `${baseUrl}/${imagePath}`;
     imageBuffer = await downloadImage(imageUrl);
   }
 
@@ -91,7 +93,9 @@ export async function sendRecipeResult(bot, chatId, recipe, previousMsgId = null
 
   let imageBuffer = null;
   if (recipe.image_url) {
-    const imageUrl = `${config.BACKEND_URL}${recipe.image_url}`;
+    const baseUrl = config.BACKEND_URL.replace(/\/$/, '');
+    const imagePath = recipe.image_url.replace(/^\//, '');
+    const imageUrl = `${baseUrl}/${imagePath}`;
     imageBuffer = await downloadImage(imageUrl);
   }
 
