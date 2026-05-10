@@ -38,3 +38,6 @@ backend/scratch/
 
 # Frontend build files
 frontend/dist/
+
+# Code review ToDos:
+docs/todo/
