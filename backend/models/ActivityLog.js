@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import { sequelize } from '../config/database.js';
+import { Organization } from './Organization.js';
 
 /**
  * ActivityLog — Telemetría de producto
@@ -38,6 +39,15 @@ export const ActivityLog = sequelize.define('ActivityLog', {
     type: DataTypes.UUID,
     allowNull: true
   },
+  // Organization ID — nullable for global/Wati data
+  organization_id: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    references: {
+      model: 'organizations',
+      key: 'id'
+    }
+  },
   // IP del cliente para análisis geográfico / rate limiting
   ip: {
     type: DataTypes.STRING(64),
@@ -49,3 +59,6 @@ export const ActivityLog = sequelize.define('ActivityLog', {
   timestamps: true,
   updatedAt: false         // los logs son inmutables; solo tiene created_at
 });
+
+ActivityLog.belongsTo(Organization, { foreignKey: 'organization_id', as: 'organization' });
+Organization.hasMany(ActivityLog, { foreignKey: 'organization_id', as: 'activity_logs' });

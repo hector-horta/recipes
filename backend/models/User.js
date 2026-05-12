@@ -1,6 +1,7 @@
 import { DataTypes } from 'sequelize';
 import { sequelize } from '../config/database.js';
 import { Organization } from './Organization.js';
+import { UserOrganization } from './UserOrganization.js';
 
 export const User = sequelize.define('User', {
   id: {
@@ -47,14 +48,6 @@ export const User = sequelize.define('User', {
     type: DataTypes.ENUM('user', 'admin', 'super_admin'),
     defaultValue: 'user',
     allowNull: false
-  },
-  organization_id: {
-    type: DataTypes.UUID,
-    allowNull: true,
-    references: {
-      model: 'organizations',
-      key: 'id'
-    }
   }
 }, {
   tableName: 'users',
@@ -62,5 +55,17 @@ export const User = sequelize.define('User', {
   underscored: true
 });
 
-User.belongsTo(Organization, { foreignKey: 'organization_id', as: 'organization' });
-Organization.hasMany(User, { foreignKey: 'organization_id', as: 'users' });
+// Many-to-Many association via UserOrganization
+User.belongsToMany(Organization, { 
+  through: UserOrganization, 
+  foreignKey: 'user_id', 
+  otherKey: 'organization_id',
+  as: 'organizations' 
+});
+
+Organization.belongsToMany(User, { 
+  through: UserOrganization, 
+  foreignKey: 'organization_id', 
+  otherKey: 'user_id',
+  as: 'users' 
+});

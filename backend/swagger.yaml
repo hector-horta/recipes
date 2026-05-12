@@ -8,16 +8,6 @@ servers:
     description: Local server
   - url: https://api.wati.health
     description: Production server
-components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-    adminApiKey:
-      type: apiKey
-      in: header
-      name: X-Admin-Key
 paths:
   /api/status:
     get:
@@ -199,6 +189,10 @@ paths:
       responses:
         '200':
           description: Current user info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
     put:
       tags:
         - Auth
@@ -235,17 +229,45 @@ paths:
           name: query
           schema:
             type: string
+          description: Search term for recipes
+        - in: query
+          name: organization_id
+          schema:
+            type: string
+          description: Filter by organization ID (optional)
         - in: query
           name: page
           schema:
             type: integer
+          description: Page number
         - in: query
           name: limit
           schema:
             type: integer
+          description: Items per page
       responses:
         '200':
           description: List of recipes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recipes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Recipe'
+                  pagination:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      pages:
+                        type: integer
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
   /api/recipes/tags:
     get:
       tags:
@@ -535,3 +557,71 @@ paths:
       responses:
         '200':
           description: Ingestion logs
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    adminApiKey:
+      type: apiKey
+      in: header
+      name: X-Admin-Key
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        displayName:
+          type: string
+        role:
+          type: string
+          enum: [user, admin, super_admin]
+        organizations:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/Organization'
+        isVerified:
+          type: boolean
+    Recipe:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title_es:
+          type: string
+        title_en:
+          type: string
+        slug:
+          type: string
+        organization_id:
+          type: string
+          format: uuid
+          nullable: true
+        image_url:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        nutrition:
+          type: object
+    Organization:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        settings:
+          type: object

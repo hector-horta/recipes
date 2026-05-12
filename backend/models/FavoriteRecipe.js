@@ -1,6 +1,7 @@
 import { DataTypes } from 'sequelize';
 import { sequelize } from '../config/database.js';
 import { User } from './User.js';
+import { Organization } from './Organization.js';
 
 export const FavoriteRecipe = sequelize.define('FavoriteRecipe', {
   id: {
@@ -17,6 +18,14 @@ export const FavoriteRecipe = sequelize.define('FavoriteRecipe', {
       key: 'id'
     },
     onDelete: 'CASCADE'
+  },
+  organization_id: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    references: {
+      model: 'organizations',
+      key: 'id'
+    }
   },
   recipe_id: {
     type: DataTypes.UUID,
@@ -39,6 +48,8 @@ export const FavoriteRecipe = sequelize.define('FavoriteRecipe', {
 // Associations
 User.hasMany(FavoriteRecipe, { foreignKey: 'user_id', as: 'favorites' });
 FavoriteRecipe.belongsTo(User, { foreignKey: 'user_id' });
+FavoriteRecipe.belongsTo(Organization, { foreignKey: 'organization_id', as: 'organization' });
+Organization.hasMany(FavoriteRecipe, { foreignKey: 'organization_id', as: 'favorite_recipes' });
 
 // Lazy association to Recipe (avoids circular imports)
 let _recipeAssociationDefined = false;

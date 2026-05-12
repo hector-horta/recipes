@@ -4,13 +4,14 @@ import { GoogleGenAI } from "@google/genai";
 import ActivityLogger from '../services/ActivityLogger.js';
 
 vi.mock("@google/genai", () => {
-  const generateContentMock = vi.fn();
-  const getGenerativeModelMock = vi.fn(() => ({
-    generateContent: generateContentMock
-  }));
+  const generateImagesMock = vi.fn();
+  
+  const models = {
+    generateImages: generateImagesMock
+  };
   
   function GoogleGenAI() {
-    this.getGenerativeModel = getGenerativeModelMock;
+    this.models = models;
   }
   
   return { GoogleGenAI };
@@ -25,37 +26,34 @@ vi.mock("../services/ActivityLogger.js", () => {
   };
   return {
     default: mockLogger,
-    ActivityLogger: mockLogger // Keep named export just in case
+    ActivityLogger: mockLogger
   };
 });
 
 vi.mock("../config/env.js", () => ({
   config: {
-    GEMINI_API_KEY: 'test-key'
+    GEMINI_API_KEY: 'test-key',
+    GEMINI_IMAGE_MODEL: 'test-model'
   }
 }));
 
 describe('GeminiService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Ensure the client is reset if needed, though it's a singleton
   });
 
   describe('generateRecipeImage', () => {
     it('should return a buffer on success', async () => {
       const mockImageData = Buffer.from('fake-image-data').toString('base64');
       const mockResponse = {
-        response: Promise.resolve({
-          candidates: [{
-            content: {
-              parts: [{ inlineData: { data: mockImageData } }]
-            }
-          }]
-        })
+        generatedImages: [{
+          image: { imageBytes: mockImageData }
+        }]
       };
 
       const genAIInstance = new GoogleGenAI();
-      const model = genAIInstance.getGenerativeModel({ model: 'any' });
-      model.generateContent.mockResolvedValue(mockResponse);
+      genAIInstance.models.generateImages.mockResolvedValue(mockResponse);
 
       const result = await geminiService.generateRecipeImage('Tasty Cake');
 
@@ -66,16 +64,11 @@ describe('GeminiService', () => {
 
     it('should handle missing image data in response', async () => {
       const mockResponse = {
-        response: Promise.resolve({
-          candidates: [{
-            content: { parts: [] }
-          }]
-        })
+        generatedImages: []
       };
 
       const genAIInstance = new GoogleGenAI();
-      const model = genAIInstance.getGenerativeModel({ model: 'any' });
-      model.generateContent.mockResolvedValue(mockResponse);
+      genAIInstance.models.generateImages.mockResolvedValue(mockResponse);
 
       const result = await geminiService.generateRecipeImage('Tasty Cake');
 
@@ -85,8 +78,7 @@ describe('GeminiService', () => {
 
     it('should handle API errors', async () => {
       const genAIInstance = new GoogleGenAI();
-      const model = genAIInstance.getGenerativeModel({ model: 'any' });
-      model.generateContent.mockRejectedValue(new Error('Quota exceeded'));
+      genAIInstance.models.generateImages.mockRejectedValue(new Error('Quota exceeded'));
 
       const result = await geminiService.generateRecipeImage('Tasty Cake');
 

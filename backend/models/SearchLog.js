@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import { sequelize } from '../config/database.js';
+import { Organization } from './Organization.js';
 
 export const SearchLog = sequelize.define('SearchLog', {
   id: {
@@ -23,6 +24,14 @@ export const SearchLog = sequelize.define('SearchLog', {
     type: DataTypes.STRING,
     allowNull: true
   },
+  organization_id: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    references: {
+      model: 'organizations',
+      key: 'id'
+    }
+  },
   ip: {
     type: DataTypes.STRING,
     allowNull: true
@@ -32,3 +41,6 @@ export const SearchLog = sequelize.define('SearchLog', {
   underscored: true,
   timestamps: false
 });
+
+SearchLog.belongsTo(Organization, { foreignKey: 'organization_id', as: 'organization' });
+Organization.hasMany(SearchLog, { foreignKey: 'organization_id', as: 'search_logs' });

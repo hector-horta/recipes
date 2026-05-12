@@ -18,16 +18,17 @@ export class ActivityLogger {
    *
    * @param {'SEARCH'|'VIEW_RECIPE'|'ADD_FAVORITE'|'INGEST_SUCCESS'|'INGEST_FAIL'|'SYSTEM'|'ERROR'} action
    * @param {object} metadata  Datos adicionales (query, recipeId, title, error, ...)
-   * @param {object} options   { userId, ip, failedSearch }
+   * @param {object} options   { userId, ip, failedSearch, organizationId }
    */
   static log(action, metadata = {}, options = {}) {
-    const { userId = null, ip = null, failedSearch = false } = options;
+    const { userId = null, ip = null, failedSearch = false, organizationId = null } = options;
 
     ActivityLog.create({
       action,
       metadata,
       failed_search: failedSearch,
       user_id: userId,
+      organization_id: organizationId,
       ip
     }).catch(err =>
       console.error(`[ActivityLogger] DB write failed (${action}):`, err.message)
@@ -39,6 +40,7 @@ export class ActivityLogger {
         status: 'failed',
         conversion: false,
         user_id: userId,
+        organization_id: organizationId,
         ip
       }).catch(err =>
         console.error(`[ActivityLogger] SearchLog write failed:`, err.message)
