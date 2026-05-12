@@ -2,11 +2,19 @@
 FROM node:22-alpine AS base
 
 # Install pnpm and su-exec
-RUN corepack enable && corepack prepare pnpm@9.15.4 --activate && \
+RUN npm install -g pnpm@9.15.4 && \
     apk add --no-cache su-exec
 
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodeapp -u 1001 -G nodejs
+
+# Set PNPM_HOME and ensure path is updated
+ENV PNPM_HOME="/home/nodeapp/.pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+
+# Create necessary directories and ensure nodeapp ownership
+RUN mkdir -p /home/nodeapp/.cache /home/nodeapp/.pnpm && \
+    chown -R nodeapp:nodejs /home/nodeapp
 
 WORKDIR /app
 
@@ -20,8 +28,8 @@ EXPOSE 5173
 ENV CI=true
 ENV PNPM_CONFIG_STORE_DIR=/tmp/.pnpm-store
 
-# At container startup: install deps, fix permissions, then run as non-root
-CMD ["sh", "-c", "mkdir -p /tmp/.pnpm-store && chmod -R 777 /tmp/.pnpm-store && pnpm install --store-dir /tmp/.pnpm-store --no-frozen-lockfile --force && chown -R nodeapp:nodejs /app/node_modules && exec su-exec nodeapp pnpm run dev --host"]
+# At container startup: ensure store exists, install as root (faster/more reliable), fix permissions, then run as nodeapp
+CMD ["sh", "-c", "mkdir -p /tmp/.pnpm-store && chmod -R 777 /tmp/.pnpm-store && pnpm install --store-dir /tmp/.pnpm-store --no-frozen-lockfile && chown -R nodeapp:nodejs /app && exec su-exec nodeapp pnpm run dev --host"]
 
 # ── Production build (optional) ─────────────────────────────────────────────
 FROM base AS build
