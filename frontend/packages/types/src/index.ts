@@ -1,5 +1,14 @@
-// @wati/types
-// Shared TypeScript type definitions for the Wati ecosystem.
-// Will hold Recipe, Ingredient, Tag interfaces and other cross-package types.
+// Recipe domain
+export type { Tag, Ingredient, Recipe, RecipeSearchResponse } from './recipe';
 
-export {};
+// User domain
+export type { UserProfile, SeverityLevel } from './user';
+
+// Favorites domain
+export type { FavoriteItem } from './favorites';
+
+// Medical domain
+export type { MedicalProfile } from './medical';
+
+// API domain
+export type { ApiClientConfig } from './api';

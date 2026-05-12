@@ -1,5 +1,8 @@
-// @wati/ui-kit
-// Shared UI components for Wati applications.
-// Will receive Badge, Button, Input and other reusable components.
+export { Badge } from './Badge';
+export type { BadgeProps, BadgeVariant, BadgeSize } from './Badge';
 
-export {};
+export { Button } from './Button';
+export type { ButtonProps, ButtonVariant, ButtonSize } from './Button';
+
+export { Input } from './Input';
+export type { InputProps, InputVariant } from './Input';

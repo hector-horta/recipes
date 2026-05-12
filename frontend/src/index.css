@@ -26,6 +26,10 @@
 
     --glass-bg: rgba(26, 36, 33, 0.85);
     --glass-border: rgba(255, 255, 255, 0.1);
+
+    /* @wati/ui-kit gradient tokens */
+    --ui-gradient-from: var(--brand-sage);
+    --ui-gradient-to: var(--brand-teal);
   }
 }
 

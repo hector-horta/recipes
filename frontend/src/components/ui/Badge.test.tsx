@@ -12,8 +12,8 @@ describe('Badge', () => {
         const { container } = render(<Badge>Default</Badge>);
         const badge = container.firstChild as HTMLElement;
         
-        expect(badge.className).toContain('bg-brand-forest/5');
-        expect(badge.className).toContain('text-brand-forest');
+        expect(badge.className).toContain('bg-ui-primary/5');
+        expect(badge.className).toContain('text-ui-foreground');
     });
 
     it('should apply success variant styles', () => {
