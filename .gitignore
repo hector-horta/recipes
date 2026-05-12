@@ -39,5 +39,8 @@ backend/scratch/
 # Frontend build files
 frontend/dist/
 
+# Turborepo
+.turbo/
+
 # Code review ToDos:
 docs/todo/
