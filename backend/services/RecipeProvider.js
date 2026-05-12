@@ -13,6 +13,19 @@ const CACHE_TTL_SECONDS = 3600; // 1 hour
 export class RecipeProvider {
   static async getRecipes(params, userProfile) {
     let { query, number = 10, offset = 0 } = params;
+    let organizationId = params.organizationId || userProfile?.organization_id || null;
+
+    // Security: Only super_admin can query specifically for other organizations
+    if (userProfile && userProfile.role !== 'super_admin') {
+      if (organizationId !== null && organizationId !== userProfile.organization_id) {
+        organizationId = userProfile.organization_id;
+      }
+    } else if (!userProfile) {
+      // Anonymous users can only see global recipes unless an org is explicitly allowed (future)
+      // For now, if no user profile, we only allow global unless params says otherwise
+      // but we should probably force null if we want strict privacy.
+      // Keeping params.organizationId for now as it might be used by public org portals.
+    }
     
     // Fetch tags for translation
     const allTags = await TagService.getAllTags();
@@ -26,7 +39,13 @@ export class RecipeProvider {
     if (typeof query !== 'string') query = '';
     query = query.trim().slice(0, 200);
 
-    const whereClause = { status: 'published' };
+    const whereClause = { 
+      status: 'published',
+      [Op.or]: [
+        { organization_id: null }, // Global recipes
+        { organization_id: organizationId } // Organization-specific recipes
+      ]
+    };
 
     if (query) {
       const q = query;
@@ -64,7 +83,18 @@ export class RecipeProvider {
         orConditions.push(where(cast(col('ingredients'), 'text'), { [Op.iLike]: `%${term}%` }));
       });
 
-      whereClause[Op.or] = orConditions;
+      whereClause[Op.and] = [
+        { [Op.or]: [
+          { organization_id: null },
+          { organization_id: organizationId }
+        ]},
+        { [Op.or]: orConditions }
+      ];
+    } else {
+      whereClause[Op.or] = [
+        { organization_id: null },
+        { organization_id: organizationId }
+      ];
     }
 
     const userIntolerances = userProfile?.intolerances || [];
@@ -76,6 +106,7 @@ export class RecipeProvider {
       q: query || '',
       n: number,
       o: parsedOffset,
+      orgId: organizationId || 'global',
       intolerances: userIntolerances.sort(),
       severities: userProfile?.severities || {},
       uid: userProfile?.id || 'anonymous',

@@ -33,7 +33,13 @@ router.get('/', optionalAuthenticateToken, recipeLimiter, validateQuery(recipeQu
   }
 
   const { query } = params;
-  const plainProfile = userProfile ? userProfile.get({ plain: true }) : null;
+  const plainProfile = userProfile ? userProfile.get({ plain: true }) : {};
+  
+  // Inject organization_id from authenticated user (JWT)
+  if (req.user) {
+    plainProfile.organization_id = req.user.organization_id;
+  }
+
   const data = await RecipeProvider.getRecipes(params, plainProfile);
 
   // Telemetría

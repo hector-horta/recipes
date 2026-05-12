@@ -9,7 +9,7 @@ const router = express.Router();
 
 import { config } from '../config/env.js';
 
-import { requireAdminKey } from '../middleware/auth.js';
+import { optionalAuthenticateToken, checkRole } from '../middleware/auth.js';
 
 /**
  * GET /admin/stats
@@ -21,7 +21,7 @@ import { requireAdminKey } from '../middleware/auth.js';
  *  - nvidia:                 uptime estimado de NVIDIA APIs (últimas 24h)
  *  - ingest_by_day:          recetas procesadas por día (últimos 7 días)
  */
-router.get('/stats', requireAdminKey, asyncHandler(async (req, res) => {
+router.get('/stats', optionalAuthenticateToken, checkRole(['super_admin']), asyncHandler(async (req, res) => {
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const oneDayAgo   = new Date(Date.now() - 24 * 60 * 60 * 1000);
 

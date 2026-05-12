@@ -20,6 +20,7 @@ import recipeRoutes from './routes/recipes.js';
 import { connectDB, sequelize } from './config/database.js';
 import { connectRedis } from './config/redis.js';
 import { ActivityLogger } from './services/ActivityLogger.js';
+import { optionalAuthenticateToken, checkRole } from './middleware/auth.js';
 
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -57,7 +58,7 @@ connectRedis();
 app.use('/api/auth', authRoutes);
 app.use('/api/favorites', favoritesRoutes);
 app.use('/api/ingest', ingestRoutes);
-app.use('/admin', adminRoutes);
+app.use('/admin', optionalAuthenticateToken, checkRole(['super_admin']), adminRoutes);
 app.use('/api/suggestions', suggestionRoutes);
 app.use('/api/recipes', recipeRoutes);
 

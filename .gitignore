@@ -1,5 +1,7 @@
 # dependencies
 node_modules/
+.pnpm-store/
+frontend/.pnpm-store/
 frontend/.vite
 backend/coverage
 frontend/coverage

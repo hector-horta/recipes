@@ -20,7 +20,7 @@ const __dirname = path.dirname(__filename);
 const router = Router();
 
 import { z } from 'zod';
-import { requireAdminKey } from '../middleware/auth.js';
+import { requireAdminKey, checkRole, optionalAuthenticateToken } from '../middleware/auth.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
 const ingestImageSchema = z.object({
@@ -44,7 +44,8 @@ const ingestTextSchema = z.object({
   sourceReference: z.string().optional()
 });
 
-router.use(requireAdminKey);
+router.use(optionalAuthenticateToken);
+router.use(checkRole(['admin', 'super_admin']));
 
 import { config } from '../config/env.js';
 
@@ -74,6 +75,24 @@ async function checkConflict(slug, recipeData, res) {
     return true;
   }
   return false;
+}
+
+// Helper to determine the authorized organization_id
+function getAuthorizedOrgId(req) {
+  // If no user (admin key bypass) or super_admin, respect the body if provided
+  if (!req.user || req.user.role === 'super_admin') {
+    return req.body.organization_id !== undefined ? req.body.organization_id : (req.user?.organization_id || null);
+  }
+  
+  // For regular admins, they can only ingest for their own organization or global (null)
+  const targetOrgId = req.body.organization_id !== undefined ? req.body.organization_id : req.user.organization_id;
+  
+  // If they try to set it to another organization's ID, fallback to their own
+  if (targetOrgId !== null && targetOrgId !== req.user.organization_id) {
+    return req.user.organization_id;
+  }
+  
+  return targetOrgId;
 }
 
 router.post('/image', asyncHandler(async (req, res) => {
@@ -131,6 +150,7 @@ router.post('/image', asyncHandler(async (req, res) => {
     sibo_alerts: structured.siboAlerts,
     source_type: 'ocr_image',
     source_reference: imageUrl,
+    organization_id: getAuthorizedOrgId(req),
     status: saveToDb ? 'published' : 'draft'
   };
 
@@ -223,6 +243,7 @@ router.post('/images', asyncHandler(async (req, res) => {
     sibo_alerts: structured.siboAlerts,
     source_type: 'ocr_image',
     source_reference: `multi_image:${imageUrl1},${imageUrl2}`,
+    organization_id: getAuthorizedOrgId(req),
     status: saveToDb ? 'published' : 'draft'
   };
 
@@ -307,6 +328,7 @@ router.post('/text', asyncHandler(async (req, res) => {
     sibo_alerts: structured.siboAlerts,
     source_type: sourceType || 'manual',
     source_reference: sourceReference || null,
+    organization_id: getAuthorizedOrgId(req),
     status: saveToDb ? 'published' : 'draft'
   };
 
@@ -444,6 +466,7 @@ router.post('/voice', asyncHandler(async (req, res) => {
     sibo_alerts: structured.siboAlerts,
     source_type: 'audio',
     source_reference: audioUrl,
+    organization_id: getAuthorizedOrgId(req),
     status: saveToDb ? 'published' : 'draft'
   };
 
@@ -584,6 +607,7 @@ router.post('/save', asyncHandler(async (req, res) => {
     sibo_alerts: sanitized.siboAlerts,
     source_type: recipeData.source_type || 'manual',
     source_reference: recipeData.source_reference,
+    organization_id: getAuthorizedOrgId(req),
     status: status
   };
 

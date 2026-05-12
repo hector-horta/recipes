@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import { sequelize } from '../config/database.js';
+import { Organization } from './Organization.js';
 
 export const Recipe = sequelize.define('Recipe', {
   id: {
@@ -82,9 +83,20 @@ export const Recipe = sequelize.define('Recipe', {
       model: 'users',
       key: 'id'
     }
+  },
+  organization_id: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    references: {
+      model: 'organizations',
+      key: 'id'
+    }
   }
 }, {
   tableName: 'recipes',
   underscored: true,
   timestamps: true
 });
+
+Recipe.belongsTo(Organization, { foreignKey: 'organization_id', as: 'organization' });
+Organization.hasMany(Recipe, { foreignKey: 'organization_id', as: 'recipes' });

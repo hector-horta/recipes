@@ -1,30 +1,34 @@
 # Frontend — Development image
-# Works on Mac, Windows (WSL2), and Linux.
-# node_modules are installed INSIDE the container at startup to avoid
-# host-platform binary conflicts (e.g. @rollup/rollup-linux-arm64-musl).
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
+
+# Install pnpm and su-exec
+RUN corepack enable && corepack prepare pnpm@9.15.4 --activate && \
+    apk add --no-cache su-exec
 
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodeapp -u 1001 -G nodejs && \
-    apk add --no-cache su-exec
+    adduser -S nodeapp -u 1001 -G nodejs
 
 WORKDIR /app
 
-# Copy only manifests first so Docker can cache the install layer
-COPY package.json ./
+# Copy pnpm workspace configuration and manifests
+COPY pnpm-workspace.yaml* package.json ./
+COPY packages ./packages/
+COPY apps ./apps/
 
 EXPOSE 5173
 
-# At container startup: install deps as root, fix permissions, then run as non-root
-# so the correct platform binaries are used regardless of the host OS.
-CMD ["sh", "-c", "npm install --include=optional && chown -R nodeapp:nodejs /app/node_modules && exec su-exec nodeapp npm run dev -- --host"]
+ENV CI=true
+ENV PNPM_CONFIG_STORE_DIR=/tmp/.pnpm-store
+
+# At container startup: install deps, fix permissions, then run as non-root
+CMD ["sh", "-c", "mkdir -p /tmp/.pnpm-store && chmod -R 777 /tmp/.pnpm-store && pnpm install --store-dir /tmp/.pnpm-store --no-frozen-lockfile --force && chown -R nodeapp:nodejs /app/node_modules && exec su-exec nodeapp pnpm run dev --host"]
 
 # ── Production build (optional) ─────────────────────────────────────────────
 FROM base AS build
 ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
-USER root
-RUN npm install --include=optional && npm run build
+COPY . .
+RUN pnpm install && pnpm run build
 
 FROM nginx:stable-alpine AS production
 COPY --from=build /app/dist /usr/share/nginx/html

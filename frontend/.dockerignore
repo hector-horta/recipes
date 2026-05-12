@@ -1,5 +1,5 @@
-node_modules
-dist
+**/node_modules
+**/dist
 .git
 .vscode
 .env
@@ -8,3 +8,4 @@ Dockerfile
 .dockerignore
 npm-debug.log
 error.log
+.pnpm-store

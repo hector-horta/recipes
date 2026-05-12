@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import { sequelize } from '../config/database.js';
+import { Organization } from './Organization.js';
 
 export const User = sequelize.define('User', {
   id: {
@@ -41,9 +42,25 @@ export const User = sequelize.define('User', {
   data_exported_at: {
     type: DataTypes.DATE,
     allowNull: true
+  },
+  role: {
+    type: DataTypes.ENUM('user', 'admin', 'super_admin'),
+    defaultValue: 'user',
+    allowNull: false
+  },
+  organization_id: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    references: {
+      model: 'organizations',
+      key: 'id'
+    }
   }
 }, {
   tableName: 'users',
   timestamps: true,
   underscored: true
 });
+
+User.belongsTo(Organization, { foreignKey: 'organization_id', as: 'organization' });
+Organization.hasMany(User, { foreignKey: 'organization_id', as: 'users' });
