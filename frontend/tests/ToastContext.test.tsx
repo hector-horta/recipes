@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, act, renderHook } from '@testing-library/react';
-import { ToastProvider, useToast } from './ToastContext';
+import { ToastProvider, useToast } from '../src/ToastContext';
 import React from 'react';
 
 // Mock framer-motion to avoid animation issues in tests

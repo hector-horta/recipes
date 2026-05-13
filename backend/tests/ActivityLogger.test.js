@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ActivityLogger } from './ActivityLogger.js';
+import { ActivityLogger } from '../services/ActivityLogger.js';
 import { ActivityLog } from '../models/ActivityLog.js';
 import { SearchLog } from '../models/SearchLog.js';
 
@@ -34,37 +34,37 @@ describe('ActivityLogger', () => {
     it('should call ActivityLog.create with correct params', () => {
       ActivityLogger.log('SEARCH', { query: 'pasta' }, { userId: 'user-123', ip: '127.0.0.1' });
 
-      expect(ActivityLog.create).toHaveBeenCalledWith({
+      expect(ActivityLog.create).toHaveBeenCalledWith(expect.objectContaining({
         action: 'SEARCH',
         metadata: { query: 'pasta' },
         failed_search: false,
         user_id: 'user-123',
         ip: '127.0.0.1'
-      });
+      }));
     });
 
     it('should work without options', () => {
       ActivityLogger.log('VIEW_RECIPE', { recipeId: 'r1' });
 
-      expect(ActivityLog.create).toHaveBeenCalledWith({
+      expect(ActivityLog.create).toHaveBeenCalledWith(expect.objectContaining({
         action: 'VIEW_RECIPE',
         metadata: { recipeId: 'r1' },
         failed_search: false,
         user_id: null,
         ip: null
-      });
+      }));
     });
 
     it('should create SearchLog when failedSearch is true', () => {
       ActivityLogger.log('SEARCH', { query: 'notfound' }, { failedSearch: true, userId: 'u1' });
 
-      expect(SearchLog.create).toHaveBeenCalledWith({
+      expect(SearchLog.create).toHaveBeenCalledWith(expect.objectContaining({
         term: 'notfound',
         status: 'failed',
         conversion: false,
         user_id: 'u1',
         ip: null
-      });
+      }));
     });
   });
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { normalizeTag, normalizeTags } from './tagTranslations.js';
+import { normalizeTag, normalizeTags } from '../utils/tagTranslations.js';
 import { TagService } from '../services/TagService.js';
 
 vi.mock('../services/TagService.js', () => ({
@@ -45,7 +45,6 @@ describe('tagTranslations', () => {
     it('should normalize array of tags', async () => {
       const tags = ['avena', 'desayuno', 'saludable'];
       const result = await normalizeTags(tags);
-
       expect(result).toEqual([
         { es: 'Avena', en: 'Oat' },
         { es: 'Desayuno', en: 'Breakfast' },
@@ -56,7 +55,6 @@ describe('tagTranslations', () => {
     it('should remove duplicates', async () => {
       const tags = ['avena', 'Avena', 'AVENA', 'desayuno'];
       const result = await normalizeTags(tags);
-
       expect(result).toHaveLength(2);
       expect(result[0].es).toBe('Avena');
       expect(result[1].es).toBe('Desayuno');
@@ -64,22 +62,17 @@ describe('tagTranslations', () => {
 
     it('should filter out empty strings', async () => {
       const tags = ['avena', '', '  ', 'desayuno'];
-      const result = await normalizeTags(tags);
-
-      expect(result).toHaveLength(2);
+      expect(await normalizeTags(tags)).toHaveLength(2);
     });
 
     it('should filter out null and undefined', async () => {
       const tags = ['avena', null, undefined, 'desayuno'];
-      const result = await normalizeTags(tags);
-
-      expect(result).toHaveLength(2);
+      expect(await normalizeTags(tags)).toHaveLength(2);
     });
 
     it('should handle mixed known and unknown tags', async () => {
       const tags = ['avena', 'custom_tag', 'desayuno'];
       const result = await normalizeTags(tags);
-
       expect(result).toEqual([
         { es: 'Avena', en: 'Oat' },
         { es: 'custom_tag', en: 'custom_tag' },
@@ -90,7 +83,6 @@ describe('tagTranslations', () => {
     it('should preserve order while deduplicating', async () => {
       const tags = ['first', 'avena', 'second', 'Avena', 'third'];
       const result = await normalizeTags(tags);
-
       expect(result.map(t => t.es)).toEqual(['first', 'Avena', 'second', 'third']);
     });
   });

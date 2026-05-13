@@ -56,7 +56,7 @@ vi.mock('../middleware/auth.js', () => ({
   }
 }));
 
-import authRoutes from './auth.js';
+import authRoutes from '../routes/auth.js';
 import { User } from '../models/User.js';
 import { Profile } from '../models/Profile.js';
 import { IEmailService } from '../services/IEmailService.js';

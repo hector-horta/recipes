@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { SecurityScrubber } from '../api/SecurityScrubber';
-import { MedicalProfile } from '../security/SecureVault';
-import { MedicalRegistry } from '../api/MedicalRegistry';
+import { SecurityScrubber } from '../../src/api/SecurityScrubber';
+import { MedicalProfile } from '../../src/security/SecureVault';
+import { MedicalRegistry } from '../../src/api/MedicalRegistry';
 
 describe('SecurityScrubber', () => {
     const mockProfile: MedicalProfile = {

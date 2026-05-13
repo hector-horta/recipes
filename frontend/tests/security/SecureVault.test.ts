@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { SecureVault, MedicalProfile } from '../security/SecureVault';
+import { SecureVault, MedicalProfile } from '../../src/security/SecureVault';
 
 describe('SecureVault', () => {
     const mockProfile: MedicalProfile = {

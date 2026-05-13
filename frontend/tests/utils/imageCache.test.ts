@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { cacheImage, getCachedImage, getImageSource, cacheRecipeImages } from './imageCache';
-import { db } from '../db/db';
+import { cacheImage, getCachedImage, getImageSource, cacheRecipeImages } from '../../src/utils/imageCache';
+import { db } from '../../src/db/db';
 
 vi.mock('../db/db', () => ({
     db: {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { RecipeProvider } from './RecipeProvider.js';
+import { RecipeProvider } from '../services/RecipeProvider.js';
 import { Recipe } from '../models/Recipe.js';
 import { redisClient } from '../config/redis.js';
 

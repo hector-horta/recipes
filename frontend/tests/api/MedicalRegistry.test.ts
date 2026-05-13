@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { MedicalRegistry } from '../api/MedicalRegistry';
-import { db } from '../db/db';
+import { MedicalRegistry } from '../../src/api/MedicalRegistry';
+import { db } from '../../src/db/db';
 
 const MOCK_TRIGGERS = { 'dairy': ['milk'] };
 

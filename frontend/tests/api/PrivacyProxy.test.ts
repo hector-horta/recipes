@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { InputSanitizer, SecureAPI } from './PrivacyProxy.js';
+import { InputSanitizer, SecureAPI } from '../../src/api/PrivacyProxy';
 
 vi.mock('../db/db', () => ({
     db: {
@@ -291,7 +291,7 @@ describe('SecureAPI', () => {
             { id: '2', data: { id: 2, title_es: 'Cached Recipe 2', ingredients: [{ name: 'Salt' }] } }
         ];
 
-        const { db } = await import('../db/db');
+        const { db } = await import('../../src/db/db');
         db.searchCache.get = vi.fn().mockResolvedValue({
             query: 'test',
             results: ['1', '2']
@@ -309,7 +309,7 @@ describe('SecureAPI', () => {
     });
 
     it('should clear cache when cached recipes count mismatches', async () => {
-        const { db } = await import('../db/db');
+        const { db } = await import('../../src/db/db');
         db.searchCache.get = vi.fn().mockResolvedValue({
             query: 'test',
             results: ['1', '2', '3']
@@ -333,7 +333,7 @@ describe('SecureAPI', () => {
     });
 
     it('should fetch from API when cache has old schema', async () => {
-        const { db } = await import('../db/db');
+        const { db } = await import('../../src/db/db');
         db.searchCache.get = vi.fn().mockResolvedValue({
             query: 'test',
             results: ['1']

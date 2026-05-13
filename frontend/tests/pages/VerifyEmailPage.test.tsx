@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, act } from '@testing-library/react';
-import { VerifyEmailPage } from './VerifyEmailPage';
-import { useAuth } from '../AuthContext';
-import { useToast } from '../ToastContext';
-import { api } from '../lib/api';
+import { VerifyEmailPage } from '../../src/pages/VerifyEmailPage';
+import { useAuth } from '../../src/AuthContext';
+import { useToast } from '../../src/ToastContext';
+import { api } from '../../src/lib/api';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useSearchFeedback } from './useSearchFeedback';
+import { useSearchFeedback } from '../../src/hooks/useSearchFeedback';
 
 const mockFetch = vi.fn();
 global.fetch = mockFetch;

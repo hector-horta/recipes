@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { useMergedDisplayRecipes } from './useMergedDisplayRecipes';
+import { useMergedDisplayRecipes } from '../../src/hooks/useMergedDisplayRecipes';
 
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({
