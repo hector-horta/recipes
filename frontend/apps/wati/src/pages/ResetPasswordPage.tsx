@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../ToastContext';
 import { api } from '../lib/api';
-import { Button } from '../components/ui/Button';
+import { Button } from '@wati/ui-kit';
 import { Loader2, Lock, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 
 export function ResetPasswordPage() {

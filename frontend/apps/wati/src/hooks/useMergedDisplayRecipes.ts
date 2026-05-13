@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Recipe } from '../types/recipe';
+import { Recipe } from '@wati/types';
 import { FavoriteItem } from './useFavorites';
 
 interface UseMergedDisplayRecipesOptions {

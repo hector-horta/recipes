@@ -1,10 +1,11 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { RecipeSearchResponse } from '../types/recipe';
+import { RecipeSearchResponse } from '@wati/types';
 import { useDebounce } from './useDebounce';
 import { useAuth } from '../AuthContext';
-import { api, ApiError } from '../lib/api';
 import { logger } from '../utils/logger';
+
+import { api, ApiError } from '../lib/api';
 
 const ITEMS_PER_PAGE = 10;
 

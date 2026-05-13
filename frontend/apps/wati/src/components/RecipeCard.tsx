@@ -1,7 +1,7 @@
 import { Clock, Heart } from 'lucide-react';
-import { Recipe } from '../types/recipe';
+import { Recipe } from '@wati/types';
 import { useTranslation } from 'react-i18next';
-import { Button } from './ui/Button';
+import { Button } from '@wati/ui-kit';
 import { useCachedImage } from '../hooks/useCachedImage';
 import { AuthGuard } from './auth/AuthGuard';
 import { useAuth } from '../AuthContext';

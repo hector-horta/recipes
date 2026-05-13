@@ -1,6 +1,6 @@
 import { ArrowLeft, Clock, ChefHat, ListChecks, Heart } from 'lucide-react';
 import DOMPurify from 'dompurify';
-import { Recipe } from '../types/recipe';
+import { Recipe } from '@wati/types';
 import { useFavorites } from '../hooks/useFavorites';
 import { useTranslation } from 'react-i18next';
 import { useCachedImage } from '../hooks/useCachedImage';

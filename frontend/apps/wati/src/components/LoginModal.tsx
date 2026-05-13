@@ -4,8 +4,7 @@ import { api } from '../lib/api';
 import { X, Mail, Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { WatiLogo } from './WatiLogo';
 import { useTranslation } from 'react-i18next';
-import { Button } from './ui/Button';
-import { Input } from './ui/Input';
+import { Button, Input } from '@wati/ui-kit';
 
 interface LoginModalProps {
   onClose: () => void;

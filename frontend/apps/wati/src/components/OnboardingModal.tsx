@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { useAuth } from '../AuthContext';
 import { WatiLogo } from './WatiLogo';
-import { Button } from './ui/Button';
+import { Button } from '@wati/ui-kit';
 import { X, ChevronRight, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 

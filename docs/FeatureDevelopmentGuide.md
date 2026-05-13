@@ -111,74 +111,37 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 │   └── ingest_logs/              # Recovery logs de ingesta (JSON)
 │
 ├── frontend/
-│   ├── index.html                # SPA entry (Umami script tag aquí)
-│   ├── package.json              # type: "module" (ESM)
-│   ├── vite.config.ts            # Proxy: /api → backend:5001, /public → backend:5001
-│   ├── vitest.config.ts          # Test: environment: 'happy-dom', setup: src/test/setup.ts
-│   ├── tailwind.config.js        # Colores brand-* mapeados a CSS variables
-│   ├── postcss.config.js
-│   ├── pre-start.js              # Validación pre-build
-│   └── src/
-│       ├── main.tsx              # ReactDOM root: Providers → AuthProvider → App
-│       ├── App.tsx               # Router manual: RecipePage ↔ RecipeDetailPage + Modals
-│       ├── AuthContext.tsx        # AuthProvider, useAuth(), UserProfile interface
-│       ├── config.ts              # INFRAESTRUCTURA DE CONFIGURACIÓN CENTRALIZADA (API_URL, etc)
-│       ├── lib/
-│       │   └── api.ts            # Centralized API client (fetch wrapper)
-│       ├── i18n.ts               # i18next config (es/en, localStorage: wati_language)
-│       ├── index.css             # CSS variables + Tailwind utilities (glassmorphism, etc.)
-│       ├── api/
-│       │   ├── PrivacyProxy.ts   # SecureAPI.fetchSafeRecipes(), InputSanitizer.clean()
-│       │   ├── MedicalRegistry.ts# MedicalRegistry.syncTriggers(), .getLatestTriggers()
-│       │   └── SecurityScrubber.ts# SecurityScrubber.initialize(), .analyze(recipe, profile)
-│       ├── security/
-│       │   └── SecureVault.ts    # AES-256 encrypt/decrypt perfil médico en localStorage
-│       ├── types/
-│       │   └── recipe.ts         # Recipe, Ingredient, Tag interfaces
-│       ├── db/
-│       │   └── db.ts             # Dexie (IndexedDB): WatiDB — tablas: cachedRecipes, searchCache, medicalMetadata, cachedImages
-│       ├── lib/
-│       │   └── queryClient.ts    # React Query client (staleTime: 5min, gcTime: 30min)
-│       ├── hooks/
-│       │   ├── useWatiSearch.ts  # Búsqueda principal con debounce y React Query
-│       │   ├── useFavorites.ts   # CRUD favoritos con optimistic updates
-│       │   ├── useMergedDisplayRecipes.ts # Merge favoritos + recetas con paginación
-│       │   ├── useSearchFeedback.ts      # Sugerir al chef (POST /api/suggestions)
-│       │   ├── useDebounce.ts    # Debounce genérico
-│       │   └── useCachedImage.ts # Lazy load imágenes desde IndexedDB cache
-│       ├── components/
-│       │   ├── Providers.tsx     # QueryClientProvider wrapper
-│       │   ├── LoginModal.tsx    # Modal de login/register
-│       │   ├── OnboardingModal.tsx# Configuración médica post-registro
-│       │   ├── RecipeCard.tsx    # Tarjeta de receta individual
-│       │   ├── LanguageSelector.tsx
-│       │   ├── WatiLogo.tsx      # SVG Logo
-│       │   ├── WatiFavicon.tsx   # SVG Favicon
-│       │   ├── auth/
-│       │   │   └── AuthGuard.tsx # HOC: renderiza children solo si user autenticado
-│       │   ├── recipe/
-│       │   │   ├── TopNav.tsx    # Navbar superior (hamburguesa mobile)
-│       │   │   ├── PageHeader.tsx# Header con búsqueda, refresh, indicadores
-│       │   │   ├── PageLayout.tsx# Layout wrapper
-│       │   │   ├── RecipeGrid.tsx# Grid de RecipeCards con skeletons
-│       │   │   ├── SearchFeedback.tsx # UI cuando búsqueda no tiene resultados
-│       │   │   └── Pagination.tsx# Paginación para favoritos
-│       │   └── ui/
-│       │       ├── Badge.tsx     # Componente Badge reutilizable
-│       │       ├── Button.tsx    # Componente Button reutilizable
-│       │       └── Input.tsx     # Componente Input reutilizable
-│       ├── pages/
-│       │   ├── RecipePage.tsx    # Vista principal: grid de recetas
-│       │   ├── RecipeDetailPage.tsx # Vista detalle de receta
-│       │   ├── LoginPage.tsx     # Página de login (alternativa al modal)
-│       │   └── OnboardingPage.tsx# Página de onboarding (alternativa al modal)
-│       ├── utils/
-│       │   └── imageCache.ts    # cacheImage(), getCachedImage(), cacheRecipeImages()
-│       ├── locales/
-│       │   ├── en.json          # Traducciones inglés
-│       │   └── es.json          # Traducciones español
-│       └── test/
-│           └── setup.ts         # Import @testing-library/jest-dom
+│   ├── package.json              # Entorno de tests + dependencias compartidas
+│   ├── tsconfig.json             # Configuración TS (incluye tests)
+│   ├── vitest.config.ts          # Runner de tests centralizado
+│   ├── pnpm-workspace.yaml       # Definición de sub-workspace
+│   ├── apps/
+│   │   └── wati/                 # Aplicación principal (SPA)
+│   │       ├── src/              # Lógica, páginas y componentes específicos de la app
+│   │       │   ├── AuthContext.tsx
+│   │       │   ├── ToastContext.tsx
+│   │       │   ├── App.tsx
+│   │       │   ├── main.tsx
+│   │       │   ├── api/          # PrivacyProxy, MedicalRegistry, SecurityScrubber
+│   │       │   ├── hooks/        # useWatiSearch, useFavorites, etc.
+│   │       │   ├── components/   # RecipeCard, LoginModal, etc.
+│   │       │   └── test/
+│   │       │       └── setup.ts  # Setup global de Vitest
+│   │       └── package.json
+│   ├── packages/
+│   │   ├── ui-kit/               # Biblioteca de UI (@wati/ui-kit)
+│   │   │   ├── src/
+│   │   │   │   ├── Badge.tsx
+│   │   │   │   ├── Button.tsx
+│   │   │   │   └── Input.tsx
+│   │   │   └── package.json
+│   │   ├── api-client/           # Cliente de API compartido (@wati/api-client)
+│   │   └── types/                # Tipos compartidos (@wati/types)
+│   └── tests/                    # Estructura de tests espejada
+│       ├── apps/
+│       │   └── wati/             # Tests de la aplicación Wati
+│       └── packages/
+│           └── ui-kit/           # Tests de la biblioteca UI
 │
 ├── telegram-bot/                 # Bot de ingesta de recetas
 │   ├── src/

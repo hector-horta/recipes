@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { RefreshCw, AlertTriangle } from 'lucide-react';
-import { Recipe } from '../types/recipe';
-import { Button } from '../components/ui/Button';
+import { Recipe } from '@wati/types';
+import { Button } from '@wati/ui-kit';
 import { useFavorites } from '../hooks/useFavorites';
 import { TopNav } from '../components/recipe/TopNav';
 import { PageHeader } from '../components/recipe/PageHeader';

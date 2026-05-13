@@ -1,5 +1,5 @@
 import { db } from '../db/db';
-import { Recipe } from '../types/recipe';
+import { Recipe } from '@wati/types';
 
 import { CONFIG } from '../config';
 

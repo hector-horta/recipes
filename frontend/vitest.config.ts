@@ -12,12 +12,13 @@ export default defineConfig({
       '@wati/types': path.resolve(__dirname, 'packages/types/src/index.ts'),
       '@wati/api-client': path.resolve(__dirname, 'packages/api-client/src/index.ts'),
       '@wati/ui-kit': path.resolve(__dirname, 'packages/ui-kit/src/index.ts'),
+      '@wati/src': path.resolve(__dirname, './apps/wati/src'),
     },
   },
   test: {
     globals: true,
     environment: 'happy-dom',
-    setupFiles: ['./src/test/setup.ts'],
+    setupFiles: ['./apps/wati/src/test/setup.ts'],
     include: ['tests/**/*.{test,spec}.{js,mjs,cjs,ts,tsx}'],
   },
   coverage: {

@@ -5,7 +5,7 @@ import { RecipePage } from './pages/RecipePage';
 import { RecipeDetailPage } from './pages/RecipeDetailPage';
 import { LoginModal } from './components/LoginModal';
 import { OnboardingModal } from './components/OnboardingModal';
-import { Recipe } from './types/recipe';
+import { Recipe, RecipeSearchResponse } from '@wati/types';
 import { MedicalRegistry } from './api/MedicalRegistry';
 import { SecurityScrubber } from './api/SecurityScrubber';
 

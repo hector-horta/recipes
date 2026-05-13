@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../AuthContext';
 import { WatiLogo } from '../WatiLogo';
 import { LanguageSelector } from '../LanguageSelector';
-import { Button } from '../ui/Button';
+import { Button } from '@wati/ui-kit';
 import { Settings, UserCircle, LogOut, Menu, X } from 'lucide-react';
 import { logger } from '../../utils/logger';
 

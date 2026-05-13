@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { ShieldCheck, ChevronRight, AlertTriangle, Check } from 'lucide-react';
-import { Button } from '../components/ui/Button';
+import { Button } from '@wati/ui-kit';
 
 // ── Catálogo de intolerancias (keys del HIDDEN_TRIGGERS_DB) ──
 const INTOLERANCE_CATALOG = [

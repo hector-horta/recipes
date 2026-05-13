@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../AuthContext';
 import { useToast } from '../ToastContext';
 import { api } from '../lib/api';
-import { Button } from '../components/ui/Button';
+import { Button } from '@wati/ui-kit';
 import { Loader2, CheckCircle2, XCircle, Mail } from 'lucide-react';
 
 export function VerifyEmailPage() {

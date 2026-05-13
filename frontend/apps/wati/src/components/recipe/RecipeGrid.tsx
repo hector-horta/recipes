@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { UtensilsCrossed } from 'lucide-react';
 import { RecipeCard, RecipeCardSkeleton } from '../RecipeCard';
-import { Recipe } from '../../types/recipe';
+import { Recipe } from '@wati/types';
 
 interface RecipeGridProps {
   recipes: Recipe[];
