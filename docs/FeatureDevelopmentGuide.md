@@ -46,6 +46,7 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 6. **Resiliencia Frontend**: Usa reintentos (`retry`) en hooks de búsqueda y gestión de estados de error amigables para el usuario.
 7. **Auth Rule**: Wati usa **Hybrid Auth**. Los usuarios se autentican con contraseña, pero las funcionalidades core (como agregar a favoritos) están **soft-gated** y requieren validación de correo vía un link JWT.
 8. **External Integrations Rule**: Todos los servicios de terceros (como Resend) DEBEN estar abstraídos detrás de una **IEmailService Facade**. La lógica de negocio nunca debe interactuar directamente con SDKs externos.
+9. **Multi-tenancy Isolation**: Toda nueva funcionalidad que maneje datos de usuario o contenido (recetas, planes, etc.) DEBE filtrar por `organization_id`. El `organization_id` se extrae automáticamente del JWT y está disponible en `req.user.organizationId` (o `req.user.organization_id`).
 
 ---
 
@@ -74,7 +75,9 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 │   │   ├── User.js
 │   │   ├── Profile.js            # Asociaciones: User.hasOne(Profile), Profile.belongsTo(User)
 │   │   ├── FavoriteRecipe.js     # Asociaciones: User.hasMany(FavoriteRecipe)
-│   │   ├── Recipe.js
+│   │   ├── Organization.js       # Entidad de inquilino (tenant)
+│   │   ├── UserOrganization.js   # Tabla intermedia de membresía y roles
+│   │   ├── Recipe.js             # Filtrado por organization_id
 │   │   ├── SearchLog.js
 │   │   ├── ActivityLog.js
 │   │   └── validators.js         # Schemas Zod (recipeQuerySchema)
@@ -206,10 +209,27 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 | `display_name` | STRING | NOT NULL |
 | `is_active` | BOOLEAN | NOT NULL, default: true |
 | `is_verified` | BOOLEAN | NOT NULL, default: false |
+| `role` | ENUM | 'user', 'admin', 'super_admin' |
 | `accepted_terms_at` | DATE | NOT NULL |
 | `data_exported_at` | DATE | nullable |
 | `created_at` | DATE | auto |
 | `updated_at` | DATE | auto |
+
+### `organizations`
+| Column | Type | Constraints |
+|---|---|---|
+| `id` | UUID | PK |
+| `name` | STRING | NOT NULL, UNIQUE |
+| `slug` | STRING | NOT NULL, UNIQUE |
+| `is_active` | BOOLEAN | default: true |
+| `settings` | JSONB | default: {} |
+
+### `user_organizations`
+| Column | Type | Constraints |
+|---|---|---|
+| `user_id` | UUID | PK, FK → users(id) |
+| `organization_id` | UUID | PK, FK → organizations(id) |
+| `role` | STRING | default: 'user' |
 
 ### `profiles`
 | Column | Type | Constraints |
@@ -249,6 +269,7 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 | `source_reference` | STRING | nullable |
 | `status` | ENUM('draft','published','archived') | default: 'draft' |
 | `created_by` | UUID | nullable, FK → users(id) |
+| `organization_id` | UUID | nullable, FK → organizations(id) |
 
 **Formato de `ingredients` (JSONB array)**:
 ```json
@@ -299,7 +320,7 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 
 > **Nota**: `timestamps: false` — no tiene created_at/updated_at.
 
-### `tags` (Diccionario de traducciones)
+### `tags` (Diccionario de traducciones — Activo Global)
 | Column | Type | Constraints |
 |---|---|---|
 | `id` | UUID | PK |
@@ -310,6 +331,7 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 | `updated_at` | DATE | auto |
 
 > **Nota**: Se utiliza como diccionario centralizado para `normalizeTags()`. Las recetas aún guardan tags desnormalizados en JSONB por performance de lectura.
+> **⚠️ Tags son un activo GLOBAL** — no tienen `organization_id`. Son compartidos por todas las apps del ecosistema (Wati, Nutri, etc.).
 
 ### `activity_logs`
 | Column | Type | Constraints |
@@ -428,6 +450,30 @@ router.get('/', validateQuery(miSchema), (req, res) => {
   const { campo } = req.validatedQuery;
 });
 ```
+
+#### Aislamiento Multi-inquilino (Multi-tenancy)
+Toda consulta a datos de organización debe filtrar por `organization_id`. Sin embargo, las **recetas de Wati son globales** (`organization_id = NULL`) y deben estar siempre disponibles.
+
+```javascript
+// Para datos estrictamente privados de una org (ej: planes de Nutri)
+router.get('/', authenticateToken, async (req, res) => {
+  const items = await MyModel.findAll({
+    where: { organization_id: req.user.organization_id }
+  });
+  res.json(items);
+});
+
+// Para recetas: incluir siempre las globales de Wati (NULL) + las de la org
+import { Op } from 'sequelize';
+const orgId = req.user?.organization_id ?? null;
+const where = {
+  organization_id: orgId
+    ? { [Op.or]: [orgId, null] }  // Org propia + globales Wati
+    : null                         // Solo globales (usuario Wati sin org)
+};
+```
+
+> **Regla**: Nunca filtrar recetas exclusivamente por `organization_id` sin incluir `NULL`. Eso ocultaría el catálogo global de Wati a usuarios de otras plataformas.
 
 #### Autenticación y Sesión
 - **HttpOnly Cookies**: Wati usa JWT persistidos en cookies `HttpOnly` (Lax, Secure en producción). Esto protege contra robo de sesión vía XSS.
@@ -622,6 +668,8 @@ interface UserProfile {
   daily_calories: number;
   severities: Record<string, 'mild' | 'moderate' | 'severe' | 'anaphylactic'>;
   conditions: string[];
+  organizationId: string | null; // null para usuarios Wati (sin organización asignada)
+  role: 'user' | 'admin' | 'super_admin'; // super_admin: acceso cross-organización
   onboardingComplete: boolean;
   language?: string;
   savedRecipes?: any[];
@@ -630,6 +678,8 @@ interface UserProfile {
 }
 ```
 > Acceso via `const { user, login, register, logout, updateUserProfile } = useAuth();`
+>
+> **Nota sobre roles**: Un usuario puede ser `user` en Wati y `admin` en otra app del ecosistema simultáneamente. El `role` en `UserProfile` refleja el rol global del usuario. `super_admin` es reservado para el panel de administración del ecosistema.
 
 #### 🛡️ SPA Auth Hardening (Password Managers)
 Para evitar crashes en extensiones como **Bitwarden** o **LastPass** durante la navegación rápida post-auth, sigue este patrón en los formularios de login/register:
