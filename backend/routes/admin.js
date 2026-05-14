@@ -2,8 +2,14 @@ import express from 'express';
 import { Op, fn, col, literal } from 'sequelize';
 import { ActivityLog } from '../models/ActivityLog.js';
 import { FavoriteRecipe } from '../models/FavoriteRecipe.js';
+import { Organization } from '../models/Organization.js';
+import { Recipe } from '../models/Recipe.js';
+import { Tag } from '../models/Tag.js';
+import { User } from '../models/User.js';
 import { ActivityLogger } from '../services/ActivityLogger.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { validateBody } from '../middleware/validate.js';
+import { organizationSchema, adminRecipeSchema, tagSchema } from '../models/validators.js';
 
 const router = express.Router();
 
@@ -154,6 +160,293 @@ router.get('/stats', optionalAuthenticateToken, checkRole(['super_admin']), asyn
     },
     ingest_by_day:          ingestByDay
   });
+}));
+
+/**
+ * GET /admin/organizations
+ * Retorna todas las organizaciones con conteo de usuarios.
+ */
+router.get('/organizations', optionalAuthenticateToken, checkRole(['super_admin']), asyncHandler(async (req, res) => {
+  const organizations = await Organization.findAll({
+    attributes: {
+      include: [
+        [
+          literal(`(
+            SELECT COUNT(*)
+            FROM user_organizations AS uo
+            WHERE uo.organization_id = "Organization".id
+          )`),
+          'userCount'
+        ]
+      ]
+    },
+    order: [['name', 'ASC']]
+  });
+
+  // Mapear para que el status coincida con lo esperado por el frontend si es necesario
+  // En el modelo es is_active, en el frontend esperan 'active' | 'suspended' | 'pending'
+  const result = organizations.map(org => ({
+    ...org.toJSON(),
+    status: org.is_active ? 'active' : 'suspended',
+    userCount: parseInt(org.getDataValue('userCount'), 10) || 0
+  }));
+
+  res.json(result);
+}));
+
+/**
+ * GET /admin/recipes
+ * Retorna las recetas globales (Wati core).
+ */
+router.get('/recipes', optionalAuthenticateToken, checkRole(['super_admin']), asyncHandler(async (req, res) => {
+  const recipes = await Recipe.findAll({
+    where: { organization_id: null },
+    order: [['created_at', 'DESC']]
+  });
+  res.json(recipes);
+}));
+
+/**
+ * GET /admin/tags
+ * Retorna el diccionario global de etiquetas.
+ */
+router.get('/tags', optionalAuthenticateToken, checkRole(['super_admin']), asyncHandler(async (req, res) => {
+  const tags = await Tag.findAll({
+    order: [['key', 'ASC']]
+  });
+  res.json(tags);
+}));
+
+/**
+ * POST /admin/organizations
+ * Crea una nueva organización.
+ */
+router.post('/organizations', validateBody(organizationSchema), asyncHandler(async (req, res) => {
+  const { name, slug } = req.body;
+
+  const existing = await Organization.findOne({
+    where: {
+      [Op.or]: [
+        { name },
+        { slug: slug.toLowerCase() }
+      ]
+    }
+  });
+
+  if (existing) {
+    const error = new Error('Ya existe una organización con ese nombre o slug.');
+    error.status = 409;
+    throw error;
+  }
+
+  const organization = await Organization.create({ 
+    name, 
+    slug: slug.toLowerCase(),
+    is_active: true,
+    settings: {}
+  });
+  
+  ActivityLogger.log('ADMIN_ORG_CREATE', { organizationId: organization.id, name: organization.name });
+
+  res.status(201).json(organization);
+}));
+
+/**
+ * PUT /admin/organizations/:id
+ * Actualiza una organización.
+ */
+router.put('/organizations/:id', optionalAuthenticateToken, checkRole(['super_admin']), validateBody(organizationSchema), asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { name, slug } = req.body;
+
+  const organization = await Organization.findByPk(id);
+  if (!organization) {
+    const error = new Error('Organización no encontrada.');
+    error.status = 404;
+    throw error;
+  }
+
+  // Verificar duplicados (excluyendo la actual)
+  const existing = await Organization.findOne({
+    where: {
+      [Op.and]: [
+        { id: { [Op.ne]: id } },
+        {
+          [Op.or]: [
+            { name },
+            { slug: slug.toLowerCase() }
+          ]
+        }
+      ]
+    }
+  });
+
+  if (existing) {
+    const error = new Error('Ya existe otra organización con ese nombre o slug.');
+    error.status = 409;
+    throw error;
+  }
+
+  await organization.update({
+    name,
+    slug: slug.toLowerCase()
+  });
+
+  ActivityLogger.log('ADMIN_ORG_UPDATE', { organizationId: organization.id, name: organization.name });
+
+  res.json(organization);
+}));
+
+/**
+ * DELETE /admin/organizations/:id
+ * Alterna el estado activo/inactivo de una organización.
+ */
+router.delete('/organizations/:id', optionalAuthenticateToken, checkRole(['super_admin']), asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const organization = await Organization.findByPk(id);
+  if (!organization) {
+    const error = new Error('Organización no encontrada.');
+    error.status = 404;
+    throw error;
+  }
+
+  await organization.update({
+    is_active: !organization.is_active
+  });
+
+  ActivityLogger.log('ADMIN_ORG_TOGGLE_STATUS', { 
+    organizationId: organization.id, 
+    name: organization.name,
+    is_active: organization.is_active 
+  });
+
+  res.json({ message: `Organización ${organization.is_active ? 'activada' : 'suspendida'} correctamente`, organization });
+}));
+
+/**
+ * POST /admin/recipes
+ * Crea una nueva receta global (Wati core).
+ */
+router.post('/recipes', optionalAuthenticateToken, checkRole(['super_admin']), validateBody(adminRecipeSchema), asyncHandler(async (req, res) => {
+  const recipeData = {
+    ...req.body,
+    organization_id: null,
+    source_type: 'manual'
+  };
+
+  const recipe = await Recipe.create(recipeData);
+  ActivityLogger.log('ADMIN_RECIPE_CREATE', { recipeId: recipe.id, title: recipe.title_es });
+  res.status(201).json(recipe);
+}));
+
+/**
+ * PUT /admin/recipes/:id
+ * Actualiza una receta global.
+ */
+router.put('/recipes/:id', optionalAuthenticateToken, checkRole(['super_admin']), validateBody(adminRecipeSchema), asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const recipe = await Recipe.findByPk(id);
+
+  if (!recipe) {
+    const error = new Error('Receta no encontrada.');
+    error.status = 404;
+    throw error;
+  }
+
+  await recipe.update(req.body);
+  ActivityLogger.log('ADMIN_RECIPE_UPDATE', { recipeId: recipe.id, title: recipe.title_es });
+  res.json(recipe);
+}));
+
+/**
+ * DELETE /admin/recipes/:id
+ * Elimina una receta global.
+ */
+router.delete('/recipes/:id', optionalAuthenticateToken, checkRole(['super_admin']), asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const recipe = await Recipe.findByPk(id);
+
+  if (!recipe) {
+    const error = new Error('Receta no encontrada.');
+    error.status = 404;
+    throw error;
+  }
+
+  await recipe.destroy();
+  ActivityLogger.log('ADMIN_RECIPE_DELETE', { recipeId: id, title: recipe.title_es });
+  res.json({ message: 'Receta eliminada correctamente' });
+}));
+
+/**
+ * POST /admin/tags
+ * Crea una nueva etiqueta global.
+ */
+router.post('/tags', optionalAuthenticateToken, checkRole(['super_admin']), validateBody(tagSchema), asyncHandler(async (req, res) => {
+  const { key, es, en } = req.body;
+
+  const existing = await Tag.findOne({ where: { key } });
+  if (existing) {
+    const error = new Error('Ya existe una etiqueta con esa clave.');
+    error.status = 409;
+    throw error;
+  }
+
+  const tag = await Tag.create({ key, es, en });
+  ActivityLogger.log('ADMIN_TAG_CREATE', { tagId: tag.id, key: tag.key });
+  res.status(201).json(tag);
+}));
+
+/**
+ * PUT /admin/tags/:id
+ * Actualiza una etiqueta global.
+ */
+router.put('/tags/:id', optionalAuthenticateToken, checkRole(['super_admin']), validateBody(tagSchema), asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { key, es, en } = req.body;
+
+  const tag = await Tag.findByPk(id);
+  if (!tag) {
+    const error = new Error('Etiqueta no encontrada.');
+    error.status = 404;
+    throw error;
+  }
+
+  // Verificar si la nueva clave ya existe en otro tag
+  const existing = await Tag.findOne({ 
+    where: { 
+      key,
+      id: { [Op.ne]: id }
+    } 
+  });
+  if (existing) {
+    const error = new Error('Ya existe otra etiqueta con esa clave.');
+    error.status = 409;
+    throw error;
+  }
+
+  await tag.update({ key, es, en });
+  ActivityLogger.log('ADMIN_TAG_UPDATE', { tagId: tag.id, key: tag.key });
+  res.json(tag);
+}));
+
+/**
+ * DELETE /admin/tags/:id
+ * Elimina una etiqueta global.
+ */
+router.delete('/tags/:id', optionalAuthenticateToken, checkRole(['super_admin']), asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const tag = await Tag.findByPk(id);
+
+  if (!tag) {
+    const error = new Error('Etiqueta no encontrada.');
+    error.status = 404;
+    throw error;
+  }
+
+  await tag.destroy();
+  ActivityLogger.log('ADMIN_TAG_DELETE', { tagId: id, key: tag.key });
+  res.json({ message: 'Etiqueta eliminada correctamente' });
 }));
 
 export default router;

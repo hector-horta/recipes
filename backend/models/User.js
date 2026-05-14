@@ -48,6 +48,14 @@ export const User = sequelize.define('User', {
     type: DataTypes.ENUM('user', 'admin', 'super_admin'),
     defaultValue: 'user',
     allowNull: false
+  },
+  organization_id: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    references: {
+      model: 'organizations',
+      key: 'id'
+    }
   }
 }, {
   tableName: 'users',

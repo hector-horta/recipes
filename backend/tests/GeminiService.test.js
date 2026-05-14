@@ -59,7 +59,63 @@ describe('GeminiService', () => {
 
       expect(result).toBeInstanceOf(Buffer);
       expect(result.toString()).toBe('fake-image-data');
-      expect(ActivityLogger.info).toHaveBeenCalledWith(expect.stringContaining('Generating image for "Tasty Cake"'), expect.any(Object));
+      expect(ActivityLogger.info).toHaveBeenCalledWith(expect.stringContaining('Generating image for "Tasty Cake"'), expect.objectContaining({
+        hasFeedback: false,
+        hasDetails: false
+      }));
+      
+      // Verify prompt construction and config
+      expect(genAIInstance.models.generateImages).toHaveBeenCalledWith(expect.objectContaining({
+        prompt: expect.stringContaining('Tasty Cake'),
+        config: expect.objectContaining({
+          numberOfImages: 1,
+          aspectRatio: "1:1"
+        })
+      }));
+    });
+
+    it('should include ingredients in prompt when details are provided', async () => {
+      const mockResponse = {
+        generatedImages: [{
+          image: { imageBytes: Buffer.from('image').toString('base64') }
+        }]
+      };
+
+      const genAIInstance = new GoogleGenAI();
+      genAIInstance.models.generateImages.mockResolvedValue(mockResponse);
+
+      const details = {
+        ingredients: [{ name: { en: 'Sugar' } }, { name: { en: 'Flour' } }]
+      };
+
+      await geminiService.generateRecipeImage('Cake', '', details);
+
+      expect(genAIInstance.models.generateImages).toHaveBeenCalledWith(expect.objectContaining({
+        prompt: expect.stringContaining('Featuring ingredients like Sugar, Flour')
+      }));
+      expect(ActivityLogger.info).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+        hasDetails: true
+      }));
+    });
+
+    it('should include feedback in prompt when provided', async () => {
+      const mockResponse = {
+        generatedImages: [{
+          image: { imageBytes: Buffer.from('image').toString('base64') }
+        }]
+      };
+
+      const genAIInstance = new GoogleGenAI();
+      genAIInstance.models.generateImages.mockResolvedValue(mockResponse);
+
+      await geminiService.generateRecipeImage('Cake', 'Make it darker');
+
+      expect(genAIInstance.models.generateImages).toHaveBeenCalledWith(expect.objectContaining({
+        prompt: expect.stringContaining('IMPORTANT: Apply this feedback to the visual style: Make it darker')
+      }));
+      expect(ActivityLogger.info).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+        hasFeedback: true
+      }));
     });
 
     it('should handle missing image data in response', async () => {

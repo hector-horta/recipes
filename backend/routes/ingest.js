@@ -127,7 +127,7 @@ router.post('/image', asyncHandler(async (req, res) => {
   let imageResult = null;
   if (generateImage) {
     try {
-      imageResult = await generateRecipeImage(structured.title?.en || titleEs, apiKey);
+      imageResult = await generateRecipeImage(structured.title?.en || titleEs, apiKey, '', structured);
     } catch (imgErr) {
       ActivityLogger.warn('[Ingest] Failed to generate image', { error: imgErr.message, title: titleEs });
     }
@@ -220,7 +220,7 @@ router.post('/images', asyncHandler(async (req, res) => {
   const titleEn = structured.title?.en || titleEs;
   if (generateImage) {
     try {
-      imageResult = await generateRecipeImage(titleEn, apiKey);
+      imageResult = await generateRecipeImage(titleEn, apiKey, '', structured);
     } catch (imgErr) {
       ActivityLogger.warn('Failed to generate image during dual ingest', { error: imgErr.message, title: titleEn });
     }
@@ -305,7 +305,7 @@ router.post('/text', asyncHandler(async (req, res) => {
   let imageResult = null;
   if (generateImage) {
     try {
-      imageResult = await generateRecipeImage(structured.title?.en || titleEs, apiKey);
+      imageResult = await generateRecipeImage(structured.title?.en || titleEs, apiKey, '', structured);
     } catch (imgErr) {
       ActivityLogger.warn('[Ingest] Failed to generate image', { error: imgErr.message, title: titleEs });
     }
@@ -443,7 +443,7 @@ router.post('/voice', asyncHandler(async (req, res) => {
   // If we don't save to DB, we don't generate image yet (per new flow)
   if (saveToDb) {
     try {
-      imageResult = await generateRecipeImage(titleEn, nvidiaKey);
+      imageResult = await generateRecipeImage(titleEn, nvidiaKey, '', structured);
     } catch (imgErr) {
       ActivityLogger.warn('Image generation failed for voice ingest', { error: imgErr.message, title: titleEn });
     }
@@ -548,7 +548,7 @@ router.post('/:slug/:action', asyncHandler(async (req, res) => {
           }
         }
 
-        const imageResult = await generateRecipeImage(recipe.title_en, apiKey, issue);
+        const imageResult = await generateRecipeImage(recipe.title_en, apiKey, issue, recipe.toJSON());
         
         recipe.image_url = imageResult.url;
         recipe.image_filename = imageResult.filename;
@@ -616,7 +616,7 @@ router.post('/save', asyncHandler(async (req, res) => {
 
   if (generateImage && !finalData.image_url) {
     try {
-      imageResult = await generateRecipeImage(finalData.title_en, apiKey);
+      imageResult = await generateRecipeImage(finalData.title_en, apiKey, '', finalData);
       finalData.image_url = imageResult.url;
       finalData.image_filename = imageResult.filename;
     } catch (imgErr) {

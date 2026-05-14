@@ -27,9 +27,10 @@ class GeminiService {
    * Generates a high-quality image for a recipe.
    * @param {string} recipeTitle - The title of the dish.
    * @param {string} feedback - Optional feedback to refine the image.
+   * @param {Object} details - Optional extra details like ingredients.
    * @returns {Promise<Buffer|null>} - The image buffer or null if failed.
    */
-  async generateRecipeImage(recipeTitle, feedback = '') {
+  async generateRecipeImage(recipeTitle, feedback = '', details = {}) {
     if (!recipeTitle || typeof recipeTitle !== 'string') {
       ActivityLogger.warn('⚠️ Invalid recipeTitle provided to GeminiService.generateRecipeImage');
       return null;
@@ -42,28 +43,47 @@ class GeminiService {
 
     try {
       const dishStyle = this._getDishSpecificStyle(recipeTitle);
+      
+      // Technical context from ingredients/details
+      let technicalContext = "";
+      if (details.ingredients && Array.isArray(details.ingredients)) {
+        const topIngredients = details.ingredients.slice(0, 5).map(i => i.name?.en || i.name).join(', ');
+        technicalContext = `Featuring ingredients like ${topIngredients}.`;
+      }
+
       const basePrompt = `A professional, high-end commercial photo of ${recipeTitle}`;
       const styleEnhancers = `ultra-realistic food photography, Michelin star plating, ${dishStyle}, high resolution 8k, cinematic lighting, macro lens, shallow depth of field, vibrant natural colors, clean elegant background`;
       const qualityConstraints = "no text, no watermarks, no blurry edges, no low resolution, no artificial colors, no distorted objects, no messy background";
       
-      const finalPrompt = feedback 
-        ? `${basePrompt}. Style: ${styleEnhancers}. Constraints: ${qualityConstraints}. IMPORTANT: Apply this feedback: ${feedback}`
-        : `${basePrompt}. Style: ${styleEnhancers}. Constraints: ${qualityConstraints}`;
+      let finalPrompt = `${basePrompt}. ${technicalContext} Style: ${styleEnhancers}. Constraints: ${qualityConstraints}.`;
+
+      if (feedback) {
+        finalPrompt += ` IMPORTANT: Apply this feedback to the visual style: ${feedback}`;
+      }
 
       ActivityLogger.info(`🎨 Generating image for "${recipeTitle}"`, { 
         style: dishStyle,
-        hasFeedback: !!feedback
+        hasFeedback: !!feedback,
+        hasDetails: !!technicalContext
       });
       
       const result = await this.client.models.generateImages({
         model: this.modelId,
-        prompt: finalPrompt
+        prompt: finalPrompt,
+        config: {
+          numberOfImages: 1,
+          aspectRatio: "1:1",
+          outputMimeType: "image/jpeg"
+        }
       });
 
-      const imageData = result.generatedImages?.[0]?.image?.imageBytes;
+      const generatedImage = result.generatedImages?.[0];
+      const imageData = generatedImage?.image?.imageBytes;
       
       if (imageData) {
-        return Buffer.from(imageData, 'base64');
+        // If the SDK returns a base64 string, Buffer.from(..., 'base64') is correct.
+        // If it's already a Uint8Array, Buffer.from(Uint8Array) also works.
+        return Buffer.from(imageData, typeof imageData === 'string' ? 'base64' : undefined);
       }
       
       ActivityLogger.error('❌ No image data found in Gemini response', { 

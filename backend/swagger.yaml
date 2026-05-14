@@ -364,12 +364,286 @@ paths:
     get:
       tags:
         - Admin
-      summary: Get suggestion stats
+      summary: Get platform usage statistics
       security:
         - adminApiKey: []
+        - bearerAuth: []
       responses:
         '200':
-          description: Suggestion statistics
+          description: Usage statistics (top searches, conversion, uptime)
+  /admin/organizations:
+    get:
+      tags:
+        - Admin
+      summary: List all organizations
+      security:
+        - adminApiKey: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of organizations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Organization'
+    post:
+      tags:
+        - Admin
+      summary: Create a new organization
+      security:
+        - adminApiKey: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - slug
+              properties:
+                name:
+                  type: string
+                slug:
+                  type: string
+      responses:
+        '201':
+          description: Organization created
+        '409':
+          description: Organization already exists
+  /admin/organizations/{id}:
+    put:
+      tags:
+        - Admin
+      summary: Update organization
+      security:
+        - adminApiKey: []
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - slug
+              properties:
+                name:
+                  type: string
+                slug:
+                  type: string
+      responses:
+        '200':
+          description: Organization updated
+        '404':
+          description: Not found
+    delete:
+      tags:
+        - Admin
+      summary: Toggle organization status (active/suspended)
+      security:
+        - adminApiKey: []
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Status toggled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  organization:
+                    $ref: '#/components/schemas/Organization'
+  /admin/recipes:
+    get:
+      tags:
+        - Admin
+      summary: List global recipes
+      security:
+        - adminApiKey: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of recipes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Recipe'
+    post:
+      tags:
+        - Admin
+      summary: Create a new global recipe
+      security:
+        - adminApiKey: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecipeUpdate'
+      responses:
+        '201':
+          description: Recipe created
+  /admin/recipes/{id}:
+    put:
+      tags:
+        - Admin
+      summary: Update global recipe
+      security:
+        - adminApiKey: []
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecipeUpdate'
+      responses:
+        '200':
+          description: Recipe updated
+    delete:
+      tags:
+        - Admin
+      summary: Delete global recipe
+      security:
+        - adminApiKey: []
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Recipe deleted
+  /admin/tags:
+    get:
+      tags:
+        - Admin
+      summary: List global tags
+      security:
+        - adminApiKey: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of tags
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Tag'
+    post:
+      tags:
+        - Admin
+      summary: Create a new global tag
+      security:
+        - adminApiKey: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - key
+                - es
+                - en
+              properties:
+                key:
+                  type: string
+                es:
+                  type: string
+                en:
+                  type: string
+      responses:
+        '201':
+          description: Tag created
+  /admin/tags/{id}:
+    put:
+      tags:
+        - Admin
+      summary: Update global tag
+      security:
+        - adminApiKey: []
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - key
+                - es
+                - en
+              properties:
+                key:
+                  type: string
+                es:
+                  type: string
+                en:
+                  type: string
+      responses:
+        '200':
+          description: Tag updated
+    delete:
+      tags:
+        - Admin
+      summary: Delete global tag
+      security:
+        - adminApiKey: []
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Tag deleted
   /api/ingest/image:
     post:
       tags:
@@ -613,6 +887,30 @@ components:
             type: string
         nutrition:
           type: object
+    RecipeUpdate:
+      type: object
+      properties:
+        title_es:
+          type: string
+        title_en:
+          type: string
+        slug:
+          type: string
+        prep_time_minutes:
+          type: integer
+        cook_time_minutes:
+          type: integer
+        servings:
+          type: integer
+        difficulty:
+          type: string
+          enum: [easy, medium, hard]
+        status:
+          type: string
+          enum: [draft, published, archived]
+        sibo_risk_level:
+          type: string
+          enum: [safe, caution, avoid]
     Organization:
       type: object
       properties:
@@ -623,5 +921,27 @@ components:
           type: string
         slug:
           type: string
+        is_active:
+          type: boolean
         settings:
           type: object
+        userCount:
+          type: integer
+        status:
+          type: string
+          enum: [active, suspended, pending]
+    Tag:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        key:
+          type: string
+        es:
+          type: string
+        en:
+          type: string
+        category:
+          type: string
+

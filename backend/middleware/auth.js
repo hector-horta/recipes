@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { config } from '../config/env.js';
 import crypto from 'crypto';
+import { Organization } from '../models/Organization.js';
 
 const JWT_SECRET = config.JWT_SECRET;
 const JWT_ALGO = 'HS256';
@@ -91,7 +92,7 @@ export const requireAdminKey = (req, res, next) => {
  * @param {string[]} allowedRoles 
  */
 export const checkRole = (allowedRoles) => {
-  return (req, res, next) => {
+  return async (req, res, next) => {
     // 1. If an admin key is present and valid, allow access (Legacy/Integration Support)
     const adminKey = req.headers['x-admin-key'];
     if (adminKey && config.ADMIN_API_KEY) {
@@ -107,6 +108,17 @@ export const checkRole = (allowedRoles) => {
     // 2. Validate JWT Role
     if (!req.user) {
       return res.status(401).json({ error: 'Acceso denegado. Se requiere autenticación.' });
+    }
+
+    // 3. Check Organization Status (if not super_admin)
+    if (req.user.role !== 'super_admin' && req.user.organization_id) {
+      const org = await Organization.findByPk(req.user.organization_id);
+      if (org && !org.is_active) {
+        return res.status(403).json({ 
+          error: 'Acceso denegado. Tu organización está suspendida.',
+          code: 'ORGANIZATION_SUSPENDED'
+        });
+      }
     }
 
     if (allowedRoles.includes(req.user.role)) {

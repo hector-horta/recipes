@@ -175,9 +175,9 @@ import { fileURLToPath } from 'url';
 const __filename_nim = fileURLToPath(import.meta.url);
 const __dirname_nim = path.dirname(__filename_nim);
 
-export async function generateRecipeImage(prompt, apiKey, feedback = '') {
+export async function generateRecipeImage(prompt, apiKey, feedback = '', details = {}) {
   try {
-    const imageBuffer = await geminiService.generateRecipeImage(prompt, feedback);
+    const imageBuffer = await geminiService.generateRecipeImage(prompt, feedback, details);
     
     if (imageBuffer) {
       const filename = `recipe-${Date.now()}.jpg`;
