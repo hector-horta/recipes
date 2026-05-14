@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { recipeQuerySchema } from './validators.js';
+import { recipeQuerySchema } from '../../models/validators.js';
 
 describe('validators', () => {
   describe('recipeQuerySchema', () => {

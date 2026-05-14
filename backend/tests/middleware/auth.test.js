@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { authenticateToken, optionalAuthenticateToken, checkRole } from './auth.js';
+import { authenticateToken, optionalAuthenticateToken, checkRole } from '../../middleware/auth.js';
 import jwt from 'jsonwebtoken';
 
 vi.mock('jsonwebtoken');
-vi.mock('../services/ActivityLogger.js', () => ({
+vi.mock('../../services/ActivityLogger.js', () => ({
   ActivityLogger: {
     info: vi.fn(),
     error: vi.fn(),
@@ -13,7 +13,7 @@ vi.mock('../services/ActivityLogger.js', () => ({
 }));
 
 // Provide a default config mock to avoid database connection issues
-vi.mock('../config/env.js', () => ({
+vi.mock('../../config/env.js', () => ({
   config: {
     JWT_SECRET: 'test-secret',
     ADMIN_API_KEY: 'test-admin-key',

@@ -1226,7 +1226,7 @@ export const GlobalRecipes: React.FC = () => {
 
         <div className="mt-10 pt-8 border-t border-brand-sage/10 flex flex-col md:flex-row gap-4">
           <Button 
-            variant="neutral" 
+            variant="secondary" 
             type="button" 
             className="px-10 h-14 rounded-2xl font-black uppercase tracking-widest text-[10px]" 
             onClick={handleCloseModal}

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { validateQuery } from './validate.js';
+import { validateQuery } from '../../middleware/validate.js';
 import { z } from 'zod';
 
 const testSchema = z.object({

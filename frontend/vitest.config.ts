@@ -19,7 +19,10 @@ export default defineConfig({
     globals: true,
     environment: 'happy-dom',
     setupFiles: ['./apps/wati/src/test/setup.ts'],
-    include: ['tests/**/*.{test,spec}.{js,mjs,cjs,ts,tsx}'],
+    include: [
+      'apps/*/tests/**/*.{test,spec}.{js,mjs,cjs,ts,tsx}',
+      'packages/*/tests/**/*.{test,spec}.{js,mjs,cjs,ts,tsx}'
+    ],
   },
   coverage: {
     provider: 'v8',

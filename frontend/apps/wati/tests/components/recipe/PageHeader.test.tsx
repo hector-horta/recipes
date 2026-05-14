@@ -22,12 +22,20 @@ const mockUser = {
 
 vi.mock('@wati/src/AuthContext', () => ({
   useAuth: () => ({
-    user: mockUser
+    user: mockUser,
+    is_verified: true
+  })
+}));
+
+// Mock ToastContext
+vi.mock('@wati/src/ToastContext', () => ({
+  useToast: () => ({
+    showToast: vi.fn()
   })
 }));
 
 // Mock AuthGuard to always render children for testing simplicity
-vi.mock('../auth/AuthGuard', () => ({
+vi.mock('@wati/src/components/auth/AuthGuard', () => ({
   AuthGuard: ({ children }: { children: React.ReactNode }) => <>{children}</>
 }));
 
