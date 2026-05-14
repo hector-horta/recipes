@@ -6,6 +6,8 @@ import { Modal } from '../components/Modal';
 import { Button, Input } from '@wati/ui-kit';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
+import { logger } from '../utils/logger';
 
 interface Tag {
   id: string;
@@ -29,11 +31,21 @@ const itemVariants = {
 };
 
 export const Tags: React.FC = () => {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTag, setEditingTag] = useState<Tag | null>(null);
   const [newTag, setNewTag] = useState({ key: '', es: '', en: '' });
   const [searchTerm, setSearchTerm] = useState('');
+  const isFirstRender = React.useRef(true);
+
+  React.useEffect(() => {
+    if (isFirstRender.current) {
+      logger.info('ADMIN_TAGS_VIEW');
+      isFirstRender.current = false;
+    }
+  }, []);
+
 
   const { data: tags, isLoading } = useQuery({
     queryKey: ['global-tags'],
@@ -42,39 +54,45 @@ export const Tags: React.FC = () => {
 
   const createMutation = useMutation({
     mutationFn: (data: typeof newTag) => api.post('/admin/tags', data),
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['global-tags'] });
       setIsModalOpen(false);
       setNewTag({ key: '', es: '', en: '' });
-      toast.success('Etiqueta creada correctamente');
+      toast.success(t('tags.messages.create_success'));
+      logger.info('ADMIN_TAG_CREATE', { tagId: data.id, key: data.key });
     },
     onError: (error: any) => {
-      toast.error(error?.message || 'Error al crear la etiqueta');
+      logger.error('ADMIN_TAG_CREATE_FAIL', error);
+      toast.error(error?.message || t('common.error_generic'));
     }
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: typeof newTag }) => 
       api.put(`/admin/tags/${id}`, data),
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['global-tags'] });
       setEditingTag(null);
       setIsModalOpen(false);
-      toast.success('Etiqueta actualizada correctamente');
+      toast.success(t('tags.messages.update_success'));
+      logger.info('ADMIN_TAG_UPDATE', { tagId: id, key: data.key });
     },
     onError: (error: any) => {
-      toast.error(error?.message || 'Error al actualizar la etiqueta');
+      logger.error('ADMIN_TAG_UPDATE_FAIL', error);
+      toast.error(error?.message || t('common.error_generic'));
     }
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/admin/tags/${id}`),
-    onSuccess: () => {
+    onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['global-tags'] });
-      toast.success('Etiqueta eliminada correctamente');
+      toast.success(t('tags.messages.delete_success'));
+      logger.info('ADMIN_TAG_DELETE', { tagId: id });
     },
     onError: (error: any) => {
-      toast.error(error?.message || 'Error al eliminar la etiqueta');
+      logger.error('ADMIN_TAG_DELETE_FAIL', error);
+      toast.error(error?.message || t('common.error_generic'));
     }
   });
 
@@ -110,9 +128,9 @@ export const Tags: React.FC = () => {
             <div className="p-2 bg-brand-forest/10 text-brand-forest rounded-lg">
               <Languages size={24} />
             </div>
-            <h2 className="text-4xl font-extrabold text-brand-forest tracking-tight">Diccionario</h2>
+            <h2 className="text-4xl font-extrabold text-brand-forest tracking-tight">{t('tags.title')}</h2>
           </div>
-          <p className="text-brand-text-muted font-medium">Gestiona etiquetas globales y sus traducciones oficiales.</p>
+          <p className="text-brand-text-muted font-medium">{t('tags.subtitle')}</p>
         </motion.div>
         
         <motion.button 
@@ -127,7 +145,7 @@ export const Tags: React.FC = () => {
           className="flex items-center justify-center gap-2 bg-brand-forest text-white px-8 py-4 rounded-2xl font-bold hover:shadow-2xl hover:shadow-brand-forest/30 transition-all group"
         >
           <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
-          <span>Nueva Etiqueta</span>
+          <span>{t('tags.create')}</span>
         </motion.button>
       </div>
 
@@ -141,7 +159,7 @@ export const Tags: React.FC = () => {
             <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-brand-text-muted/60" size={20} />
             <input
               type="text"
-              placeholder="Buscar por clave o traducción..."
+              placeholder={t('tags.search_placeholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-14 pr-6 py-4 bg-brand-cream/40 border-2 border-transparent focus:border-brand-sage/30 rounded-2xl outline-none transition-all placeholder:text-brand-text-muted/40 text-brand-forest font-medium"
@@ -153,10 +171,10 @@ export const Tags: React.FC = () => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-brand-cream/20">
-                <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest">Identificador (Key)</th>
-                <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest">Español</th>
-                <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest">Inglés</th>
-                <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest text-right">Acciones</th>
+                <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest">{t('tags.table.key')}</th>
+                <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest">{t('tags.table.es')}</th>
+                <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest">{t('tags.table.en')}</th>
+                <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest text-right">{t('tags.table.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-brand-sage/10">
@@ -181,7 +199,7 @@ export const Tags: React.FC = () => {
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-2xl bg-brand-sage/15 text-brand-sage flex items-center justify-center transition-transform group-hover:scale-110 duration-300">
-                          <TagIcon size={22} strokeWidth={2.5} />
+                           <TagIcon size={22} strokeWidth={2.5} />
                         </div>
                         <code className="text-[11px] font-bold font-mono text-brand-teal bg-brand-teal/10 px-3 py-1.5 rounded-lg border border-brand-teal/20">
                           {tag.key}
@@ -204,7 +222,7 @@ export const Tags: React.FC = () => {
                             setIsModalOpen(true);
                           }}
                           className="p-3 bg-brand-sage/10 text-brand-sage hover:bg-brand-sage hover:text-white rounded-xl transition-all shadow-sm"
-                          title="Editar"
+                          title={t('common.edit')}
                         >
                           <Pencil size={18} />
                         </motion.button>
@@ -212,12 +230,12 @@ export const Tags: React.FC = () => {
                           whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.9 }}
                           onClick={() => {
-                            if (confirm('¿Estás seguro de que deseas eliminar esta etiqueta?')) {
+                            if (confirm(t('tags.messages.confirm_delete'))) {
                               deleteMutation.mutate(tag.id);
                             }
                           }}
                           className="p-3 bg-red-50 text-red-400 hover:bg-red-500 hover:text-white rounded-xl transition-all shadow-sm"
-                          title="Eliminar"
+                          title={t('common.delete')}
                         >
                           <Trash2 size={18} />
                         </motion.button>
@@ -233,7 +251,7 @@ export const Tags: React.FC = () => {
                       <div className="w-16 h-16 bg-brand-cream/50 rounded-full flex items-center justify-center text-brand-text-muted/30">
                         <TagIcon size={32} />
                       </div>
-                      <p className="text-brand-text-muted font-bold">No se encontraron etiquetas registradas.</p>
+                      <p className="text-brand-text-muted font-bold">{t('tags.table.no_tags')}</p>
                     </div>
                   </td>
                 </motion.tr>
@@ -249,16 +267,16 @@ export const Tags: React.FC = () => {
           setIsModalOpen(false);
           setEditingTag(null);
         }}
-        title={editingTag ? 'Actualizar Etiqueta' : 'Nueva Etiqueta Global'}
+        title={editingTag ? t('tags.modal.update_title') : t('tags.modal.create_title')}
       >
         <form onSubmit={handleSubmit} className="p-2 space-y-6">
           <div className="space-y-3">
             <label className="text-sm font-black text-brand-forest uppercase tracking-widest flex items-center gap-2">
               <span className="w-1.5 h-1.5 bg-brand-teal rounded-full" />
-              Identificador (Key)
+              {t('tags.modal.key_label')}
             </label>
             <Input
-              placeholder="ej: gluten-free"
+              placeholder={t('tags.modal.key_placeholder')}
               className="h-14 rounded-2xl border-2 border-brand-sage/10 focus:border-brand-sage/40 transition-all text-lg font-mono lowercase"
               value={editingTag ? editingTag.key : newTag.key}
               onChange={(e) => {
@@ -271,7 +289,7 @@ export const Tags: React.FC = () => {
             />
             {!editingTag && (
               <p className="text-[11px] text-brand-text-muted font-medium italic pl-1">
-                * Este valor es inmutable una vez creado.
+                {t('tags.modal.immutable_hint')}
               </p>
             )}
           </div>
@@ -279,10 +297,10 @@ export const Tags: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-3">
               <label className="text-sm font-black text-brand-forest uppercase tracking-widest flex items-center gap-2">
-                Español
+                {t('tags.modal.es_label')}
               </label>
               <Input
-                placeholder="Nombre en ES"
+                placeholder={t('tags.modal.es_placeholder')}
                 className="h-14 rounded-2xl border-2 border-brand-sage/10 focus:border-brand-sage/40 transition-all text-lg font-bold"
                 value={editingTag ? editingTag.es : newTag.es}
                 onChange={(e) => {
@@ -294,10 +312,10 @@ export const Tags: React.FC = () => {
             </div>
             <div className="space-y-3">
               <label className="text-sm font-black text-brand-forest uppercase tracking-widest flex items-center gap-2">
-                Inglés
+                {t('tags.modal.en_label')}
               </label>
               <Input
-                placeholder="Name in EN"
+                placeholder={t('tags.modal.en_placeholder')}
                 className="h-14 rounded-2xl border-2 border-brand-sage/10 focus:border-brand-sage/40 transition-all text-lg font-bold"
                 value={editingTag ? editingTag.en : newTag.en}
                 onChange={(e) => {
@@ -323,7 +341,7 @@ export const Tags: React.FC = () => {
                 <Loader2 className="animate-spin" size={24} />
               ) : (
                 <>
-                  <span>{editingTag ? 'Actualizar Etiqueta' : 'Registrar Etiqueta'}</span>
+                  <span>{editingTag ? t('tags.modal.submit_update') : t('tags.modal.submit_create')}</span>
                   <ArrowRight size={20} />
                 </>
               )}

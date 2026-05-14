@@ -1,0 +1,241 @@
+{
+  "common": {
+    "dashboard": "Panel de Control",
+    "tenants": "Organizaciones",
+    "recipes": "Recetas Globales",
+    "tags": "Etiquetas",
+    "loading": "Cargando...",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "search": "Buscar...",
+    "actions": "Acciones",
+    "status": "Estado",
+    "update": "Actualizar",
+    "empty": "(Vacío)",
+    "searches": "Búsquedas",
+    "language_es": "Español",
+    "language_en": "Inglés",
+    "discard_changes": "Descartar Cambios"
+  },
+  "dashboard": {
+    "title": "Dashboard de Control",
+    "subtitle": "Métricas de rendimiento y actividad de la plataforma.",
+    "loading_stats": "Cargando métricas del sistema...",
+    "stats": {
+      "uptime": "Uptime NVIDIA",
+      "success_ingest": "Ingestas Exitosas",
+      "failed_ingest": "Fallos de Ingesta",
+      "success_rate": "Tasa de Éxito",
+      "last_24h": "Últimas 24h",
+      "today": "Hoy",
+      "nvidia_api": "NVIDIA NIM API"
+    },
+    "top_searches": "Top 5 Búsquedas",
+    "failed_searches": "Búsquedas sin Resultados",
+    "no_data": "Sin datos suficientes",
+    "congratulations": "¡Felicidades! Todo se encuentra.",
+    "ingest_activity": "Actividad de Ingesta (IA)",
+    "ingest_subtitle": "Recetas procesadas por día",
+    "legend_success": "Éxito",
+    "legend_failure": "Fallo",
+    "low_conversion": "Recetas con Baja Conversión",
+    "low_conversion_subtitle": "Más vistas, pero menos añadidas a favoritos (potencial de mejora).",
+    "table": {
+      "recipe": "Receta",
+      "views": "Vistas",
+      "favorites": "Favoritos",
+      "conv_ratio": "Ratio Conv.",
+      "action": "Acción",
+      "review": "Revisar Contenido",
+      "no_conversion": "Sin datos de conversión todavía."
+    }
+  },
+  "tenants": {
+    "title": "Tenants",
+    "subtitle": "Control centralizado de organizaciones y accesos.",
+    "create": "Nuevo Tenant",
+    "search_placeholder": "Filtrar por nombre, slug o identificador...",
+    "total": "Total",
+    "table": {
+      "org": "Organización",
+      "id": "Identificador",
+      "status": "Estado",
+      "users": "Usuarios",
+      "actions": "Acciones",
+      "status_online": "● En Línea",
+      "status_suspended": "○ Suspendido",
+      "users_suffix": "Colaboradores",
+      "no_tenants": "No se encontraron organizaciones bajo estos criterios."
+    },
+    "modal": {
+      "create_title": "Inscribir Nuevo Tenant",
+      "update_title": "Actualizar Tenant",
+      "name_label": "Nombre Legal",
+      "name_placeholder": "Nombre comercial de la organización",
+      "slug_label": "Identificador (Slug)",
+      "slug_placeholder": "slug-unico-de-acceso",
+      "slug_hint": "* Este identificador definirá la URL de acceso del cliente.",
+      "submit_create": "Confirmar Inscripción",
+      "submit_update": "Actualizar Registro"
+    },
+    "messages": {
+      "create_success": "Organización creada correctamente",
+      "update_success": "Organización actualizada correctamente",
+      "confirm_status": "¿Estás seguro de que deseas {{action}} esta organización?",
+      "error_create": "Error al crear la organización",
+      "error_update": "Error al actualizar la organización",
+      "error_status": "Error al cambiar el estado"
+    },
+    "actions": {
+      "edit": "Editar Perfil",
+      "suspend": "Revocar Acceso",
+      "activate": "Restaurar Acceso"
+    }
+  },
+  "tags": {
+    "title": "Diccionario",
+    "subtitle": "Gestiona etiquetas globales y sus traducciones oficiales.",
+    "create": "Nueva Etiqueta",
+    "search_placeholder": "Buscar por clave o traducción...",
+    "table": {
+      "key": "Identificador (Key)",
+      "es": "Español",
+      "en": "Inglés",
+      "actions": "Acciones",
+      "no_tags": "No se encontraron etiquetas registradas."
+    },
+    "modal": {
+      "create_title": "Nueva Etiqueta Global",
+      "update_title": "Actualizar Etiqueta",
+      "key_label": "Identificador (Key)",
+      "key_placeholder": "ej: gluten-free",
+      "immutable_hint": "* Este valor es inmutable una vez creado.",
+      "es_label": "Español",
+      "es_placeholder": "Nombre en ES",
+      "en_label": "Inglés",
+      "en_placeholder": "Name in EN",
+      "submit_create": "Registrar Etiqueta",
+      "submit_update": "Actualizar Etiqueta"
+    },
+    "messages": {
+      "create_success": "Etiqueta creada correctamente",
+      "update_success": "Etiqueta actualizada correctamente",
+      "delete_success": "Etiqueta eliminada correctamente",
+      "confirm_delete": "¿Estás seguro de que deseas eliminar esta etiqueta?"
+    }
+  },
+  "auth": {
+    "login_title": "MORE Admin",
+    "login_subtitle": "Portal de Administración Global",
+    "email_label": "Email Corporativo",
+    "password_label": "Contraseña",
+    "submit_button": "Entrar al Portal",
+    "verifying": "Verificando...",
+    "restricted_access": "Acceso Restringido • Super Admin Only",
+    "error_denied": "Acceso denegado. Se requiere rol de super_admin.",
+    "error_generic": "Error al iniciar sesión"
+  },
+  "recipes": {
+    "title": "Control Maestro de Recetas",
+    "subtitle": "Catálogo base de Wati disponible para todos los inquilinos.",
+    "create": "Crear Receta Global",
+    "search_placeholder": "Buscar por nombre, ingredientes o slug...",
+    "filter_allergens": "Filtrar por Alérgenos:",
+    "difficulty": {
+      "easy": "Fácil",
+      "medium": "Media",
+      "hard": "Difícil"
+    },
+    "risk_label": "Riesgo:",
+    "sibo_risk": {
+      "safe": "Seguro",
+      "caution": "Precaución",
+      "avoid": "Evitar"
+    },
+    "status": {
+      "draft": "Borrador",
+      "published": "Publicado",
+      "archived": "Archivado"
+    },
+    "messages": {
+      "create_success": "Receta creada correctamente",
+      "update_success": "Receta actualizada correctamente",
+      "delete_success": "Receta eliminada correctamente",
+      "bulk_update_success": "Estado actualizado para las recetas seleccionadas",
+      "bulk_delete_success": "Recetas eliminadas correctamente",
+      "confirm_delete": "¿Estás seguro de que deseas eliminar esta receta? Esta acción no se puede deshacer.",
+      "confirm_bulk_delete": "¿Eliminar {{count}} recetas?",
+      "copy_slug_success": "Slug copiado",
+      "regenerate_success": "Imagen regenerada con éxito"
+    },
+    "ui": {
+      "results_count": "{{count}} Resultados",
+      "view_table": "Vista de Tabla",
+      "view_grid": "Vista de Cuadrícula",
+      "selected_count": "{{count}} Recetas Seleccionadas",
+      "discard_selection": "Descartar selección",
+      "edit_recipe": "Editar Receta",
+      "delete_recipe": "Eliminar Receta",
+      "publish": "Publicar",
+      "draft": "Borrador",
+      "no_results": "Sin coincidencias",
+      "no_results_subtitle": "Prueba a ajustar tus filtros de búsqueda.",
+      "no_results_found": "No se encontraron recetas.",
+      "clear_filters": "Limpiar todos los filtros",
+      "minutes_suffix": "min",
+      "minutes_short": "m"
+    },
+    "form": {
+      "essential_info": "Información Esencial",
+      "title_es": "Título (ES)",
+      "title_en": "Título (EN)",
+      "slug": "Slug / URL Permanente",
+      "slug_placeholder": "risotto-de-setas",
+      "placeholder_title": "Ej: Risotto de Setas Silvestres",
+      "prep_time": "Prep",
+      "cook_time": "Cocción",
+      "servings": "Raciones",
+      "ingredients": "Ingredientes",
+      "add_ingredient": "Añadir Ingrediente",
+      "ingredient_label": "Ingrediente",
+      "name_placeholder": "Nombre...",
+      "amount_label": "Cant.",
+      "amount_placeholder": "0",
+      "unit_label": "Ud.",
+      "unit_placeholder": "gr",
+      "no_ingredients": "No hay ingredientes definidos",
+      "steps": "Procedimiento",
+      "add_step": "Añadir Paso",
+      "step_placeholder": "Describe el proceso para el paso {{index}}...",
+      "no_steps": "Define el procedimiento paso a paso",
+      "difficulty_label": "Dificultad",
+      "status_label": "Estado de Publicación",
+      "sibo_risk_label": "Riesgo SIBO",
+      "tags_allergens": "Etiquetas & Alérgenos",
+      "no_tags_hint": "Carga etiquetas en el diccionario primero.",
+      "style_guide": "Guía de Estilo",
+      "style_guide_slug": "El Slug es permanente tras la creación para mantener el SEO.",
+      "style_guide_ingredients": "Describe los ingredientes con precisión para mejores resultados de IA.",
+      "style_guide_sibo": "El Riesgo SIBO es vital para la seguridad alimentaria del usuario.",
+      "save_edit": "Consolidar Receta",
+      "save_create": "Publicar en el Catálogo"
+    },
+    "ai": {
+      "title": "Visual Studio (IA)",
+      "image_alt": "Vista previa de la receta",
+      "no_image": "Sin Imagen Magistral",
+      "no_image_hint": "La IA generará una imagen basada en tu descripción técnica al guardar.",
+      "processing": "Manifestando tu visión...",
+      "processing_hint": "Esto requiere un procesamiento neuronal intenso (20-30s)",
+      "feedback_placeholder": "Describe ajustes (ej: 'Iluminación dorada de atardecer')...",
+      "processing_btn": "Manifestando...",
+      "regenerate_btn": "Regenerar con IA"
+    }
+  },
+  "sidebar": {
+    "connected_as": "Conectado como",
+    "logout": "Cerrar Sesión"
+  }
+}

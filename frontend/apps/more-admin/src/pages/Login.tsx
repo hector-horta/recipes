@@ -4,20 +4,27 @@ import { useNavigate } from 'react-router-dom';
 import { Button, Input } from '@wati/ui-kit';
 import { ShieldCheck, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
+import { logger } from '../utils/logger';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { login, error, isLoading } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await login({ email, password });
+      logger.info('ADMIN_LOGIN_SUCCESS', { email });
       navigate('/tenants');
     } catch (err) {
-      // Error is handled in context
+      logger.error('ADMIN_LOGIN_FAILED', { 
+        email, 
+        error: err instanceof Error ? err.message : 'Unknown' 
+      });
     }
   };
 
@@ -43,8 +50,8 @@ export const Login: React.FC = () => {
           >
             <ShieldCheck size={40} />
           </motion.div>
-          <h2 className="text-4xl font-black text-brand-forest tracking-tight">MORE Admin</h2>
-          <p className="mt-2 text-brand-text-muted font-medium">Portal de Administración Global</p>
+          <h2 className="text-4xl font-black text-brand-forest tracking-tight">{t('auth.login_title')}</h2>
+          <p className="mt-2 text-brand-text-muted font-medium">{t('auth.login_subtitle')}</p>
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
@@ -57,31 +64,34 @@ export const Login: React.FC = () => {
                 className="p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-sm font-medium flex items-center gap-2"
               >
                 <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
-                {error}
+                {error === 'Acceso denegado. Se requiere rol de super_admin.' ? t('auth.error_denied') : t('auth.error_generic')}
               </motion.div>
             )}
           </AnimatePresence>
 
           <div className="space-y-5">
             <div className="space-y-2">
-              <label className="text-sm font-bold text-brand-forest ml-1">Email Corporativo</label>
+              <label className="text-sm font-bold text-brand-forest ml-1">{t('auth.email_label')}</label>
               <Input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="admin@more.com"
                 required
+                autoComplete="email"
                 className="h-12 rounded-xl bg-brand-cream/50 border-none focus:ring-2 focus:ring-brand-sage/30"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-bold text-brand-forest ml-1">Contraseña</label>
+              <label className="text-sm font-bold text-brand-forest ml-1">{t('auth.password_label')}</label>
               <Input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
+                autoComplete="current-password"
+                data-bwignore
                 className="h-12 rounded-xl bg-brand-cream/50 border-none focus:ring-2 focus:ring-brand-sage/30"
               />
             </div>
@@ -95,11 +105,11 @@ export const Login: React.FC = () => {
             {isLoading ? (
               <div className="flex items-center justify-center gap-2">
                 <Loader2 className="animate-spin" size={20} />
-                <span>Verificando...</span>
+                <span>{t('auth.verifying')}</span>
               </div>
             ) : (
               <div className="flex items-center justify-center gap-2">
-                <span>Entrar al Portal</span>
+                <span>{t('auth.submit_button')}</span>
                 <motion.span
                   animate={{ x: [0, 5, 0] }}
                   transition={{ repeat: Infinity, duration: 1.5 }}
@@ -112,7 +122,7 @@ export const Login: React.FC = () => {
         </form>
 
         <p className="text-center text-[10px] text-brand-text-muted uppercase tracking-widest font-bold opacity-50">
-          Acceso Restringido • Super Admin Only
+          {t('auth.restricted_access')}
         </p>
       </motion.div>
     </div>

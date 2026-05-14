@@ -3,15 +3,17 @@ import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Users, Tags, BookOpen, LogOut } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../AuthContext';
+import { useTranslation } from 'react-i18next';
 
 export const Sidebar: React.FC = () => {
   const { logout, user } = useAuth();
+  const { t } = useTranslation();
 
   const navItems = [
-    { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/tenants', icon: Users, label: 'Tenants' },
-    { to: '/recipes', icon: BookOpen, label: 'Recetas Globales' },
-    { to: '/tags', icon: Tags, label: 'Tags' },
+    { to: '/dashboard', icon: LayoutDashboard, label: t('common.dashboard') },
+    { to: '/tenants', icon: Users, label: t('common.tenants') },
+    { to: '/recipes', icon: BookOpen, label: t('common.recipes') },
+    { to: '/tags', icon: Tags, label: t('common.tags') },
   ];
 
   return (
@@ -68,7 +70,7 @@ export const Sidebar: React.FC = () => {
 
       <div className="p-4 border-t border-white/10 space-y-4">
         <div className="px-4 py-2">
-          <p className="text-sm text-white/40">Conectado como</p>
+          <p className="text-sm text-white/40">{t('sidebar.connected_as')}</p>
           <p className="text-sm font-medium truncate">{user?.email}</p>
         </div>
         <button
@@ -76,7 +78,7 @@ export const Sidebar: React.FC = () => {
           className="w-full flex items-center gap-3 px-4 py-3 text-white/60 hover:bg-red-500/10 hover:text-red-400 rounded-xl transition-colors"
         >
           <LogOut size={20} />
-          <span className="font-medium">Cerrar Sesión</span>
+          <span className="font-medium">{t('sidebar.logout')}</span>
         </button>
       </div>
     </aside>

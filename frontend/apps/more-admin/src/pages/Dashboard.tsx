@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { 
@@ -19,11 +19,13 @@ import {
   XAxis, 
   YAxis, 
   CartesianGrid, 
-  Tooltip as RechartsTooltip, 
+  RechartsTooltip, 
   ResponsiveContainer,
   AreaChart,
   Area
 } from 'recharts';
+import { useTranslation } from 'react-i18next';
+import { logger } from '../utils/logger';
 
 interface Stats {
   generated_at: string;
@@ -45,16 +47,21 @@ interface Stats {
 }
 
 export const Dashboard: React.FC = () => {
+  const { t } = useTranslation();
   const { data: stats, isLoading, refetch } = useQuery({
     queryKey: ['admin-stats'],
     queryFn: () => api.get<Stats>('/admin/stats'),
   });
 
+  useEffect(() => {
+    logger.info('ADMIN_DASHBOARD_VIEW');
+  }, []);
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-brand-text-muted">
         <Loader2 className="animate-spin mb-4" size={48} />
-        <p className="font-medium animate-pulse">Cargando métricas del sistema...</p>
+        <p className="font-medium animate-pulse">{t('dashboard.loading_stats')}</p>
       </div>
     );
   }
@@ -67,46 +74,49 @@ export const Dashboard: React.FC = () => {
     >
       <div className="flex items-end justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-brand-forest">Dashboard de Control</h2>
-          <p className="text-brand-text-muted mt-1">Métricas de rendimiento y actividad de la plataforma.</p>
+          <h2 className="text-3xl font-bold text-brand-forest">{t('dashboard.title')}</h2>
+          <p className="text-brand-text-muted mt-1">{t('dashboard.subtitle')}</p>
         </div>
         <button 
-          onClick={() => refetch()}
+          onClick={() => {
+            refetch();
+            logger.info('ADMIN_DASHBOARD_REFRESH');
+          }}
           className="flex items-center gap-2 text-brand-sage bg-brand-sage/10 px-4 py-2 rounded-xl text-sm font-medium hover:bg-brand-sage/20 transition-all"
         >
           <RefreshCcw size={16} />
-          Actualizar
+          {t('common.update')}
         </button>
       </div>
 
       {/* Grid de Resumen */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard 
-          title="Uptime NVIDIA"
+          title={t('dashboard.stats.uptime')}
           value={stats?.nvidia.uptime_percent_24h ? `${stats.nvidia.uptime_percent_24h}%` : 'N/A'}
           icon={<Cpu size={24} />}
-          description="Últimas 24h"
+          description={t('dashboard.stats.last_24h')}
           variant="success"
         />
         <StatCard 
-          title="Ingestas Exitosas"
+          title={t('dashboard.stats.success_ingest')}
           value={stats?.nvidia.success_24h || 0}
           icon={<ArrowUpRight size={24} />}
-          description="Hoy"
+          description={t('dashboard.stats.today')}
           variant="info"
         />
         <StatCard 
-          title="Fallos de Ingesta"
+          title={t('dashboard.stats.failed_ingest')}
           value={stats?.nvidia.failures_24h || 0}
           icon={<AlertCircle size={24} />}
-          description="Hoy"
+          description={t('dashboard.stats.today')}
           variant="danger"
         />
         <StatCard 
-          title="Tasa de Éxito"
+          title={t('dashboard.stats.success_rate')}
           value={stats?.nvidia.uptime_percent_24h ? `${Math.round(stats.nvidia.uptime_percent_24h)}%` : '0%'}
           icon={<TrendingUp size={24} />}
-          description="NVIDIA NIM API"
+          description={t('dashboard.stats.nvidia_api')}
           variant="warning"
         />
       </div>
@@ -118,19 +128,19 @@ export const Dashboard: React.FC = () => {
             <div className="w-10 h-10 rounded-xl bg-brand-sage/10 text-brand-sage flex items-center justify-center">
               <TrendingUp size={20} />
             </div>
-            <h3 className="text-xl font-bold text-brand-forest">Top 5 Búsquedas</h3>
+            <h3 className="text-xl font-bold text-brand-forest">{t('dashboard.top_searches')}</h3>
           </div>
           <div className="space-y-3">
             {stats?.top_searches.map((search, idx) => (
               <div key={idx} className="flex items-center justify-between p-3 bg-brand-cream/30 rounded-xl">
-                <span className="font-medium text-brand-text capitalize">{search.term || '(Vacio)'}</span>
+                <span className="font-medium text-brand-text capitalize">{search.term || t('common.empty')}</span>
                 <span className="bg-brand-sage text-white px-3 py-1 rounded-lg text-xs font-bold">
-                  {search.count} búsquedas
+                  {search.count} {t('common.searches')}
                 </span>
               </div>
             ))}
             {stats?.top_searches.length === 0 && (
-              <p className="text-center text-brand-text-muted py-8 italic">Sin datos suficientes</p>
+              <p className="text-center text-brand-text-muted py-8 italic">{t('dashboard.no_data')}</p>
             )}
           </div>
         </div>
@@ -141,19 +151,19 @@ export const Dashboard: React.FC = () => {
             <div className="w-10 h-10 rounded-xl bg-red-50 text-red-400 flex items-center justify-center">
               <SearchX size={20} />
             </div>
-            <h3 className="text-xl font-bold text-brand-forest">Búsquedas sin Resultados</h3>
+            <h3 className="text-xl font-bold text-brand-forest">{t('dashboard.failed_searches')}</h3>
           </div>
           <div className="space-y-3">
             {stats?.failed_searches.map((search, idx) => (
               <div key={idx} className="flex items-center justify-between p-3 bg-red-50/30 rounded-xl">
-                <span className="font-medium text-red-900 capitalize">{search.term || '(Vacio)'}</span>
+                <span className="font-medium text-red-900 capitalize">{search.term || t('common.empty')}</span>
                 <span className="text-red-400 text-xs font-bold">
-                  {search.count} veces
+                  {search.count} {t('dashboard.stats.today')}
                 </span>
               </div>
             ))}
             {stats?.failed_searches.length === 0 && (
-              <p className="text-center text-brand-text-muted py-8 italic">¡Felicidades! Todo se encuentra.</p>
+              <p className="text-center text-brand-text-muted py-8 italic">{t('dashboard.congratulations')}</p>
             )}
           </div>
         </div>
@@ -176,18 +186,18 @@ export const Dashboard: React.FC = () => {
               <BarChart3 size={28} />
             </div>
             <div>
-              <h3 className="text-2xl font-black text-brand-forest tracking-tight">Actividad de Ingesta (IA)</h3>
-              <p className="text-sm text-brand-text-muted font-medium">Recetas procesadas por día</p>
+              <h3 className="text-2xl font-black text-brand-forest tracking-tight">{t('dashboard.ingest_activity')}</h3>
+              <p className="text-sm text-brand-text-muted font-medium">{t('dashboard.ingest_subtitle')}</p>
             </div>
           </div>
           <div className="flex items-center gap-6 bg-brand-cream/50 p-2 rounded-2xl px-4 border border-brand-sage/10">
              <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-brand-sage shadow-sm shadow-brand-sage/50" />
-                <span className="text-xs font-bold text-brand-forest uppercase tracking-wider">Éxito</span>
+                <span className="text-xs font-bold text-brand-forest uppercase tracking-wider">{t('dashboard.legend_success')}</span>
              </div>
              <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-red-400 shadow-sm shadow-red-400/50" />
-                <span className="text-xs font-bold text-brand-forest uppercase tracking-wider">Fallo</span>
+                <span className="text-xs font-bold text-brand-forest uppercase tracking-wider">{t('dashboard.legend_failure')}</span>
              </div>
           </div>
         </div>
@@ -248,19 +258,19 @@ export const Dashboard: React.FC = () => {
             <BarChart3 size={20} />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-brand-forest">Recetas con Baja Conversión</h3>
-            <p className="text-xs text-brand-text-muted mt-1">Más vistas, pero menos añadidas a favoritos (potencial de mejora).</p>
+            <h3 className="text-xl font-bold text-brand-forest">{t('dashboard.low_conversion')}</h3>
+            <p className="text-xs text-brand-text-muted mt-1">{t('dashboard.low_conversion_subtitle')}</p>
           </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-brand-cream/30">
-                <th className="px-6 py-4 text-sm font-semibold text-brand-forest">Receta</th>
-                <th className="px-6 py-4 text-sm font-semibold text-brand-forest">Vistas</th>
-                <th className="px-6 py-4 text-sm font-semibold text-brand-forest">Favoritos</th>
-                <th className="px-6 py-4 text-sm font-semibold text-brand-forest">Ratio Conv.</th>
-                <th className="px-6 py-4 text-sm font-semibold text-brand-forest text-right">Acción</th>
+                <th className="px-6 py-4 text-sm font-semibold text-brand-forest">{t('dashboard.table.recipe')}</th>
+                <th className="px-6 py-4 text-sm font-semibold text-brand-forest">{t('dashboard.table.views')}</th>
+                <th className="px-6 py-4 text-sm font-semibold text-brand-forest">{t('dashboard.table.favorites')}</th>
+                <th className="px-6 py-4 text-sm font-semibold text-brand-forest">{t('dashboard.table.conv_ratio')}</th>
+                <th className="px-6 py-4 text-sm font-semibold text-brand-forest text-right">{t('dashboard.table.action')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-brand-sage/5">
@@ -292,7 +302,7 @@ export const Dashboard: React.FC = () => {
                       to={`/recipes?edit=${recipe.recipe_id}`}
                       className="text-xs font-bold text-brand-sage hover:underline bg-brand-sage/5 px-3 py-1.5 rounded-lg transition-all hover:bg-brand-sage/10"
                     >
-                      Revisar Contenido
+                      {t('dashboard.table.review')}
                     </Link>
                   </td>
                 </tr>
@@ -300,7 +310,7 @@ export const Dashboard: React.FC = () => {
               {stats?.low_conversion_recipes.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-brand-text-muted italic">
-                    Sin datos de conversión todavía.
+                    {t('dashboard.table.no_conversion')}
                   </td>
                 </tr>
               )}

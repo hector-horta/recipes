@@ -6,6 +6,8 @@ import { Building2, Plus, Search, Loader2, Pencil, Power, ArrowRight } from 'luc
 import { Modal } from '../components/Modal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
+import { logger } from '../utils/logger';
 
 interface Organization {
   id: string;
@@ -31,11 +33,21 @@ const itemVariants = {
 };
 
 export const Tenants: React.FC = () => {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOrg, setEditingOrg] = useState<Organization | null>(null);
   const [newTenant, setNewTenant] = useState({ name: '', slug: '' });
   const [searchTerm, setSearchTerm] = useState('');
+  const isFirstRender = React.useRef(true);
+
+  React.useEffect(() => {
+    if (isFirstRender.current) {
+      logger.info('ADMIN_TENANTS_VIEW');
+      isFirstRender.current = false;
+    }
+  }, []);
+
 
   const { data: organizations, isLoading } = useQuery({
     queryKey: ['organizations'],
@@ -45,14 +57,16 @@ export const Tenants: React.FC = () => {
   const createMutation = useMutation({
     mutationFn: (data: { name: string; slug: string }) => 
       api.post('/admin/organizations', data),
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['organizations'] });
       setIsModalOpen(false);
       setNewTenant({ name: '', slug: '' });
-      toast.success('Organización creada correctamente');
+      toast.success(t('tenants.create_success'));
+      logger.info('ADMIN_ORG_CREATE', { organizationId: data.id, name: data.name });
     },
-    onError: (error: any) => {
-      toast.error(error?.message || 'Error al crear la organización');
+    onError: (err) => {
+      logger.error('ADMIN_ORG_CREATE_FAIL', err);
+      toast.error(err?.message || t('tenants.messages.error_create'));
     }
   });
 
@@ -62,10 +76,10 @@ export const Tenants: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['organizations'] });
       setEditingOrg(null);
-      toast.success('Organización actualizada correctamente');
+      toast.success(t('tenants.messages.update_success'));
     },
     onError: (error: any) => {
-      toast.error(error?.message || 'Error al actualizar la organización');
+      toast.error(error?.message || t('tenants.messages.error_update'));
     }
   });
 
@@ -76,7 +90,7 @@ export const Tenants: React.FC = () => {
       toast.success(data.message);
     },
     onError: (error: any) => {
-      toast.error(error?.message || 'Error al cambiar el estado');
+      toast.error(error?.message || t('tenants.messages.error_status'));
     }
   });
 
@@ -109,9 +123,9 @@ export const Tenants: React.FC = () => {
             <div className="p-2 bg-brand-forest/10 text-brand-forest rounded-lg">
               <Building2 size={24} />
             </div>
-            <h2 className="text-4xl font-extrabold text-brand-forest tracking-tight">Tenants</h2>
+            <h2 className="text-4xl font-extrabold text-brand-forest tracking-tight">{t('common.tenants')}</h2>
           </div>
-          <p className="text-brand-text-muted font-medium">Control centralizado de organizaciones y accesos.</p>
+          <p className="text-brand-text-muted font-medium">{t('tenants.subtitle')}</p>
         </motion.div>
         
         <motion.button 
@@ -126,7 +140,7 @@ export const Tenants: React.FC = () => {
           className="flex items-center justify-center gap-2 bg-brand-forest text-white px-8 py-4 rounded-2xl font-bold hover:shadow-2xl hover:shadow-brand-forest/30 transition-all group"
         >
           <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
-          <span>Nuevo Tenant</span>
+          <span>{t('tenants.create')}</span>
         </motion.button>
       </div>
 
@@ -140,14 +154,14 @@ export const Tenants: React.FC = () => {
             <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-brand-text-muted/60" size={20} />
             <input
               type="text"
-              placeholder="Filtrar por nombre, slug o identificador..."
+              placeholder={t('tenants.search_placeholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-14 pr-6 py-4 bg-brand-cream/40 border-2 border-transparent focus:border-brand-sage/30 rounded-2xl outline-none transition-all placeholder:text-brand-text-muted/40 text-brand-forest font-medium"
             />
           </div>
           <div className="flex items-center gap-2 text-sm text-brand-text-muted font-semibold bg-brand-cream/40 px-4 py-2 rounded-xl border border-brand-sage/10">
-            <span>Total:</span>
+            <span>{t('tenants.total')}:</span>
             <span className="text-brand-forest font-bold">{filteredOrgs?.length || 0}</span>
           </div>
         </div>
@@ -156,11 +170,11 @@ export const Tenants: React.FC = () => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-brand-cream/20">
-                <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest">Organización</th>
-                <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest">Identificador</th>
-                <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest">Estado</th>
-                <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest">Usuarios</th>
-                <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest text-right">Acciones</th>
+                <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest">{t('tenants.table.org')}</th>
+                <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest">{t('tenants.table.id')}</th>
+                <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest">{t('tenants.table.status')}</th>
+                <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest">{t('tenants.table.users')}</th>
+                <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest text-right">{t('tenants.table.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-brand-sage/10">
@@ -205,7 +219,7 @@ export const Tenants: React.FC = () => {
                         className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tighter"
                         variant={org.status === 'active' ? 'success' : 'warning'}
                       >
-                        {org.status === 'active' ? '● En Línea' : '○ Suspendido'}
+                        {org.status === 'active' ? t('tenants.table.status_online') : t('tenants.table.status_suspended')}
                       </Badge>
                     </td>
                     <td className="px-8 py-6">
@@ -213,7 +227,7 @@ export const Tenants: React.FC = () => {
                         <div className="w-8 h-8 rounded-full bg-brand-cream border-2 border-white flex items-center justify-center text-xs font-bold text-brand-forest shadow-sm">
                           {org.userCount}
                         </div>
-                        <span className="text-sm text-brand-text-muted font-bold">Colaboradores</span>
+                        <span className="text-sm text-brand-text-muted font-bold">{t('tenants.table.users_suffix')}</span>
                       </div>
                     </td>
                     <td className="px-8 py-6 text-right">
@@ -226,7 +240,7 @@ export const Tenants: React.FC = () => {
                             setIsModalOpen(true);
                           }}
                           className="p-3 bg-brand-sage/10 text-brand-sage hover:bg-brand-sage hover:text-white rounded-xl transition-all shadow-sm"
-                          title="Editar Perfil"
+                          title={t('tenants.actions.edit')}
                         >
                           <Pencil size={18} />
                         </motion.button>
@@ -234,7 +248,8 @@ export const Tenants: React.FC = () => {
                           whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.9 }}
                           onClick={() => {
-                            if (confirm(`¿Estás seguro de que deseas ${org.status === 'active' ? 'suspender' : 'activar'} esta organización?`)) {
+                            const action = org.status === 'active' ? t('tenants.actions.suspend').toLowerCase() : t('tenants.actions.activate').toLowerCase();
+                            if (confirm(t('tenants.messages.confirm_status', { action }))) {
                               toggleStatusMutation.mutate(org.id);
                             }
                           }}
@@ -243,7 +258,7 @@ export const Tenants: React.FC = () => {
                               ? 'bg-red-50 text-red-400 hover:bg-red-500 hover:text-white' 
                               : 'bg-brand-forest/10 text-brand-forest hover:bg-brand-forest hover:text-white'
                           }`}
-                          title={org.status === 'active' ? 'Revocar Acceso' : 'Restaurar Acceso'}
+                          title={org.status === 'active' ? t('tenants.actions.suspend') : t('tenants.actions.activate')}
                         >
                           <Power size={18} />
                         </motion.button>
@@ -259,7 +274,7 @@ export const Tenants: React.FC = () => {
                       <div className="w-16 h-16 bg-brand-cream/50 rounded-full flex items-center justify-center text-brand-text-muted/30">
                         <Building2 size={32} />
                       </div>
-                      <p className="text-brand-text-muted font-bold">No se encontraron organizaciones bajo estos criterios.</p>
+                      <p className="text-brand-text-muted font-bold">{t('tenants.table.no_tenants')}</p>
                     </div>
                   </td>
                 </motion.tr>
@@ -275,16 +290,16 @@ export const Tenants: React.FC = () => {
           setIsModalOpen(false);
           setEditingOrg(null);
         }}
-        title={editingOrg ? 'Actualizar Tenant' : 'Inscribir Nuevo Tenant'}
+        title={editingOrg ? t('tenants.modal.update_title') : t('tenants.modal.create_title')}
       >
         <form onSubmit={handleSubmit} className="p-2 space-y-6">
           <div className="space-y-3">
             <label className="text-sm font-black text-brand-forest uppercase tracking-widest flex items-center gap-2">
               <span className="w-1.5 h-1.5 bg-brand-sage rounded-full" />
-              Nombre Legal
+              {t('tenants.modal.name_label')}
             </label>
             <Input
-              placeholder="Nombre comercial de la organización"
+              placeholder={t('tenants.modal.name_placeholder')}
               className="h-14 rounded-2xl border-2 border-brand-sage/10 focus:border-brand-sage/40 transition-all text-lg font-bold"
               value={editingOrg ? editingOrg.name : newTenant.name}
               onChange={(e) => {
@@ -298,11 +313,11 @@ export const Tenants: React.FC = () => {
           <div className="space-y-3">
             <label className="text-sm font-black text-brand-forest uppercase tracking-widest flex items-center gap-2">
               <span className="w-1.5 h-1.5 bg-brand-teal rounded-full" />
-              Identificador (Slug)
+              {t('tenants.modal.slug_label')}
             </label>
             <div className="relative group">
               <Input
-                placeholder="slug-unico-de-acceso"
+                placeholder={t('tenants.modal.slug_placeholder')}
                 className="h-14 rounded-2xl border-2 border-brand-sage/10 focus:border-brand-sage/40 transition-all text-lg font-mono lowercase"
                 value={editingOrg ? editingOrg.slug : newTenant.slug}
                 onChange={(e) => {
@@ -317,7 +332,7 @@ export const Tenants: React.FC = () => {
               </div>
             </div>
             <p className="text-[11px] text-brand-text-muted font-medium italic pl-1">
-              * Este identificador definirá la URL de acceso del cliente.
+              {t('tenants.modal.slug_hint')}
             </p>
           </div>
 
@@ -335,7 +350,7 @@ export const Tenants: React.FC = () => {
                 <Loader2 className="animate-spin" size={24} />
               ) : (
                 <>
-                  <span>{editingOrg ? 'Actualizar Registro' : 'Confirmar Inscripción'}</span>
+                  <span>{editingOrg ? t('tenants.modal.submit_update') : t('tenants.modal.submit_create')}</span>
                   <ArrowRight size={20} />
                 </>
               )}

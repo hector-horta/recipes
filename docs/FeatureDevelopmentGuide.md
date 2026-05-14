@@ -47,6 +47,7 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 7. **Auth Rule**: Wati usa **Hybrid Auth**. Los usuarios se autentican con contraseña, pero las funcionalidades core (como agregar a favoritos) están **soft-gated** y requieren validación de correo vía un link JWT.
 8. **External Integrations Rule**: Todos los servicios de terceros (como Resend) DEBEN estar abstraídos detrás de una **IEmailService Facade**. La lógica de negocio nunca debe interactuar directamente con SDKs externos.
 9. **Multi-tenancy Isolation**: Toda nueva funcionalidad que maneje datos de usuario o contenido (recetas, planes, etc.) DEBE filtrar por `organization_id`. El `organization_id` se extrae automáticamente del JWT y está disponible en `req.user.organizationId` (o `req.user.organization_id`).
+10. **Frontend Independence**: Cada frontend (`wati`, `more-admin`) corre en su propio contenedor Docker y es independiente. Comparten lógica a través de `packages/` pero mantienen sus propios ciclos de despliegue y configuraciones de i18n.
 
 ---
 
@@ -116,18 +117,25 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 │   ├── vitest.config.ts          # Runner de tests centralizado
 │   ├── pnpm-workspace.yaml       # Definición de sub-workspace
 │   ├── apps/
-│   │   └── wati/                 # Aplicación principal (SPA)
-│   │       ├── src/              # Lógica, páginas y componentes específicos de la app
-│   │       │   ├── AuthContext.tsx
-│   │       │   ├── ToastContext.tsx
-│   │       │   ├── App.tsx
-│   │       │   ├── main.tsx
-│   │       │   ├── api/          # PrivacyProxy, MedicalRegistry, SecurityScrubber
-│   │       │   ├── hooks/        # useWatiSearch, useFavorites, etc.
-│   │       │   ├── components/   # RecipeCard, LoginModal, etc.
-│   │       │   └── test/
-│   │       │       └── setup.ts  # Setup global de Vitest
-│   │       └── package.json
+│   │   ├── wati/                 # Aplicación principal (B2C)
+│   │   │   ├── src/              # Lógica, páginas y componentes de Wati
+│   │   │   │   ├── AuthContext.tsx
+│   │   │   │   ├── ToastContext.tsx
+│   │   │   │   ├── App.tsx
+│   │   │   │   ├── main.tsx
+│   │   │   │   ├── api/          # PrivacyProxy, MedicalRegistry, SecurityScrubber
+│   │   │   │   ├── hooks/        # useWatiSearch, useFavorites, etc.
+│   │   │   │   ├── components/   # RecipeCard, LoginModal, etc.
+│   │   │   │   └── test/
+│   │   │   │       └── setup.ts  # Setup global de Vitest
+│   │   │   └── package.json
+│   │   └── more-admin/           # Panel de administración (B2B/Gestión)
+│   │       ├── src/
+│   │       │   ├── pages/        # GlobalRecipes.tsx (Gestión de contenido)
+│   │       │   ├── locales/      # i18n para admin
+│   │       │   └── components/
+│   │       ├── package.json
+│   │       └── Dockerfile        # Container independiente
 │   ├── packages/
 │   │   ├── ui-kit/               # Biblioteca de UI (@wati/ui-kit)
 │   │   │   ├── src/
@@ -721,13 +729,18 @@ interface Tag { es: string; en: string; }
 #### Internacionalización (i18n)
 - Archivos: `locales/en.json`, `locales/es.json`
 - Agregar toda cadena visible al usuario en **ambos** archivos.
-- Usar en componentes:
+- **Patrón para Recetas (Dynamic Titles)**:
+  En el admin y visualización de contenido, se debe usar el idioma activo para elegir qué campo de la base de datos mostrar:
+  ```typescript
+  const title = activeLang === 'es' ? recipe.title_es : (recipe.title_en || recipe.title_es);
+  ```
+- **Traducciones UI**: Usar en componentes:
 ```typescript
 import { useTranslation } from 'react-i18next';
 const { t } = useTranslation();
-// Uso: t('seccion.clave')
+// Uso: t('recipes.ui.minutes_suffix')
 ```
-- El idioma se persiste en `localStorage` bajo la clave `wati_language`.
+- El idioma se persiste en `localStorage` bajo la clave `wati_language` (Wati) o se gestiona vía estado en `more-admin`.
 
 #### Componentes Reutilizables (ui/)
 | Componente | Props principales | Uso |
