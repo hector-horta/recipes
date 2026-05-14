@@ -1,4 +1,4 @@
-# Frontend — Development image
+# MORE Admin — Development image
 FROM node:22-alpine AS base
 
 # Install pnpm and su-exec
@@ -18,27 +18,27 @@ RUN mkdir -p /home/nodeapp/.cache /home/nodeapp/.pnpm && \
 
 WORKDIR /app
 
-# Copy pnpm workspace configuration and manifests
+# Copy pnpm workspace configuration and manifests from the frontend root
 COPY pnpm-workspace.yaml* package.json ./
 COPY packages ./packages/
-COPY apps ./apps/
+COPY apps/more-admin ./apps/more-admin/
 
-EXPOSE 5173
+EXPOSE 5174
 
 ENV CI=true
 ENV PNPM_CONFIG_STORE_DIR=/tmp/.pnpm-store
 
-# At container startup: ensure store exists, install as root (faster/more reliable), fix permissions, then run as nodeapp
-CMD ["sh", "-c", "mkdir -p /tmp/.pnpm-store && chmod -R 777 /tmp/.pnpm-store && pnpm install --store-dir /tmp/.pnpm-store --no-frozen-lockfile && chown -R nodeapp:nodejs /app && exec su-exec nodeapp pnpm run dev --host"]
+# At container startup: run dev for more-admin
+CMD ["sh", "-c", "mkdir -p /tmp/.pnpm-store && chmod -R 777 /tmp/.pnpm-store && pnpm install --store-dir /tmp/.pnpm-store --no-frozen-lockfile && chown -R nodeapp:nodejs /app && cd apps/more-admin && exec su-exec nodeapp pnpm run dev --host"]
 
-# ── Production build (optional) ─────────────────────────────────────────────
+# ── Production build ─────────────────────────────────────────────
 FROM base AS build
 ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
 COPY . .
-RUN pnpm install --no-frozen-lockfile && pnpm run build
+RUN pnpm install --no-frozen-lockfile && cd apps/more-admin && pnpm run build
 
 FROM nginx:stable-alpine AS production
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=build /app/apps/more-admin/dist /usr/share/nginx/html
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

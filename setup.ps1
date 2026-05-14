@@ -59,8 +59,12 @@ docker compose down
 # Step 4: Remove ONLY node_modules volumes (safe to recreate)
 Write-Host ""
 Write-Host "Step 4: Removing node_modules volumes..." -ForegroundColor Yellow
-docker volume rm recipes_frontend_node_modules 2>$null
-docker volume rm recipes_backend_node_modules 2>$null
+$volumes_to_remove = @("recipes_frontend_node_modules", "recipes_more_admin_node_modules", "recipes_backend_node_modules")
+foreach ($vol in $volumes_to_remove) {
+    if (docker volume ls -q -f name=$vol) {
+        docker volume rm $vol
+    }
+}
 Write-Host "  NOTE: Data volumes are PRESERVED:" -ForegroundColor Cyan
 foreach ($vol in $PROTECTED_VOLUMES) {
     Write-Host "    [PROTECTED] $vol" -ForegroundColor Green
@@ -112,9 +116,10 @@ Write-Host " Setup complete!" -ForegroundColor Green
 Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Common endpoints:" -ForegroundColor White
-Write-Host "  Frontend:  http://localhost:5173"
-Write-Host "  Backend:   http://localhost:5001"
-Write-Host "  Dozzle:    http://localhost:8080"
-Write-Host "  Umami:     http://localhost:3000"
+Write-Host "  Wati UI:    http://localhost:5173"
+Write-Host "  More Admin:  http://localhost:5174"
+Write-Host "  Backend:     http://localhost:5001"
+Write-Host "  Dozzle:      http://localhost:8080"
+Write-Host "  Umami:       http://localhost:3000"
 Write-Host ""
 Write-Host "Backups saved in backend/ingest_logs/" -ForegroundColor Cyan

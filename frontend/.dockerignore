@@ -1,0 +1,10 @@
+node_modules
+**/node_modules
+.pnpm-store
+**/ .pnpm-store
+dist
+**/dist
+.vscode
+.env
+.env.*
+*.log

@@ -8,17 +8,14 @@ import {
   AlertCircle, 
   Cpu, 
   ArrowUpRight, 
-  ArrowDownRight,
   Clock,
   RefreshCcw,
   ChefHat
 } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
-  BarChart, 
-  Bar, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
