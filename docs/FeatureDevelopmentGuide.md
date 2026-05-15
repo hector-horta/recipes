@@ -30,6 +30,35 @@ Al desarrollar en este repositorio:
 
 ---
 
+## 🚀 Inicio Rápido (Quick Start)
+
+Para levantar el entorno de desarrollo por primera vez:
+
+1. **Clonar y Configurar**:
+   ```bash
+   git clone [repo]
+   cp .env.example .env  # Configura tus llaves de API (NVIDIA, GROQ, etc.)
+   ```
+
+2. **Levantar Infraestructura**:
+   ```bash
+   docker compose up -d --build
+   ```
+
+3. **Preparar Base de Datos**:
+   ```bash
+   docker compose exec backend npx sequelize-cli db:migrate
+   docker compose exec backend npx sequelize-cli db:seed:all
+   ```
+
+4. **Verificar**:
+   - Wati UI: `http://localhost:5173`
+   - More Admin: `http://localhost:5174`
+   - API Status: `http://localhost:5001/api/status`
+   - Logs: `http://localhost:8080` (Dozzle)
+
+---
+
 ## 🏗️ Arquitectura y Calidad de Código
 
 Para combatir la deuda técnica y mantener el codebase profesional:
@@ -50,9 +79,9 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 10. **Frontend Independence**: Cada frontend (`wati`, `more-admin`) corre en su propio contenedor Docker y es independiente. Comparten lógica a través de `packages/` pero mantienen sus propios ciclos de despliegue y configuraciones de i18n.
 11. **Admin Content Management**: El panel `more-admin` es el responsable de gestionar el catálogo global (`organization_id = NULL`). Toda nueva funcionalidad de gestión debe incluir soporte para **bulk actions** (acciones en masa) y feedback visual inmediato vía toasts.
 12. **Content Resilience (Images)**: Para mitigar errores de generación por AI, se debe proveer un mecanismo de "Refresh/Regenerate Image" que permita al admin forzar una nueva generación especificando el problema (ej: "texto en la imagen").
-13. **Tag Consistency**: Los tags son globales. Al crear/editar contenido, se deben usar los `keys` del catálogo de tags para asegurar la integridad de las traducciones en todas las apps.
+13. **Tag Consistency**: Los tags son globales. Al crear/editar contenido, se deben usar los `keys` del catálogo de tags para asegurar la integridad de las traducciones en todas las apps. **Prohibido hardcodear strings de tags en las recetas.**
 14. **XSS Sanitization**: Todo contenido HTML proveniente de fuentes externas (AI, OCR, Scrapers) DEBE ser sanitizado en el frontend usando `DOMPurify` con una whitelist estricta antes de renderizarse.
-
+15. **Telemetry First**: Ninguna feature está completa sin su correspondiente evento de analytics (Umami) y logs estructurados (ActivityLogger).
 ---
 
 ## 📁 Estructura Completa del Proyecto
@@ -914,6 +943,17 @@ El ecosistema incluye **Dozzle** para visualizar logs de contenedores en tiempo 
 - **Uso**: Útil para debugear la comunicación entre `more-admin`, `backend` y el `telegram-bot` simultáneamente.
 - **Seguridad**: Requiere autenticación definida en `users.yml`.
 
+### Analytics (Umami)
+Se utiliza Umami para el trackeo de eventos de usuario sin cookies invasivas.
+- **Acceso Panel**: `http://localhost:3000` (o `https://analytics.localhost` si está configurado el proxy).
+- **Credenciales Default**: `admin` / `umami`.
+- **Setup**: El `WEBSITE_ID` debe estar configurado en el `.env` y en el `index.html` del frontend.
+- **Base de Datos**: Umami utiliza su propia base de datos `umami_db` dentro del mismo contenedor de PostgreSQL.
+
+### Infraestructura Local (Resumen)
+- **Redis**: Se utiliza como caché de segundo nivel para recetas procesadas y resultados de búsqueda. Si Redis falla, el sistema degrada automáticamente a consultas directas a la base de datos (resiliencia pasiva).
+- **Dozzle**: Permite monitoreo multi-contenedor. Especialmente útil para depurar el flujo: `Telegram Bot -> Backend -> More Admin`.
+
 ---
 
 ## 🧪 Testing
@@ -971,35 +1011,41 @@ describe('MiComponente', () => {
 
 ---
 
-## 🐳 Comandos de Desarrollo
+### 🔌 Servicios y Puertos (Localhost)
 
-> ⚠️ **Los comandos Docker (`docker compose ...`) son cross-platform.** Los comandos de shell (filtrado, encadenamiento) varían según el OS. Ver tabla en la sección de instrucciones para agentes.
+| Servicio | Puerto | Descripción |
+|---|---|---|
+| **Nginx** | `80/443` | Reverse Proxy principal (Entry point) |
+| **Frontend (Wati)** | `5173` | App B2C (React + Vite) |
+| **More Admin** | `5174` | Portal de administración B2B |
+| **Backend** | `5001` | API principal (Express 5) |
+| **PostgreSQL** | `5432` | Base de datos principal |
+| **Redis** | `6379` | Caché de recetas y sesiones |
+| **Umami** | `3000` | Panel de Analytics |
+| **Dozzle** | `8080` | Visor de logs en tiempo real |
 
-### Docker (cross-platform)
+### 🛠️ Comandos de Desarrollo (Docker)
+
+> ⚠️ **Los comandos Docker son cross-platform.** Sin embargo, asegúrate de estar en la raíz del proyecto.
+
 ```bash
-# Levantar todo el entorno
+# 🚀 Levantar todo el entorno (Recomendado)
 docker compose up -d --build
 
-# Ejecutar migraciones
+# 🔄 Reiniciar un servicio específico (ej: backend)
+docker compose restart backend
+
+# 📝 Ver logs en tiempo real (vía terminal)
+docker compose logs -f [servicio]
+
+# 🗄️ Database: Correr migraciones
 docker compose exec backend npx sequelize-cli db:migrate
 
-# Revertir última migración
+# 🗄️ Database: Revertir última migración
 docker compose exec backend npx sequelize-cli db:migrate:undo
 
-# Generar nueva migración
-docker compose exec backend npx sequelize-cli migration:generate --name descripcion-del-cambio
-
-# Ver logs (filtrar por servicio)
-docker compose logs -f backend
-docker compose logs -f frontend
-
-# Consultar DB
-docker compose exec postgres psql -U wati_user -d wati_db -c "SELECT ..."
-
-# 🚀 Levantar todo el entorno (Comando principal)
-docker compose up -d --build
-
-# Detener y limpiar volúmenes (⚠️ Borra DB si no es volumen nombrado)
+# 🐳 Limpiar todo (detener + borrar volúmenes)
+# ADVERTENCIA: Esto borrará la base de datos si no usas volúmenes externos.
 docker compose down -v
 ```
 
