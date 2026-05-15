@@ -29,7 +29,7 @@ ENV CI=true
 ENV PNPM_CONFIG_STORE_DIR=/tmp/.pnpm-store
 
 # At container startup: ensure store exists, install as root (faster/more reliable), fix permissions, then run as nodeapp
-CMD ["sh", "-c", "mkdir -p /tmp/.pnpm-store && chmod -R 777 /tmp/.pnpm-store && pnpm install --store-dir /tmp/.pnpm-store --no-frozen-lockfile && chown -R nodeapp:nodejs /app && exec su-exec nodeapp pnpm run dev --host"]
+CMD ["sh", "-c", "mkdir -p /tmp/.pnpm-store && chmod -R 777 /tmp/.pnpm-store && pnpm install --store-dir /tmp/.pnpm-store --no-frozen-lockfile && chown -R nodeapp:nodejs /app && cd apps/wati && exec su-exec nodeapp pnpm run dev --host"]
 
 # ── Production build (optional) ─────────────────────────────────────────────
 FROM base AS build

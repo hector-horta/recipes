@@ -75,7 +75,7 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 6. **Resiliencia Frontend**: Usa reintentos (`retry`) en hooks de búsqueda y gestión de estados de error amigables para el usuario.
 7. **Auth Rule**: Wati usa **Hybrid Auth**. Los usuarios se autentican con contraseña, pero las funcionalidades core (como agregar a favoritos) están **soft-gated** y requieren validación de correo vía un link JWT.
 8. **External Integrations Rule**: Todos los servicios de terceros (como Resend) DEBEN estar abstraídos detrás de una **IEmailService Facade**. La lógica de negocio nunca debe interactuar directamente con SDKs externos.
-9. **Multi-tenancy Isolation**: Toda nueva funcionalidad que maneje datos de usuario o contenido (recetas, planes, etc.) DEBE filtrar por `organization_id`. El `organization_id` se extrae automáticamente del JWT y está disponible en `req.user.organizationId` (o `req.user.organization_id`).
+9. **Multi-tenancy Isolation**: Toda nueva funcionalidad que maneje datos de usuario o contenido (recetas, planes, etc.) DEBE filtrar por `organization_id`. El `organization_id` se extrae automáticamente del JWT y está disponible en `req.user.organizationId` (o `req.user.organization_id`). Para migrar datos antiguos, consultar la [Guía de Migración](file:///docs/MigrationGuideToMultitenant.md).
 10. **Frontend Independence**: Cada frontend (`wati`, `more-admin`) corre en su propio contenedor Docker y es independiente. Comparten lógica a través de `packages/` pero mantienen sus propios ciclos de despliegue y configuraciones de i18n.
 11. **Admin Content Management**: El panel `more-admin` es el responsable de gestionar el catálogo global (`organization_id = NULL`). Toda nueva funcionalidad de gestión debe incluir soporte para **bulk actions** (acciones en masa) y feedback visual inmediato vía toasts.
 12. **Content Resilience (Images)**: Para mitigar errores de generación por AI, se debe proveer un mecanismo de "Refresh/Regenerate Image" que permita al admin forzar una nueva generación especificando el problema (ej: "texto en la imagen").
@@ -136,7 +136,8 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 │   │   ├── tagTranslations.js    # TAG_TRANSLATIONS map, normalizeTag(), normalizeTags()
 │   │   ├── ingestSanitizer.js    # sanitizeStructuredRecipe() — mapea output LLM a ENUMs/tipos DB
 │   │   ├── regenerateAllImages.js
-│   │   └── regenerateSpecificImages.js
+│   │   ├── regenerateSpecificImages.js
+│   │   └── migrateToTenant.js    # Script de migración multi-tenant (ver docs/MigrationGuideToMultitenant.md)
 │   ├── migrations/               # Sequelize CLI migrations (.cjs)
 │   ├── seeders/
 │   ├── tests/
