@@ -19,7 +19,7 @@ import {
   XAxis, 
   YAxis, 
   CartesianGrid, 
-  RechartsTooltip, 
+  Tooltip, 
   ResponsiveContainer,
   AreaChart,
   Area
@@ -225,7 +225,7 @@ export const Dashboard: React.FC = () => {
                 tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }}
                 dx={-10}
               />
-              <RechartsTooltip 
+              <Tooltip 
                 contentStyle={{ 
                   borderRadius: '24px', 
                   border: '1px solid rgba(74, 103, 65, 0.1)', 

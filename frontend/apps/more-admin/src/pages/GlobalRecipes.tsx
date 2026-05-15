@@ -57,20 +57,36 @@ interface Recipe {
   created_at: string;
 }
 
-const INITIAL_FORM_STATE = {
+interface RecipeFormData {
+  title_es: string;
+  title_en: string;
+  slug: string;
+  prep_time_minutes: number;
+  cook_time_minutes: number;
+  servings: number;
+  difficulty: 'easy' | 'medium' | 'hard';
+  status: 'draft' | 'published' | 'archived';
+  sibo_risk_level: 'safe' | 'caution' | 'avoid';
+  ingredients: any[];
+  steps: any[];
+  tags: string[];
+  image_url: string | null;
+}
+
+const INITIAL_FORM_STATE: RecipeFormData = {
   title_es: '',
   title_en: '',
   slug: '',
   prep_time_minutes: 0,
   cook_time_minutes: 0,
   servings: 1,
-  difficulty: 'medium' as const,
-  status: 'draft' as const,
-  sibo_risk_level: 'safe' as const,
-  ingredients: [] as any[],
-  steps: [] as any[],
-  tags: [] as string[],
-  image_url: null as string | null
+  difficulty: 'medium',
+  status: 'draft',
+  sibo_risk_level: 'safe',
+  ingredients: [],
+  steps: [],
+  tags: [],
+  image_url: null
 };
 
 const containerVariants = {
@@ -447,12 +463,21 @@ export const GlobalRecipes: React.FC = () => {
                       onChange={toggleAll}
                     />
                   </th>
-                   </th>
-                  <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest">{t('dashboard.table.recipe')}</th>
-                  <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest">{t('recipes.difficulty')}</th>
-                  <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest">{t('recipes.sibo_risk')}</th>
-                  <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest">{t('common.status')}</th>
-                  <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest text-right">{t('common.actions')}</th>
+                  <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest">
+                    {t('dashboard.table.recipe')}
+                  </th>
+                  <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest">
+                    {t('recipes.difficulty')}
+                  </th>
+                  <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest">
+                    {t('recipes.sibo_risk')}
+                  </th>
+                  <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest">
+                    {t('common.status')}
+                  </th>
+                  <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest text-right">
+                    {t('common.actions')}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-brand-sage/10">
@@ -573,7 +598,7 @@ export const GlobalRecipes: React.FC = () => {
                 </AnimatePresence>
                 {!recipesLoading && filteredRecipes?.length === 0 && (
                   <motion.tr initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                    <td colSpan={5} className="px-8 py-20 text-center">
+                    <td colSpan={6} className="px-8 py-20 text-center">
                       <div className="flex flex-col items-center gap-4">
                         <div className="w-20 h-20 bg-brand-cream/50 rounded-full flex items-center justify-center text-brand-text-muted/30">
                           <ChefHat size={40} strokeWidth={1} />
@@ -582,7 +607,7 @@ export const GlobalRecipes: React.FC = () => {
                           <p className="text-brand-forest font-black text-xl">{t('recipes.no_results')}</p>
                           <p className="text-brand-text-muted font-medium">{t('recipes.no_results_subtitle')}</p>
                         </div>
-                        <Button variant="neutral" onClick={() => { setSearchTerm(''); setSelectedTags([]); }}>
+                        <Button variant="secondary" onClick={() => { setSearchTerm(''); setSelectedTags([]); }}>
                           {t('recipes.clear_filters')}
                         </Button>
                       </div>
@@ -1291,19 +1316,23 @@ export const GlobalRecipes: React.FC = () => {
                 <Filter size={16} className="text-brand-teal" /> {t('recipes.form.tags_allergens')}
               </label>
               <div className="flex flex-wrap gap-2 p-6 bg-brand-cream/30 rounded-[2rem] border border-brand-sage/10 max-h-[300px] overflow-y-auto custom-scrollbar">
-                {tags?.map(tag => (
-                  <button
-                    key={tag.id}
-                    type="button"
-                    onClick={() => toggleTag(tag.key)}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-tighter transition-all ${
-                      formData.tags.includes(tag.key)
-                        ? 'bg-brand-teal text-white shadow-lg shadow-brand-teal/20 scale-105'
-                        : 'bg-white text-brand-text-muted border-2 border-transparent hover:border-brand-sage/20'
+                {tags?.map(tag => {
+                  const label = activeLang === 'es' ? tag.es : tag.en;
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => toggleTag(tag.key)}
+                      className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-tighter transition-all ${
+                        formData.tags.includes(tag.key)
+                          ? 'bg-brand-teal text-white shadow-lg shadow-brand-teal/20 scale-105'
+                          : 'bg-white text-brand-text-muted border-2 border-transparent hover:border-brand-sage/20'
+                      }`}
                     >
-                      {t(`tags.items.${tag.key}`, { defaultValue: activeLang === 'es' ? tag.es : tag.en })}
+                      {t(`tags.items.${tag.key}`, { defaultValue: label })}
                     </button>
-                ))}
+                  );
+                })}
                 {tags?.length === 0 && <p className="text-xs text-brand-text-muted italic text-center w-full py-4 opacity-40">{t('recipes.form.no_tags_hint')}</p>}
               </div>
             </section>

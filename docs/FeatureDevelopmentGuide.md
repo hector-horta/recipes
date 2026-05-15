@@ -48,6 +48,10 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 8. **External Integrations Rule**: Todos los servicios de terceros (como Resend) DEBEN estar abstraídos detrás de una **IEmailService Facade**. La lógica de negocio nunca debe interactuar directamente con SDKs externos.
 9. **Multi-tenancy Isolation**: Toda nueva funcionalidad que maneje datos de usuario o contenido (recetas, planes, etc.) DEBE filtrar por `organization_id`. El `organization_id` se extrae automáticamente del JWT y está disponible en `req.user.organizationId` (o `req.user.organization_id`).
 10. **Frontend Independence**: Cada frontend (`wati`, `more-admin`) corre en su propio contenedor Docker y es independiente. Comparten lógica a través de `packages/` pero mantienen sus propios ciclos de despliegue y configuraciones de i18n.
+11. **Admin Content Management**: El panel `more-admin` es el responsable de gestionar el catálogo global (`organization_id = NULL`). Toda nueva funcionalidad de gestión debe incluir soporte para **bulk actions** (acciones en masa) y feedback visual inmediato vía toasts.
+12. **Content Resilience (Images)**: Para mitigar errores de generación por AI, se debe proveer un mecanismo de "Refresh/Regenerate Image" que permita al admin forzar una nueva generación especificando el problema (ej: "texto en la imagen").
+13. **Tag Consistency**: Los tags son globales. Al crear/editar contenido, se deben usar los `keys` del catálogo de tags para asegurar la integridad de las traducciones en todas las apps.
+14. **XSS Sanitization**: Todo contenido HTML proveniente de fuentes externas (AI, OCR, Scrapers) DEBE ser sanitizado en el frontend usando `DOMPurify` con una whitelist estricta antes de renderizarse.
 
 ---
 
@@ -652,6 +656,44 @@ interface UserProfile {
 >
 > **Nota sobre roles**: Un usuario puede ser `user` en Wati y `admin` en otra app del ecosistema simultáneamente. El `role` en `UserProfile` refleja el rol global del usuario. `super_admin` es reservado para el panel de administración del ecosistema.
 
+#### Administración de Contenido (more-admin)
+
+El panel de administración utiliza patrones avanzados para la gestión eficiente de grandes catálogos:
+
+1. **Mutaciones en Bloque (Bulk Operations)**:
+Para optimizar el tráfico, las acciones sobre múltiples elementos deben usar `Promise.all` con mutaciones individuales o endpoints de bulk si existen en el backend.
+```typescript
+const bulkDeleteMutation = useMutation({
+  mutationFn: (ids: string[]) => 
+    Promise.all(ids.map(id => api.delete(`/admin/recipes/${id}`))),
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['global-recipes'] });
+    setSelectedIds([]);
+    toast.success(t('recipes.bulk_delete_success'));
+  }
+});
+```
+
+2. **Regeneración de Imágenes AI**:
+Permite corregir fallos en la generación original mediante un feedback loop que envía el problema detectado al backend:
+```typescript
+const refreshImageMutation = useMutation({
+  mutationFn: ({ slug, issue }: { slug: string; issue: string }) => 
+    api.post(`/api/ingest/${slug}/refresh-image`, { issue }),
+  onSuccess: (data) => {
+    queryClient.invalidateQueries({ queryKey: ['global-recipes'] });
+    setFormData(prev => ({ ...prev, image_url: data.recipe.image_url }));
+    toast.success(t('recipes.regenerate_success'));
+  }
+});
+```
+
+3. **Gestión de Tags Globales**:
+Los tags se seleccionan por `key` y se filtran dinámicamente. La UI debe mostrar la traducción según el idioma activo (`t('tags.items.${key}')`) pero persistir el `key` único.
+
+4. **Filtros Persistentes**:
+El modo de vista (`grid` vs `table`) y filtros de búsqueda deben persistirse en `localStorage` o `URLSearchParams` para mantener el contexto tras recargas.
+
 #### 🛡️ SPA Auth Hardening (Password Managers)
 Para evitar crashes en extensiones como **Bitwarden** o **LastPass** durante la navegación rápida post-auth, sigue este patrón en los formularios de login/register:
 
@@ -784,6 +826,37 @@ Todas las brand colors están como `brand-sage`, `brand-forest`, `brand-mint`, `
 
 **Iconos**: `lucide-react` — importar iconos individuales: `import { Search, Heart } from 'lucide-react';`
 
+**Animaciones (Framer Motion)**:
+Wati y More-Admin utilizan `framer-motion` para una experiencia premium y fluida:
+- **Staggered Children**: Usar variantes para animar listas de elementos de forma secuencial.
+- **AnimatePresence**: Obligatorio para transiciones de salida (modales, elementos eliminados de listas).
+- **Layout Animations**: Usar el prop `layout` en elementos que cambian de tamaño o posición para transiciones suaves y automáticas.
+
+```tsx
+const containerVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: { staggerChildren: 0.05 }
+  }
+};
+
+<motion.div variants={containerVariants} initial="hidden" animate="visible">
+  <AnimatePresence mode="wait">
+    {isOpen && (
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+      >
+        {content}
+      </motion.div>
+    )}
+  </AnimatePresence>
+</motion.div>
+```
+
 ---
 
 ## 📊 Logging & Telemetry (Frontend)
@@ -834,6 +907,12 @@ logger.error('Error al cargar datos', error, { originalQuery: q });
 | Evento (action) | Cuándo | Metadata |
 |---|---|---|
 | `SEARCH` | Búsqueda con intolerancias activas | `{ query, filteredByIntolerances, resultsAfterFilter }` |
+
+### Monitoreo de Logs (Dozzle)
+El ecosistema incluye **Dozzle** para visualizar logs de contenedores en tiempo real sin usar la terminal.
+- **Acceso**: `http://localhost:8080`
+- **Uso**: Útil para debugear la comunicación entre `more-admin`, `backend` y el `telegram-bot` simultáneamente.
+- **Seguridad**: Requiere autenticación definida en `users.yml`.
 
 ---
 
@@ -916,6 +995,12 @@ docker compose logs -f frontend
 
 # Consultar DB
 docker compose exec postgres psql -U wati_user -d wati_db -c "SELECT ..."
+
+# 🚀 Levantar todo el entorno (Comando principal)
+docker compose up -d --build
+
+# Detener y limpiar volúmenes (⚠️ Borra DB si no es volumen nombrado)
+docker compose down -v
 ```
 
 ### Bash / zsh (Linux / macOS)

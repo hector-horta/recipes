@@ -70,12 +70,12 @@ export const Tags: React.FC = () => {
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: typeof newTag }) => 
       api.put(`/admin/tags/${id}`, data),
-    onSuccess: (data: any) => {
+    onSuccess: (data: any, variables: any) => {
       queryClient.invalidateQueries({ queryKey: ['global-tags'] });
       setEditingTag(null);
       setIsModalOpen(false);
       toast.success(t('tags.messages.update_success'));
-      logger.info('ADMIN_TAG_UPDATE', { tagId: id, key: data.key });
+      logger.info('ADMIN_TAG_UPDATE', { tagId: variables.id, key: data.key });
     },
     onError: (error: any) => {
       logger.error('ADMIN_TAG_UPDATE_FAIL', error);
