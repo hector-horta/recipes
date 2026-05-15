@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { PageHeader } from '@wati/src/components/recipe/PageHeader';
+import '@testing-library/jest-dom';
+import '@testing-library/jest-dom/vitest';
+import { PageHeader } from '../../../src/components/recipe/PageHeader';
 
 // Mock translation
 vi.mock('react-i18next', () => ({
