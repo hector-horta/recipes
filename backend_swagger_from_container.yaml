@@ -4,12 +4,12 @@ info:
   description: Wati Health Recipe and Medical AI Platform Backend API
   version: 1.0.0
 servers:
-  - url: http://localhost:5001/api
+  - url: http://localhost:5001
     description: Local server
-  - url: https://api.wati.health/api
+  - url: https://api.wati.health
     description: Production server
 paths:
-  /status:
+  /api/status:
     get:
       tags:
         - Status
@@ -23,7 +23,7 @@ paths:
                 status: ok
                 message: Backend is running!
                 version: 1.0.0
-  /medical/catalog:
+  /api/medical/catalog:
     get:
       tags:
         - Medical
@@ -31,7 +31,7 @@ paths:
       responses:
         '200':
           description: Returns medical intolerances
-  /medical/triggers:
+  /api/medical/triggers:
     get:
       tags:
         - Medical
@@ -39,7 +39,7 @@ paths:
       responses:
         '200':
           description: Returns medical triggers
-  /auth/register:
+  /api/auth/register:
     post:
       tags:
         - Auth
@@ -73,7 +73,7 @@ paths:
           description: Validation error
         '409':
           description: Email already in use
-  /auth/login:
+  /api/auth/login:
     post:
       tags:
         - Auth
@@ -97,7 +97,7 @@ paths:
           description: Logged in successfully
         '401':
           description: Invalid credentials
-  /auth/resend-verification:
+  /api/auth/resend-verification:
     post:
       tags:
         - Auth
@@ -107,7 +107,7 @@ paths:
       responses:
         '200':
           description: Verification email sent
-  /auth/verify:
+  /api/auth/verify:
     post:
       tags:
         - Auth
@@ -128,7 +128,7 @@ paths:
           description: Account verified successfully
         '400':
           description: Invalid token
-  /auth/forgot-password:
+  /api/auth/forgot-password:
     post:
       tags:
         - Auth
@@ -147,7 +147,7 @@ paths:
       responses:
         '200':
           description: Reset email sent (if user exists)
-  /auth/reset-password:
+  /api/auth/reset-password:
     post:
       tags:
         - Auth
@@ -171,7 +171,7 @@ paths:
           description: Password updated
         '400':
           description: Invalid token or password
-  /auth/logout:
+  /api/auth/logout:
     post:
       tags:
         - Auth
@@ -179,7 +179,7 @@ paths:
       responses:
         '200':
           description: Logged out
-  /auth/me:
+  /api/auth/me:
     get:
       tags:
         - Auth
@@ -217,7 +217,7 @@ paths:
       responses:
         '200':
           description: Account deleted
-  /recipes:
+  /api/recipes:
     get:
       tags:
         - Recipes
@@ -268,7 +268,7 @@ paths:
                         type: integer
                       limit:
                         type: integer
-  /recipes/tags:
+  /api/recipes/tags:
     get:
       tags:
         - Recipes
@@ -276,7 +276,7 @@ paths:
       responses:
         '200':
           description: List of tags
-  /recipes/tags/refresh:
+  /api/recipes/tags/refresh:
     post:
       tags:
         - Recipes
@@ -286,7 +286,7 @@ paths:
       responses:
         '200':
           description: Caches cleared
-  /favorites:
+  /api/favorites:
     get:
       tags:
         - Favorites
@@ -323,7 +323,7 @@ paths:
           description: Favorited
         '200':
           description: Unfavorited
-  /favorites/{recipeId}:
+  /api/favorites/{recipeId}:
     delete:
       tags:
         - Favorites
@@ -339,7 +339,7 @@ paths:
       responses:
         '200':
           description: Removed from favorites
-  /suggestions:
+  /api/suggestions:
     post:
       tags:
         - Suggestions
@@ -360,7 +360,7 @@ paths:
       responses:
         '201':
           description: Suggestion recorded
-  /admin/stats:
+  /api/admin/stats:
     get:
       tags:
         - Admin
@@ -371,7 +371,7 @@ paths:
       responses:
         '200':
           description: Usage statistics (top searches, conversion, uptime)
-  /admin/organizations:
+  /api/admin/organizations:
     get:
       tags:
         - Admin
@@ -414,7 +414,7 @@ paths:
           description: Organization created
         '409':
           description: Organization already exists
-  /admin/organizations/{id}:
+  /api/admin/organizations/{id}:
     put:
       tags:
         - Admin
@@ -474,7 +474,7 @@ paths:
                     type: string
                   organization:
                     $ref: '#/components/schemas/Organization'
-  /admin/recipes:
+  /api/admin/recipes:
     get:
       tags:
         - Admin
@@ -507,7 +507,7 @@ paths:
       responses:
         '201':
           description: Recipe created
-  /admin/recipes/{id}:
+  /api/admin/recipes/{id}:
     put:
       tags:
         - Admin
@@ -548,7 +548,7 @@ paths:
       responses:
         '200':
           description: Recipe deleted
-  /admin/tags:
+  /api/admin/tags:
     get:
       tags:
         - Admin
@@ -592,7 +592,7 @@ paths:
       responses:
         '201':
           description: Tag created
-  /admin/tags/{id}:
+  /api/admin/tags/{id}:
     put:
       tags:
         - Admin
@@ -644,7 +644,7 @@ paths:
       responses:
         '200':
           description: Tag deleted
-  /ingest/image:
+  /api/ingest/image:
     post:
       tags:
         - Ingest
@@ -669,7 +669,7 @@ paths:
       responses:
         '200':
           description: Recipe processed
-  /ingest/images:
+  /api/ingest/images:
     post:
       tags:
         - Ingest
@@ -697,7 +697,7 @@ paths:
       responses:
         '200':
           description: Recipe processed
-  /ingest/text:
+  /api/ingest/text:
     post:
       tags:
         - Ingest
@@ -726,7 +726,7 @@ paths:
       responses:
         '200':
           description: Recipe processed
-  /ingest/transcribe:
+  /api/ingest/transcribe:
     post:
       tags:
         - Ingest
@@ -749,7 +749,7 @@ paths:
       responses:
         '200':
           description: Transcription
-  /ingest/voice:
+  /api/ingest/voice:
     post:
       tags:
         - Ingest
@@ -774,7 +774,7 @@ paths:
       responses:
         '200':
           description: Recipe processed
-  /ingest/{slug}/{action}:
+  /api/ingest/{slug}/{action}:
     post:
       tags:
         - Ingest
@@ -795,7 +795,7 @@ paths:
       responses:
         '200':
           description: Action performed
-  /ingest/save:
+  /api/ingest/save:
     post:
       tags:
         - Ingest
@@ -821,7 +821,7 @@ paths:
           description: Recipe updated
         '201':
           description: Recipe created
-  /ingest/logs:
+  /api/ingest/logs:
     get:
       tags:
         - Ingest

@@ -58,7 +58,7 @@ connectRedis();
 app.use('/api/auth', authRoutes);
 app.use('/api/favorites', favoritesRoutes);
 app.use('/api/ingest', ingestRoutes);
-app.use('/admin', optionalAuthenticateToken, checkRole(['super_admin']), adminRoutes);
+app.use('/api/admin', optionalAuthenticateToken, checkRole(['super_admin']), adminRoutes);
 app.use('/api/suggestions', suggestionRoutes);
 app.use('/api/recipes', recipeRoutes);
 
