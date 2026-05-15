@@ -823,8 +823,14 @@ const { t } = useTranslation();
 
 #### Estilos y Design System
 
-**CSS Variables** (definidas en `index.css`):
+El ecosistema de aplicaciones utiliza una base compartida de componentes pero con sistemas de diseño diferenciados por aplicación para reflejar sus identidades únicas.
+
+##### Wati (Harmony Palette)
+Diseñado para una experiencia de usuario centrada en la salud y la nutrición, utilizando tonos orgánicos y relajantes.
+
+**CSS Variables** (`wati/src/index.css`):
 ```css
+/* Harmony Palette */
 --brand-sage: #82A082;
 --brand-forest: #1B4332;
 --brand-mint: #74C69D;
@@ -835,23 +841,59 @@ const { t } = useTranslation();
 --brand-text: #1B2621;
 --brand-text-muted: #57635E;
 
+--surface-light: #FFFFFF;
+--surface-organic: #F9FBF9;
+--surface-dark: #1A2421;
+
 --success: #2D6A4F;
 --warning: #FFB703;
 --danger: #D62828;
-
---glass-bg: rgba(26, 36, 33, 0.85);
---glass-border: rgba(255, 255, 255, 0.1);
 ```
 
-**Tailwind Custom Tokens** (`tailwind.config.js`):
-Todas las brand colors están como `brand-sage`, `brand-forest`, `brand-mint`, `brand-teal`, `brand-cream`, `brand-peach`, `brand-celeste`, `brand-text`, `brand-text-muted`.
+**Tailwind Tokens**: `brand-sage`, `brand-forest`, `brand-mint`, `brand-teal`, `brand-cream`, `brand-peach`, `brand-celeste`.
+
+---
+
+##### MORE (Industrial Precision)
+Diseñado para el entorno de administración técnica, con un enfoque en la precisión, densidad de datos y control.
+
+**CSS Variables** (`more-admin/src/index.css`):
+```css
+/* Industrial Precision Palette - STITCH SYNC */
+--brand-primary: #00FFC2;
+--brand-secondary: #1C2024;
+--brand-tertiary: #101417;
+--brand-neutral: #83958C;
+
+--brand-text: #E0E2E8;
+--brand-text-muted: #B9CBC1;
+
+--surface-light: #272A2E;
+--surface-organic: #1C2024;
+--surface-dark: #101417;
+--surface-lowest: #0B0F12;
+
+--success: #00FFC2;
+--warning: #FFB703;
+--danger: #F87171;
+
+--outline: #3A4A43;
+--outline-strong: #83958C;
+```
+
+**Tailwind Tokens**: `brand-primary`, `brand-secondary`, `brand-tertiary`, `brand-neutral`, `brand-text`, `brand-text-muted`.
+
+---
+
+#### Utilidades Compartidas
 
 **Utility Classes Custom**:
-- `.glass-organic` — glassmorphism con blur
-- `.bg-organic-gradient` — gradiente sage → teal
+- `.glass-organic` — glassmorphism con blur (usa variables de cada app)
+- `.bg-organic-gradient` — gradiente principal de la app
 - `.hover-lift` — hover: lift + shadow
 - `.animate-fade-in` — fadeIn keyframe
-- `.text-glow-sage` — text-shadow verde suave
+- `.text-glow-sage` — text-shadow suave (enfocado en Wati)
+- `.text-glow-mint` — text-shadow neon (enfocado en MORE)
 
 **Iconos**: `lucide-react` — importar iconos individuales: `import { Search, Heart } from 'lucide-react';`
 
