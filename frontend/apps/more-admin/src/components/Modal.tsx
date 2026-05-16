@@ -8,9 +8,17 @@ interface ModalProps {
   title: string;
   children: React.ReactNode;
   className?: string;
+  maxWidth?: string;
 }
 
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, className }) => {
+export const Modal: React.FC<ModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  title, 
+  children, 
+  className,
+  maxWidth = 'max-w-md'
+}) => {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -39,7 +47,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className={`w-full max-w-md rounded-3xl shadow-2xl pointer-events-auto overflow-hidden mx-4 ${className || ''}`}
+              className={`w-full ${maxWidth} rounded-3xl shadow-2xl pointer-events-auto overflow-hidden mx-4 ${className || ''}`}
               style={{ 
                 backgroundColor: 'var(--surface-organic)',
                 border: '1px solid var(--outline)',
