@@ -45,7 +45,7 @@ export const Login: React.FC = () => {
     lowest:     'var(--surface-lowest)',
     outline:    'var(--outline)',
     black65:    'rgba(0, 0, 0, 0.65)',
-    hover:      '#00E1AB',
+    hover:      'var(--brand-teal)',
   } as const;
 
   const inputStyle: React.CSSProperties = {

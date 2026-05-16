@@ -17,7 +17,7 @@ interface Tag {
 
 // ─── Design tokens ─────────────────────────────────────────────────────────
 const T = {
-  dark:      '#101417',
+  dark:      'var(--brand-tertiary)',
   surface:   'var(--surface-organic)',
   surfaceHi: 'var(--surface-light)',
   outline:   'var(--outline)',
@@ -26,7 +26,7 @@ const T = {
   primary:   'var(--brand-primary)',
   primary08: 'rgba(0, 255, 194, 0.08)',
   primary15: 'rgba(0, 255, 194, 0.15)',
-  danger:    '#F87171',
+  danger:    'var(--danger)',
   danger08:  'rgba(248, 113, 113, 0.08)',
   danger15:  'rgba(248, 113, 113, 0.15)',
 } as const;

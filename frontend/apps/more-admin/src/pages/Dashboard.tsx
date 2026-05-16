@@ -56,9 +56,10 @@ const T = {
   text:       'var(--brand-text)',        // #E0E2E8
   muted:      'var(--brand-text-muted)', // #B9CBC1
   primary:    'var(--brand-primary)',     // #00FFC2
-  primary08:  'rgba(0, 255, 194, 0.08)',
+  primary14:  'rgba(0, 255, 194, 0.14)',
   primary15:  'rgba(0, 255, 194, 0.15)',
   primary20:  'rgba(0, 255, 194, 0.20)',
+  primary08:  'rgba(0, 255, 194, 0.08)', // Added primary08
   danger:     'var(--danger)',            // #F87171
   danger08:   'rgba(248, 113, 113, 0.08)',
   danger15:   'rgba(248, 113, 113, 0.15)',
@@ -69,6 +70,7 @@ const T = {
   neutral08:  'rgba(131, 149, 140, 0.08)',
   neutral10:  'rgba(131, 149, 140, 0.10)',
   neutral15:  'rgba(131, 149, 140, 0.15)',
+  outline50:  'rgba(58, 74, 67, 0.50)',
   black50:    'rgba(0, 0, 0, 0.50)',
   shadowLg:   '0 12px 48px -12px rgba(0, 0, 0, 0.50)',
 } as const;
@@ -140,13 +142,13 @@ export const Dashboard: React.FC = () => {
           className="flex items-center gap-2 text-sm font-medium transition-all"
           style={{
             color: T.primary,
-            backgroundColor: 'rgba(0,255,194,0.08)',
-            border: '1px solid rgba(0,255,194,0.15)',
+            backgroundColor: T.primary08,
+            border: `1px solid ${T.primary15}`,
             borderRadius: '0.75rem',
             padding: '0.5rem 1rem',
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(0,255,194,0.14)')}
-          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'rgba(0,255,194,0.08)')}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = T.primary14)}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = T.primary08)}
         >
           <RefreshCcw size={16} />
           {t('common.update')}
@@ -195,7 +197,7 @@ export const Dashboard: React.FC = () => {
           >
             <div
               className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ backgroundColor: 'rgba(0,255,194,0.1)', color: T.primary }}
+              style={{ backgroundColor: T.primary08, color: T.primary }}
             >
               <TrendingUp size={20} />
             </div>
@@ -237,7 +239,7 @@ export const Dashboard: React.FC = () => {
           >
             <div
               className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ backgroundColor: 'rgba(248,113,113,0.1)', color: T.danger }}
+              style={{ backgroundColor: T.danger08, color: T.danger }}
             >
               <SearchX size={20} />
             </div>
@@ -292,7 +294,7 @@ export const Dashboard: React.FC = () => {
           <div className="flex items-center gap-4">
             <div
               className="w-14 h-14 rounded-2xl flex items-center justify-center"
-              style={{ backgroundColor: T.lowest, color: T.primary, border: `1px solid ${T.outline}`, boxShadow: '0 0 20px rgba(0,255,194,0.1)' }}
+              style={{ backgroundColor: T.lowest, color: T.primary, border: `1px solid ${T.outline}`, boxShadow: `0 0 20px ${T.primary15}` }}
             >
               <BarChart3 size={26} />
             </div>
@@ -327,20 +329,20 @@ export const Dashboard: React.FC = () => {
 
         {/* Chart */}
         <div className="h-[350px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" debounce={50}>
             <AreaChart data={stats?.ingest_by_day || []}>
               <defs>
                 <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#00FFC2" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="#00FFC2" stopOpacity={0} />
+                  <stop offset="5%"  stopColor={T.primary} stopOpacity={0.25} />
+                  <stop offset="95%" stopColor={T.primary} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(58,74,67,0.5)" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={T.outline50} />
               <XAxis
                 dataKey="day"
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: '#83958C', fontSize: 11, fontWeight: 600 }}
+                tick={{ fill: T.outlineSt, fontSize: 11, fontWeight: 600 }}
                 dy={15}
               />
               <YAxis

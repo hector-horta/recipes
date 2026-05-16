@@ -19,7 +19,8 @@ interface Organization {
 
 // ─── Design tokens ─────────────────────────────────────────────────────────
 const T = {
-  dark:      '#101417',
+  dark:      'var(--brand-tertiary)',
+  lowest:    'var(--surface-lowest)',
   surface:   'var(--surface-organic)',
   surfaceHi: 'var(--surface-light)',
   outline:   'var(--outline)',
@@ -29,10 +30,10 @@ const T = {
   primary08: 'rgba(0, 255, 194, 0.08)',
   primary12: 'rgba(0, 255, 194, 0.12)',
   primary15: 'rgba(0, 255, 194, 0.15)',
-  danger:    '#F87171',
+  danger:    'var(--danger)',
   danger08:  'rgba(248, 113, 113, 0.08)',
   danger15:  'rgba(248, 113, 113, 0.15)',
-  warning:   '#FFB703',
+  warning:   'var(--warning)',
   warning12: 'rgba(255, 183, 3, 0.12)',
 } as const;
 
@@ -223,8 +224,8 @@ export const Tenants: React.FC = () => {
                             <div
                               className="w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 duration-300"
                               style={org.status === 'active'
-                                ? { backgroundColor: 'rgba(0,255,194,0.08)', color: T.primary }
-                                : { backgroundColor: 'rgba(248,113,113,0.08)', color: T.danger }}
+                                ? { backgroundColor: T.primary08, color: T.primary }
+                                : { backgroundColor: T.danger08, color: T.danger }}
                             >
                               <Building2 size={22} strokeWidth={2.5} />
                             </div>
@@ -239,7 +240,7 @@ export const Tenants: React.FC = () => {
                         <td className="px-8 py-6">
                           <code
                             className="text-[11px] font-bold font-mono px-3 py-1.5 rounded-lg"
-                            style={{ color: T.primary, backgroundColor: 'rgba(0,255,194,0.08)', border: '1px solid rgba(0,255,194,0.15)' }}
+                            style={{ color: T.primary, backgroundColor: T.primary08, border: `1px solid ${T.primary15}` }}
                           >
                             {org.slug}
                           </code>
