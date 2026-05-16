@@ -853,10 +853,10 @@ export const GlobalRecipes: React.FC = () => {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         title={editingRecipe ? t('recipes.ui.edit_recipe') : t('recipes.create')}
-        className="max-w-6xl"
+        maxWidth="max-w-[80vw]"
       >
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-          <div className="lg:col-span-8 space-y-8 overflow-y-auto max-h-[75vh] pr-6 custom-scrollbar pb-6">
+          <div className="lg:col-span-8 space-y-8 pr-6 pb-6">
             <form onSubmit={handleSubmit} id="recipe-form" className="space-y-10">
               
               <section className="space-y-6">

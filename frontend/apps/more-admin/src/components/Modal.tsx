@@ -47,7 +47,7 @@ export const Modal: React.FC<ModalProps> = ({
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className={`w-full ${maxWidth} rounded-3xl shadow-2xl pointer-events-auto overflow-hidden mx-4 ${className || ''}`}
+              className={`w-auto ${maxWidth} max-h-[90vh] flex flex-col rounded-3xl shadow-2xl pointer-events-auto overflow-hidden mx-4 ${className || ''}`}
               style={{ 
                 backgroundColor: 'var(--surface-organic)',
                 border: '1px solid var(--outline)',
@@ -55,7 +55,7 @@ export const Modal: React.FC<ModalProps> = ({
               }}
             >
               <div 
-                className="px-6 py-4 border-b flex items-center justify-between"
+                className="px-6 py-4 border-b flex items-center justify-between shrink-0"
                 style={{ 
                   backgroundColor: 'var(--surface-light)',
                   borderColor: 'var(--outline)'
@@ -72,7 +72,7 @@ export const Modal: React.FC<ModalProps> = ({
                   <X size={20} />
                 </button>
               </div>
-              <div className="p-6">
+              <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
                 {children}
               </div>
             </motion.div>
