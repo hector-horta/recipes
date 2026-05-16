@@ -17,7 +17,7 @@ interface Tag {
 
 // ─── Design tokens ─────────────────────────────────────────────────────────
 const T = {
-  dark:      'var(--brand-tertiary)',
+  dark:      'var(--surface-dark)',
   surface:   'var(--surface-organic)',
   surfaceHi: 'var(--surface-light)',
   outline:   'var(--outline)',

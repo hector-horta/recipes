@@ -19,7 +19,7 @@ interface Organization {
 
 // ─── Design tokens ─────────────────────────────────────────────────────────
 const T = {
-  dark:      'var(--brand-tertiary)',
+  dark:      'var(--surface-dark)',
   lowest:    'var(--surface-lowest)',
   surface:   'var(--surface-organic)',
   surfaceHi: 'var(--surface-light)',
