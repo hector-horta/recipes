@@ -19,6 +19,15 @@ const queryClient = new QueryClient({
   },
 });
 
+const T = {
+  surface: 'var(--surface-organic)',
+  text:    'var(--brand-text)',
+  primary: 'var(--brand-primary)',
+  outline: 'var(--outline)',
+  black10: 'rgba(0, 0, 0, 0.10)',
+  white:   '#FFFFFF',
+} as const;
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -41,18 +50,19 @@ function App() {
           toastOptions={{
             duration: 4000,
             style: {
-              background: '#ffffff',
-              color: '#2d3a3a',
-              borderRadius: '16px',
-              boxShadow: '0 10px 15px -3px rgba(45, 58, 58, 0.1)',
+              background: T.surface,
+              color: T.text,
+              borderRadius: '1rem',
+              border: `1px solid ${T.outline}`,
+              boxShadow: `0 10px 15px -3px ${T.black10}`,
               padding: '12px 20px',
               fontSize: '14px',
               fontWeight: 500,
             },
             success: {
               iconTheme: {
-                primary: '#4a6741',
-                secondary: '#ffffff',
+                primary: T.primary,
+                secondary: T.surface,
               },
             },
           }}

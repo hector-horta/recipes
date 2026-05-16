@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
-import { Badge, Button, Input } from '@wati/ui-kit';
+
 import { 
   BookOpen, 
   Search, 
@@ -88,6 +88,39 @@ const INITIAL_FORM_STATE: RecipeFormData = {
   tags: [],
   image_url: null
 };
+
+// ─── Design tokens ─────────────────────────────────────────────────────────
+const T = {
+  dark:      '#101417',
+  dark80:    'rgba(16, 20, 23, 0.8)',
+  surface:   'var(--surface-organic)',
+  surfaceHi: 'var(--surface-light)',
+  outline:   'var(--outline)',
+  text:      'var(--brand-text)',
+  muted:     'var(--brand-text-muted)',
+  primary:   'var(--brand-primary)',
+  primary05: 'rgba(0, 255, 194, 0.05)',
+  primary08: 'rgba(0, 255, 194, 0.08)',
+  primary12: 'rgba(0, 255, 194, 0.12)',
+  primary15: 'rgba(0, 255, 194, 0.15)',
+  primary85: 'rgba(0, 255, 194, 0.85)',
+  danger:    '#F87171',
+  danger08:  'rgba(248, 113, 113, 0.08)',
+  danger12:  'rgba(248, 113, 113, 0.12)',
+  danger15:  'rgba(248, 113, 113, 0.15)',
+  danger20:  'rgba(248, 113, 113, 0.20)',
+  warning:   '#FFB703',
+  warningBadge: '#fbbf24',
+  warning12: 'rgba(255, 183, 3, 0.12)',
+  warning15: 'rgba(251, 191, 36, 0.15)',
+  warning85: 'rgba(255, 183, 3, 0.85)',
+  success:   '#00FFC2',
+  success15: 'rgba(0, 255, 194, 0.15)',
+  muted12:   'rgba(148, 163, 184, 0.12)',
+  grey:      '#94a3b8',
+  white:     '#FFFFFF',
+  black03:   'rgba(0, 0, 0, 0.03)',
+} as const;
 
 const containerVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -369,38 +402,41 @@ export const GlobalRecipes: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <motion.div variants={itemVariants}>
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-brand-forest/10 text-brand-forest rounded-lg">
+            <div className="p-2 rounded-lg" style={{ backgroundColor: T.primary08, color: T.primary }}>
               <ChefHat size={28} />
             </div>
-            <h2 className="text-4xl font-extrabold text-brand-forest tracking-tight">{t('recipes.title')}</h2>
+            <h2 className="text-4xl font-extrabold tracking-tight" style={{ color: T.text }}>{t('recipes.title')}</h2>
           </div>
-          <p className="text-brand-text-muted font-medium">{t('recipes.subtitle')}</p>
+          <p className="font-medium" style={{ color: T.muted }}>{t('recipes.subtitle')}</p>
         </motion.div>
         
         <div className="flex items-center gap-4">
-          <div className="bg-brand-cream/40 p-1 rounded-2xl border border-brand-sage/10 flex">
-            <button 
+          <div className="p-1 rounded-2xl flex" style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}` }}>
+            <button
               onClick={() => setViewMode('table')}
-              className={`p-2 rounded-xl transition-all ${viewMode === 'table' ? 'bg-white text-brand-forest shadow-sm' : 'text-brand-text-muted hover:text-brand-forest'}`}
+              className="p-2 rounded-xl transition-all"
+              style={viewMode === 'table' ? { backgroundColor: T.surface, color: T.primary } : { color: T.muted }}
               title={t('recipes.view_table')}
             >
               <Filter size={20} className="rotate-90" />
             </button>
-            <button 
+            <button
               onClick={() => setViewMode('grid')}
-              className={`p-2 rounded-xl transition-all ${viewMode === 'grid' ? 'bg-white text-brand-forest shadow-sm' : 'text-brand-text-muted hover:text-brand-forest'}`}
+              className="p-2 rounded-xl transition-all"
+              style={viewMode === 'grid' ? { backgroundColor: T.surface, color: T.primary } : { color: T.muted }}
               title={t('recipes.view_grid')}
             >
               <BookOpen size={20} />
             </button>
           </div>
 
-          <motion.button 
+          <motion.button
             variants={itemVariants}
             whileHover={{ scale: 1.02, y: -2 }}
             whileTap={{ scale: 0.98 }}
             onClick={handleNew}
-            className="flex items-center justify-center gap-2 bg-brand-forest text-white px-8 py-4 rounded-2xl font-bold hover:shadow-2xl hover:shadow-brand-forest/30 transition-all group"
+            className="flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold transition-all group"
+            style={{ backgroundColor: T.primary, color: T.dark }}
           >
             <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
             <span>{t('recipes.create')}</span>
@@ -408,41 +444,42 @@ export const GlobalRecipes: React.FC = () => {
         </div>
       </div>
 
-      <motion.div 
+      <motion.div
         variants={itemVariants}
-        className="bg-white/80 backdrop-blur-xl rounded-[2rem] shadow-2xl shadow-brand-forest/5 border border-brand-sage/20 overflow-hidden"
+        className="rounded-[2rem] overflow-hidden"
+        style={{ backgroundColor: T.surface, border: `1px solid ${T.outline}` }}
       >
         <div className="p-8 space-y-6">
           <div className="flex flex-col md:flex-row items-center gap-6">
             <div className="relative flex-1 w-full">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-brand-text-muted/60" size={20} />
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2" size={20} style={{ color: T.muted }} />
               <input
                 type="text"
                 placeholder={t('recipes.search_placeholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-14 pr-6 py-4 bg-brand-cream/40 border-2 border-transparent focus:border-brand-sage/30 rounded-2xl outline-none transition-all placeholder:text-brand-text-muted/40 text-brand-forest font-medium"
+                className="w-full pl-14 pr-6 py-4 rounded-2xl outline-none transition-all font-medium"
+                style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.text }}
               />
             </div>
-            <div className="flex items-center gap-2 text-sm text-brand-text-muted font-semibold bg-brand-cream/40 px-4 py-2 rounded-xl border border-brand-sage/10">
+            <div className="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl" style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.muted }}>
               <Filter size={16} />
               <span>{t('recipes.ui.results_count', { count: filteredRecipes?.length || 0 })}</span>
             </div>
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <div className="flex items-center gap-2 text-xs font-black text-brand-forest uppercase tracking-widest mr-2">
-              <Sparkles size={14} className="text-brand-sage" /> {t('recipes.filter_allergens')}
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest mr-2" style={{ color: T.muted }}>
+              <Sparkles size={14} style={{ color: T.primary }} /> {t('recipes.filter_allergens')}
             </div>
             {tags?.map(tag => (
               <button
                 key={tag.id}
                 onClick={() => toggleFilterTag(tag.key)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                  selectedTags.includes(tag.key)
-                    ? 'bg-brand-sage text-white shadow-lg shadow-brand-sage/20 scale-105'
-                    : 'bg-brand-cream/40 text-brand-text-muted hover:bg-brand-cream/60 border border-brand-sage/10'
-                }`}
+                className="px-4 py-2 rounded-xl text-xs font-bold transition-all"
+                style={selectedTags.includes(tag.key)
+                  ? { backgroundColor: T.primary, color: T.dark, transform: 'scale(1.05)' }
+                  : { backgroundColor: T.surfaceHi, color: T.muted, border: `1px solid ${T.outline}` }}
               >
                 {t(`tags.items.${tag.key}`, { defaultValue: activeLang === 'es' ? tag.es : tag.en })}
               </button>
@@ -454,62 +491,67 @@ export const GlobalRecipes: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-brand-cream/20">
+                <tr style={{ backgroundColor: T.surfaceHi }}>
                   <th className="px-8 py-5 w-10">
-                    <input 
-                      type="checkbox" 
-                      className="w-5 h-5 rounded-lg accent-brand-forest transition-all"
+                    <input
+                      type="checkbox"
+                      className="w-5 h-5 rounded-lg transition-all cursor-pointer"
+                      style={{ accentColor: T.primary }}
                       checked={selectedIds.length === filteredRecipes.length && filteredRecipes.length > 0}
                       onChange={toggleAll}
                     />
                   </th>
-                  <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest">
+                  <th className="px-8 py-5 text-xs font-bold uppercase tracking-widest" style={{ color: T.muted }}>
                     {t('dashboard.table.recipe')}
                   </th>
-                  <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest">
+                  <th className="px-8 py-5 text-xs font-bold uppercase tracking-widest" style={{ color: T.muted }}>
                     {t('recipes.difficulty')}
                   </th>
-                  <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest">
+                  <th className="px-8 py-5 text-xs font-bold uppercase tracking-widest" style={{ color: T.muted }}>
                     {t('recipes.sibo_risk')}
                   </th>
-                  <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest">
+                  <th className="px-8 py-5 text-xs font-bold uppercase tracking-widest" style={{ color: T.muted }}>
                     {t('common.status')}
                   </th>
-                  <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest text-right">
+                  <th className="px-8 py-5 text-xs font-bold uppercase tracking-widest text-right" style={{ color: T.muted }}>
                     {t('common.actions')}
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-brand-sage/10">
+              <tbody style={{ borderTop: `1px solid ${T.outline}` }}>
                 <AnimatePresence mode="popLayout">
                   {recipesLoading ? (
                     Array.from({ length: 5 }).map((_, i) => (
                       <tr key={`loading-${i}`} className="animate-pulse">
                         <td colSpan={6} className="px-8 py-6">
-                          <div className="h-16 bg-brand-cream/60 rounded-2xl w-full"></div>
+                          <div className="h-16 rounded-2xl w-full" style={{ backgroundColor: T.surfaceHi }} />
                         </td>
                       </tr>
                     ))
                   ) : filteredRecipes.map((recipe) => (
-                    <motion.tr 
+                    <motion.tr
                       layout
                       key={recipe.id}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0, scale: 0.95 }}
-                      className={`hover:bg-brand-cream/30 transition-all group ${selectedIds.includes(recipe.id) ? 'bg-brand-sage/5' : ''}`}
+                      className="transition-all group"
+                      style={{ borderTop: `1px solid ${T.outline}`, backgroundColor: selectedIds.includes(recipe.id) ? T.primary05 : 'transparent' }}
+                      onMouseEnter={(e) => { if (!selectedIds.includes(recipe.id)) (e.currentTarget as HTMLElement).style.backgroundColor = T.surfaceHi; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = selectedIds.includes(recipe.id) ? T.primary05 : 'transparent'; }}
                     >
                       <td className="px-8 py-6">
-                        <input 
-                          type="checkbox" 
-                          className="w-5 h-5 rounded-lg accent-brand-forest transition-all"
+                        <input
+                          type="checkbox"
+                          className="w-5 h-5 rounded-lg transition-all cursor-pointer"
+                          style={{ accentColor: T.primary }}
                           checked={selectedIds.includes(recipe.id)}
                           onChange={() => toggleSelection(recipe.id)}
                         />
                       </td>
                       <td className="px-8 py-6">
                         <div className="flex items-center gap-4">
-                          <div className="w-16 h-16 rounded-[1.25rem] bg-brand-sage/10 overflow-hidden flex items-center justify-center text-brand-sage shrink-0 border-2 border-brand-sage/20 group-hover:scale-105 transition-transform duration-300 shadow-sm">
+                          <div className="w-16 h-16 rounded-[1.25rem] overflow-hidden flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform duration-300" style={{ backgroundColor: T.primary08, color: T.primary, border: `1px solid ${T.primary15}` }}>
                             {recipe.image_url ? (
                               <img 
                                 src={recipe.image_url} 
@@ -521,20 +563,21 @@ export const GlobalRecipes: React.FC = () => {
                             )}
                           </div>
                           <div className="flex flex-col min-w-0">
-                            <span className="font-bold text-brand-forest text-lg leading-tight truncate">
+                            <span className="font-bold text-lg leading-tight truncate" style={{ color: T.text }}>
                               {activeLang === 'es' ? recipe.title_es : recipe.title_en}
                             </span>
                             <div className="flex items-center gap-3 mt-1">
-                              <button 
+                              <button
                                 onClick={() => {
                                   navigator.clipboard.writeText(recipe.slug);
                                   toast.success(t('recipes.messages.copy_slug_success'));
                                 }}
-                                className="text-[10px] font-black font-mono text-brand-teal uppercase bg-brand-teal/10 px-2 py-0.5 rounded border border-brand-teal/10 hover:bg-brand-teal hover:text-white transition-colors"
+                                className="text-[10px] font-black font-mono uppercase px-2 py-0.5 rounded transition-colors"
+                                style={{ color: T.primary, backgroundColor: T.primary08, border: `1px solid ${T.primary15}` }}
                               >
                                 {recipe.slug}
                               </button>
-                              <div className="flex items-center gap-1 text-brand-text-muted/60 text-xs font-medium">
+                              <div className="flex items-center gap-1 text-xs font-medium" style={{ color: T.muted }}>
                                 <Clock size={12} />
                                 {recipe.prep_time_minutes + recipe.cook_time_minutes} {t('recipes.ui.minutes_suffix')}
                               </div>
@@ -543,42 +586,54 @@ export const GlobalRecipes: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-8 py-6">
-                        <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full ${
-                          recipe.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
-                          recipe.difficulty === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
-                        }`}>
+                        <span
+                          className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full"
+                          style={recipe.difficulty === 'easy'
+                            ? { backgroundColor: T.success15, color: T.success }
+                            : recipe.difficulty === 'medium'
+                            ? { backgroundColor: T.warning15, color: T.warningBadge }
+                            : { backgroundColor: T.danger15, color: T.danger }}
+                        >
                           {t(`recipes.difficulty.${recipe.difficulty}`)}
                         </span>
                       </td>
                       <td className="px-8 py-6">
                         <div className="flex items-center gap-2">
-                          <div className={`w-2.5 h-2.5 rounded-full shadow-sm ${
-                            recipe.sibo_risk_level === 'safe' ? 'bg-green-500' :
-                            recipe.sibo_risk_level === 'caution' ? 'bg-amber-500' : 'bg-red-500'
-                          }`} />
-                          <span className="text-sm font-bold text-brand-forest capitalize">{t(`recipes.sibo_risk.${recipe.sibo_risk_level}`)}</span>
+                          <div 
+                            className="w-2.5 h-2.5 rounded-full shadow-sm" 
+                            style={{ 
+                              backgroundColor: recipe.sibo_risk_level === 'safe' ? T.success :
+                                               recipe.sibo_risk_level === 'caution' ? T.warning : T.danger 
+                            }} 
+                          />
+                          <span className="text-sm font-bold capitalize" style={{ color: T.text }}>{t(`recipes.sibo_risk.${recipe.sibo_risk_level}`)}</span>
                         </div>
                       </td>
                       <td className="px-8 py-6">
-                        <Badge 
+                        <span
                           className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest"
-                          variant={recipe.status === 'published' ? 'success' : recipe.status === 'draft' ? 'warning' : 'neutral'}
+                          style={recipe.status === 'published'
+                            ? { backgroundColor: T.primary12, color: T.primary }
+                            : recipe.status === 'draft'
+                            ? { backgroundColor: T.warning12, color: T.warning }
+                            : { backgroundColor: T.muted12, color: T.grey }}
                         >
                           {recipe.status === 'published' ? `● ${t('recipes.status.published')}` : recipe.status === 'draft' ? `○ ${t('recipes.status.draft')}` : t('recipes.status.archived')}
-                        </Badge>
+                        </span>
                       </td>
                       <td className="px-8 py-6 text-right">
                         <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
-                          <motion.button 
+                          <motion.button
                             whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.9 }}
                             onClick={() => handleEdit(recipe)}
-                            className="p-3 bg-brand-sage/10 text-brand-sage hover:bg-brand-sage hover:text-white rounded-xl transition-all shadow-sm"
+                            className="p-3 rounded-xl transition-all"
+                            style={{ backgroundColor: T.primary08, color: T.primary, border: `1px solid ${T.primary15}` }}
                             title={t('recipes.edit_recipe')}
                           >
                             <Pencil size={18} />
                           </motion.button>
-                          <motion.button 
+                          <motion.button
                             whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.9 }}
                             onClick={() => {
@@ -586,7 +641,8 @@ export const GlobalRecipes: React.FC = () => {
                                 deleteMutation.mutate(recipe.id);
                               }
                             }}
-                            className="p-3 bg-red-50 text-red-400 hover:bg-red-500 hover:text-white rounded-xl transition-all shadow-sm"
+                            className="p-3 rounded-xl transition-all"
+                            style={{ backgroundColor: T.danger08, color: T.danger, border: `1px solid ${T.danger15}` }}
                             title={t('recipes.delete_recipe')}
                           >
                             <Trash2 size={18} />
@@ -600,16 +656,20 @@ export const GlobalRecipes: React.FC = () => {
                   <motion.tr initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     <td colSpan={6} className="px-8 py-20 text-center">
                       <div className="flex flex-col items-center gap-4">
-                        <div className="w-20 h-20 bg-brand-cream/50 rounded-full flex items-center justify-center text-brand-text-muted/30">
+                        <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ backgroundColor: T.surfaceHi, color: T.muted }}>
                           <ChefHat size={40} strokeWidth={1} />
                         </div>
                         <div className="space-y-1">
-                          <p className="text-brand-forest font-black text-xl">{t('recipes.no_results')}</p>
-                          <p className="text-brand-text-muted font-medium">{t('recipes.no_results_subtitle')}</p>
+                          <p className="font-black text-xl" style={{ color: T.text }}>{t('recipes.no_results')}</p>
+                          <p className="font-medium" style={{ color: T.muted }}>{t('recipes.no_results_subtitle')}</p>
                         </div>
-                        <Button variant="secondary" onClick={() => { setSearchTerm(''); setSelectedTags([]); }}>
+                        <button
+                          onClick={() => { setSearchTerm(''); setSelectedTags([]); }}
+                          className="px-6 py-2.5 rounded-xl font-bold text-sm transition-all"
+                          style={{ backgroundColor: T.surfaceHi, color: T.text, border: `1px solid ${T.outline}` }}
+                        >
                           {t('recipes.clear_filters')}
-                        </Button>
+                        </button>
                       </div>
                     </td>
                   </motion.tr>
@@ -623,7 +683,7 @@ export const GlobalRecipes: React.FC = () => {
               <AnimatePresence mode="popLayout">
                 {recipesLoading ? (
                   Array.from({ length: 8 }).map((_, i) => (
-                    <div key={`loading-grid-${i}`} className="aspect-[4/5] bg-brand-cream/60 animate-pulse rounded-[2.5rem]" />
+                    <div key={`loading-grid-${i}`} className="aspect-[4/5] animate-pulse rounded-[2.5rem]" style={{ backgroundColor: T.surfaceHi }} />
                   ))
                 ) : filteredRecipes?.map((recipe) => (
                   <motion.div
@@ -633,38 +693,51 @@ export const GlobalRecipes: React.FC = () => {
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
                     whileHover={{ y: -10 }}
-                    className={`group bg-white rounded-[2.5rem] p-4 shadow-xl hover:shadow-2xl hover:shadow-brand-forest/10 transition-all border relative flex flex-col ${selectedIds.includes(recipe.id) ? 'border-brand-sage bg-brand-sage/5' : 'border-brand-sage/5'}`}
+                    className="group rounded-[2.5rem] p-4 transition-all relative flex flex-col"
+                    style={selectedIds.includes(recipe.id)
+                      ? { backgroundColor: T.primary05, border: `1px solid ${T.primary}` }
+                      : { backgroundColor: T.surface, border: `1px solid ${T.outline}` }}
                   >
-                    <div className="aspect-square rounded-[2rem] overflow-hidden mb-4 relative bg-brand-cream/40">
+                    <div className="aspect-square rounded-[2rem] overflow-hidden mb-4 relative" style={{ backgroundColor: T.surfaceHi }}>
                       <div className="absolute top-4 left-4 z-10">
-                        <input 
-                          type="checkbox" 
-                          className="w-5 h-5 rounded-lg accent-brand-forest transition-all shadow-md cursor-pointer"
+                        <input
+                          type="checkbox"
+                          className="w-5 h-5 rounded-lg transition-all shadow-md cursor-pointer"
+                          style={{ accentColor: T.primary }}
                           checked={selectedIds.includes(recipe.id)}
                           onChange={() => toggleSelection(recipe.id)}
                         />
                       </div>
                       {recipe.image_url ? (
-                        <img 
-                          src={recipe.image_url} 
-                          alt={t('recipes.image_alt', { title: activeLang === 'es' ? recipe.title_es : recipe.title_en })} 
-                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                        <img
+                          src={recipe.image_url}
+                          alt={t('recipes.image_alt', { title: activeLang === 'es' ? recipe.title_es : recipe.title_en })}
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-brand-sage/20">
+                        <div className="w-full h-full flex items-center justify-center" style={{ color: T.outline }}>
                           <ChefHat size={64} strokeWidth={1} />
                         </div>
                       )}
                       <div className="absolute top-4 right-4 flex flex-col gap-2">
-                        <Badge variant={recipe.status === 'published' ? 'success' : 'warning'} className="backdrop-blur-md bg-white/80 shadow-lg px-3 py-1 rounded-full text-[9px] font-black">
+                        <span
+                          className="backdrop-blur-md px-3 py-1 rounded-full text-[9px] font-black"
+                          style={recipe.status === 'published'
+                            ? { backgroundColor: T.primary85, color: T.dark }
+                            : { backgroundColor: T.warning85, color: T.dark }}
+                        >
                           {recipe.status === 'published' ? t('recipes.status.published') : recipe.status === 'draft' ? t('recipes.status.draft') : t('recipes.status.archived')}
-                        </Badge>
+                        </span>
                       </div>
-                      <div className="absolute inset-0 bg-gradient-to-t from-brand-forest/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-6">
+                      <div 
+                        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-6 rounded-[2rem]"
+                        style={{ backgroundImage: `linear-gradient(to top, ${T.dark80}, transparent, transparent)` }}
+                      >
                          <div className="flex gap-2">
                            <button 
                              onClick={() => handleEdit(recipe)}
-                             className="flex-1 bg-white text-brand-forest py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2"
+                             className="flex-1 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2"
+                             style={{ backgroundColor: T.text, color: T.dark }}
                            >
                              <Pencil size={14} /> {t('common.edit')}
                            </button>
@@ -672,7 +745,8 @@ export const GlobalRecipes: React.FC = () => {
                              onClick={() => {
                                if (confirm(t('recipes.messages.confirm_delete'))) deleteMutation.mutate(recipe.id);
                              }}
-                             className="p-2.5 bg-red-500 text-white rounded-xl"
+                              className="p-2.5 rounded-xl"
+                             style={{ backgroundColor: T.danger, color: T.white }}
                            >
                              <Trash2 size={14} />
                            </button>
@@ -682,23 +756,26 @@ export const GlobalRecipes: React.FC = () => {
                     
                     <div className="px-2 pb-2">
                       <div className="flex items-center gap-2 mb-1">
-                        <div className={`w-2 h-2 rounded-full ${
-                          recipe.sibo_risk_level === 'safe' ? 'bg-green-500' :
-                          recipe.sibo_risk_level === 'caution' ? 'bg-amber-500' : 'bg-red-500'
-                        }`} />
-                        <span className="text-[10px] font-bold text-brand-text-muted uppercase tracking-tighter">
+                        <div 
+                          className="w-2 h-2 rounded-full" 
+                          style={{ 
+                            backgroundColor: recipe.sibo_risk_level === 'safe' ? T.success :
+                                             recipe.sibo_risk_level === 'caution' ? T.warning : T.danger 
+                          }} 
+                        />
+                        <span className="text-[10px] font-bold uppercase tracking-tighter" style={{ color: T.muted }}>
                           {t('recipes.risk_label')} {t(`recipes.sibo_risk.${recipe.sibo_risk_level}`)}
                         </span>
                       </div>
-                      <h3 className="font-bold text-brand-forest text-lg leading-tight mb-2 line-clamp-1">
+                      <h3 className="font-bold text-lg leading-tight mb-2 line-clamp-1" style={{ color: T.text }}>
                         {activeLang === 'es' ? recipe.title_es : recipe.title_en}
                       </h3>
-                      <div className="flex items-center justify-between text-[11px] font-bold text-brand-text-muted/60">
+                      <div className="flex items-center justify-between text-[11px] font-bold" style={{ color: T.muted }}>
                         <div className="flex items-center gap-3">
                           <span className="flex items-center gap-1"><Clock size={12} /> {recipe.prep_time_minutes + recipe.cook_time_minutes}{t('recipes.ui.minutes_short')}</span>
                           <span className="flex items-center gap-1"><Users size={12} /> {recipe.servings}</span>
                         </div>
-                        <span className="uppercase tracking-widest text-[9px] px-2 py-0.5 bg-brand-cream rounded-md">{t(`recipes.difficulty.${recipe.difficulty}`)}</span>
+                        <span className="uppercase tracking-widest text-[9px] px-2 py-0.5 rounded-md" style={{ backgroundColor: T.surfaceHi, color: T.muted }}>{t(`recipes.difficulty.${recipe.difficulty}`)}</span>
                       </div>
                     </div>
                   </motion.div>
@@ -707,7 +784,7 @@ export const GlobalRecipes: React.FC = () => {
             </div>
             {!recipesLoading && filteredRecipes?.length === 0 && (
               <div className="py-20 text-center">
-                <p className="text-brand-text-muted">{t('recipes.no_results_found')}</p>
+                <p style={{ color: T.muted }}>{t('recipes.no_results_found')}</p>
               </div>
             )}
           </div>
@@ -722,16 +799,17 @@ export const GlobalRecipes: React.FC = () => {
             exit={{ y: 100, opacity: 0 }}
             className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 w-full max-w-2xl px-6"
           >
-            <div className="bg-brand-forest text-white rounded-[2rem] p-6 shadow-2xl flex items-center justify-between gap-6 backdrop-blur-xl bg-opacity-95 border border-white/10">
+            <div className="rounded-[2rem] p-6 shadow-2xl flex items-center justify-between gap-6" style={{ backgroundColor: T.surface, border: `1px solid ${T.primary}` }}>
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center font-black text-lg">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg" style={{ backgroundColor: T.primary12, color: T.primary }}>
                   {selectedIds.length}
                 </div>
                 <div>
-                  <p className="font-bold text-sm">{t('recipes.selected_count', { count: selectedIds.length })}</p>
-                  <button 
+                  <p className="font-bold text-sm" style={{ color: T.text }}>{t('recipes.selected_count', { count: selectedIds.length })}</p>
+                  <button
                     onClick={() => setSelectedIds([])}
-                    className="text-[10px] uppercase tracking-widest font-black text-brand-sage hover:text-white transition-colors"
+                    className="text-[10px] uppercase tracking-widest font-black transition-colors"
+                    style={{ color: T.muted }}
                   >
                     {t('recipes.ui.discard_selection')}
                   </button>
@@ -739,26 +817,29 @@ export const GlobalRecipes: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-2">
-                <button 
+                <button
                   onClick={() => bulkUpdateStatusMutation.mutate({ ids: selectedIds, status: 'published' })}
-                  className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2"
+                  className="px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2"
+                  style={{ backgroundColor: T.primary08, color: T.primary, border: `1px solid ${T.primary15}` }}
                 >
                   {t('recipes.ui.publish')}
                 </button>
-                <button 
+                <button
                   onClick={() => bulkUpdateStatusMutation.mutate({ ids: selectedIds, status: 'draft' })}
-                  className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2"
+                  className="px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2"
+                  style={{ backgroundColor: T.surfaceHi, color: T.text, border: `1px solid ${T.outline}` }}
                 >
                   {t('recipes.ui.draft')}
                 </button>
-                <div className="w-[1px] h-8 bg-white/10 mx-1" />
-                <button 
+                <div className="w-[1px] h-8 mx-1" style={{ backgroundColor: T.outline }} />
+                <button
                   onClick={() => {
                     if (confirm(t('recipes.messages.confirm_bulk_delete', { count: selectedIds.length }))) {
                       bulkDeleteMutation.mutate(selectedIds);
                     }
                   }}
-                  className="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-lg shadow-red-500/20"
+                  className="px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2"
+                  style={{ backgroundColor: T.danger12, color: T.danger, border: `1px solid ${T.danger20}` }}
                 >
                   <Trash2 size={14} /> {t('common.delete')}
                 </button>
@@ -780,22 +861,24 @@ export const GlobalRecipes: React.FC = () => {
               
               <section className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-brand-forest font-black uppercase tracking-[0.2em] text-xs">
-                    <div className="w-8 h-[2px] bg-brand-sage/30" />
+                  <div className="flex items-center gap-2 font-black uppercase tracking-[0.2em] text-xs" style={{ color: T.muted }}>
+                    <div className="w-8 h-[2px]" style={{ backgroundColor: T.outline }} />
                     {t('recipes.form.essential_info')}
                   </div>
-                  <div className="flex bg-brand-cream/40 p-1 rounded-xl border border-brand-sage/10">
-                    <button 
+                  <div className="flex p-1 rounded-xl" style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}` }}>
+                    <button
                       type="button"
                       onClick={() => setActiveLang('es')}
-                      className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${activeLang === 'es' ? 'bg-white text-brand-forest shadow-sm' : 'text-brand-text-muted hover:text-brand-forest'}`}
+                      className="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all"
+                      style={activeLang === 'es' ? { backgroundColor: T.surface, color: T.primary } : { color: T.muted }}
                     >
                       {t('common.language_es')}
                     </button>
-                    <button 
+                    <button
                       type="button"
                       onClick={() => setActiveLang('en')}
-                      className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${activeLang === 'en' ? 'bg-white text-brand-forest shadow-sm' : 'text-brand-text-muted hover:text-brand-forest'}`}
+                      className="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all"
+                      style={activeLang === 'en' ? { backgroundColor: T.surface, color: T.primary } : { color: T.muted }}
                     >
                       {t('common.language_en')}
                     </button>
@@ -813,18 +896,19 @@ export const GlobalRecipes: React.FC = () => {
                           exit={{ opacity: 0, x: 10 }}
                           className="space-y-2"
                         >
-                          <label className="text-[11px] font-black text-brand-forest uppercase tracking-widest flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 bg-brand-sage rounded-full" />
+                          <label className="text-[11px] font-black uppercase tracking-widest flex items-center gap-2" style={{ color: T.text }}>
+                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: T.primary }} />
                             {t('recipes.form.title_es')}
                           </label>
-                          <Input
+                          <input
                             placeholder={t('recipes.form.placeholder_title')}
-                            className="h-12 rounded-xl border-2 border-brand-sage/10 focus:border-brand-sage/40 transition-all font-bold"
+                            className="w-full h-12 rounded-xl px-4 outline-none transition-all font-bold"
+                            style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.text }}
                             value={formData.title_es}
                             onChange={(e) => {
                               const val = e.target.value;
-                              setFormData(prev => ({ 
-                                ...prev, 
+                              setFormData(prev => ({
+                                ...prev,
                                 title_es: val,
                                 slug: editingRecipe ? prev.slug : val.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-').replace(/[^\w-]/g, '')
                               }));
@@ -840,13 +924,14 @@ export const GlobalRecipes: React.FC = () => {
                           exit={{ opacity: 0, x: 10 }}
                           className="space-y-2"
                         >
-                          <label className="text-[11px] font-black text-brand-forest uppercase tracking-widest flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 bg-brand-sage rounded-full" />
+                          <label className="text-[11px] font-black uppercase tracking-widest flex items-center gap-2" style={{ color: T.text }}>
+                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: T.primary }} />
                             {t('recipes.form.title_en')}
                           </label>
-                          <Input
+                          <input
                             placeholder={t('recipes.form.placeholder_title')}
-                            className="h-12 rounded-xl border-2 border-brand-sage/10 focus:border-brand-sage/40 transition-all font-bold"
+                            className="w-full h-12 rounded-xl px-4 outline-none transition-all font-bold"
+                            style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.text }}
                             value={formData.title_en}
                             onChange={(e) => setFormData({ ...formData, title_en: e.target.value })}
                             required
@@ -857,13 +942,14 @@ export const GlobalRecipes: React.FC = () => {
                   </div>
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <label className="text-[11px] font-black text-brand-forest uppercase tracking-widest flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 bg-brand-sage rounded-full" />
+                      <label className="text-[11px] font-black uppercase tracking-widest flex items-center gap-2" style={{ color: T.text }}>
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: T.primary }} />
                         {t('recipes.form.slug')}
                       </label>
-                      <Input
-                        placeholder={t('recipes.form.slug_placeholder')}
-                        className="h-12 rounded-xl border-2 border-brand-sage/10 focus:border-brand-sage/40 transition-all font-mono text-sm"
+                      <input
+                        placeholder={t('recipes.form.placeholder_slug')}
+                        className="w-full h-12 rounded-xl px-4 outline-none transition-all font-bold font-mono text-[10px]"
+                        style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.primary }}
                         value={formData.slug}
                         onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
                         required
@@ -871,34 +957,37 @@ export const GlobalRecipes: React.FC = () => {
                     </div>
                     <div className="grid grid-cols-3 gap-3">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black text-brand-forest uppercase tracking-tighter flex items-center gap-1">
-                          <Clock size={12} /> {t('recipes.form.prep_time')}
+                        <label className="text-[11px] font-black uppercase tracking-widest flex items-center gap-2" style={{ color: T.text }}>
+                          <Clock size={12} style={{ color: T.primary }} /> {t('recipes.form.prep_time')}
                         </label>
-                        <Input
+                        <input
                           type="number"
-                          className="h-12 rounded-xl border-2 border-brand-sage/10 font-bold text-center"
+                          className="w-full h-12 rounded-xl px-4 outline-none transition-all font-bold"
+                          style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.text }}
                           value={formData.prep_time_minutes}
                           onChange={(e) => setFormData({ ...formData, prep_time_minutes: parseInt(e.target.value) || 0 })}
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black text-brand-forest uppercase tracking-tighter flex items-center gap-1">
-                          <Clock size={12} /> {t('recipes.form.cook_time')}
+                        <label className="text-[11px] font-black uppercase tracking-widest flex items-center gap-2" style={{ color: T.text }}>
+                          <Clock size={12} style={{ color: T.primary }} /> {t('recipes.form.cook_time')}
                         </label>
-                        <Input
+                        <input
                           type="number"
-                          className="h-12 rounded-xl border-2 border-brand-sage/10 font-bold text-center"
+                          className="w-full h-12 rounded-xl px-4 outline-none transition-all font-bold"
+                          style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.text }}
                           value={formData.cook_time_minutes}
                           onChange={(e) => setFormData({ ...formData, cook_time_minutes: parseInt(e.target.value) || 0 })}
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black text-brand-forest uppercase tracking-tighter flex items-center gap-1">
+                        <label className="text-[10px] font-black uppercase tracking-tighter flex items-center gap-1" style={{ color: T.muted }}>
                           <Users size={12} /> {t('recipes.form.servings')}
                         </label>
-                        <Input
+                        <input
                           type="number"
-                          className="h-12 rounded-xl border-2 border-brand-sage/10 font-bold text-center"
+                          className="w-full h-12 rounded-xl px-4 outline-none font-bold text-center transition-all"
+                          style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.text }}
                           value={formData.servings}
                           onChange={(e) => setFormData({ ...formData, servings: parseInt(e.target.value) || 1 })}
                         />
@@ -909,29 +998,31 @@ export const GlobalRecipes: React.FC = () => {
               </section>
 
               <section className="space-y-6">
-                <div className="flex items-center gap-2 text-brand-forest font-black uppercase tracking-[0.2em] text-xs">
-                  <div className="w-8 h-[2px] bg-brand-sage/30" />
+                <div className="flex items-center gap-2 font-black uppercase tracking-[0.2em] text-xs" style={{ color: T.muted }}>
+                  <div className="w-8 h-[2px]" style={{ backgroundColor: T.outline }} />
                   {t('recipes.form.ingredients')}
                 </div>
 
                 <div className="space-y-4">
                   {formData.ingredients.map((ing, idx) => (
-                    <motion.div 
+                    <motion.div
                       layout
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      key={idx} 
-                      className="flex gap-4 items-end bg-brand-cream/20 p-4 rounded-2xl border border-brand-sage/10 group"
+                      key={idx}
+                      className="flex gap-4 items-end p-4 rounded-2xl group"
+                      style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}` }}
                     >
                       <div className="flex flex-col gap-1">
-                        <button type="button" onClick={() => moveIngredient(idx, 'up')} className="text-brand-sage hover:text-brand-forest disabled:opacity-30" disabled={idx === 0}><ChevronUp size={16} /></button>
-                        <button type="button" onClick={() => moveIngredient(idx, 'down')} className="text-brand-sage hover:text-brand-forest disabled:opacity-30" disabled={idx === formData.ingredients.length - 1}><ChevronDown size={16} /></button>
+                        <button type="button" onClick={() => moveIngredient(idx, 'up')} className="disabled:opacity-30 transition-colors" style={{ color: T.muted }} disabled={idx === 0}><ChevronUp size={16} /></button>
+                        <button type="button" onClick={() => moveIngredient(idx, 'down')} className="disabled:opacity-30 transition-colors" style={{ color: T.muted }} disabled={idx === formData.ingredients.length - 1}><ChevronDown size={16} /></button>
                       </div>
                       <div className="flex-1 space-y-2">
-                        <label className="text-[10px] font-black text-brand-forest uppercase opacity-40">{t('recipes.form.ingredient_label')}</label>
-                        <Input
+                        <label className="text-[10px] font-black uppercase opacity-60" style={{ color: T.muted }}>{t('recipes.form.ingredient_label')}</label>
+                        <input
                           placeholder={t('recipes.form.name_placeholder')}
-                          className="bg-white border-transparent focus:border-brand-sage/20"
+                          className="w-full h-10 rounded-lg px-3 outline-none font-medium transition-all"
+                          style={{ backgroundColor: T.surface, border: `1px solid ${T.outline}`, color: T.text }}
                           value={ing.name}
                           onChange={(e) => {
                             const newIngs = [...formData.ingredients];
@@ -941,10 +1032,11 @@ export const GlobalRecipes: React.FC = () => {
                         />
                       </div>
                       <div className="w-24 space-y-2">
-                        <label className="text-[10px] font-black text-brand-forest uppercase opacity-40">{t('recipes.form.amount_label')}</label>
-                        <Input
+                        <label className="text-[10px] font-black uppercase opacity-60" style={{ color: T.muted }}>{t('recipes.form.amount_label')}</label>
+                        <input
                           placeholder="0"
-                          className="bg-white border-transparent focus:border-brand-sage/20"
+                          className="w-full h-10 rounded-lg px-3 outline-none font-medium transition-all"
+                          style={{ backgroundColor: T.surface, border: `1px solid ${T.outline}`, color: T.text }}
                           value={ing.amount}
                           onChange={(e) => {
                             const newIngs = [...formData.ingredients];
@@ -954,10 +1046,11 @@ export const GlobalRecipes: React.FC = () => {
                         />
                       </div>
                       <div className="w-24 space-y-2">
-                        <label className="text-[10px] font-black text-brand-forest uppercase opacity-40">{t('recipes.form.unit_label')}</label>
-                        <Input
+                        <label className="text-[10px] font-black uppercase opacity-60" style={{ color: T.muted }}>{t('recipes.form.unit_label')}</label>
+                        <input
                           placeholder={t('recipes.form.unit_placeholder')}
-                          className="bg-white border-transparent focus:border-brand-sage/20"
+                          className="w-full h-10 rounded-lg px-3 outline-none font-medium transition-all"
+                          style={{ backgroundColor: T.surface, border: `1px solid ${T.outline}`, color: T.text }}
                           value={ing.unit}
                           onChange={(e) => {
                             const newIngs = [...formData.ingredients];
@@ -969,7 +1062,8 @@ export const GlobalRecipes: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setFormData(prev => ({ ...prev, ingredients: prev.ingredients.filter((_, i) => i !== idx) }))}
-                        className="p-3 text-red-400 hover:bg-red-50 rounded-xl transition-all"
+                        className="p-3 rounded-xl transition-all"
+                        style={{ color: T.danger }}
                       >
                         <X size={20} />
                       </button>
@@ -978,7 +1072,8 @@ export const GlobalRecipes: React.FC = () => {
                   <button
                     type="button"
                     onClick={addIngredient}
-                    className="w-full py-4 border-2 border-dashed border-brand-sage/20 rounded-2xl text-brand-sage font-bold hover:bg-brand-sage/5 hover:border-brand-sage/40 transition-all flex items-center justify-center gap-2"
+                    className="w-full py-4 border-2 border-dashed rounded-2xl font-bold transition-all flex items-center justify-center gap-2"
+                    style={{ borderColor: T.primary15, color: T.primary }}
                   >
                     <Plus size={20} /> {t('recipes.form.add_ingredient')}
                   </button>
@@ -986,15 +1081,16 @@ export const GlobalRecipes: React.FC = () => {
               </section>
 
               <section className="space-y-6">
-                <div className="flex items-center gap-2 text-brand-forest font-black uppercase tracking-[0.2em] text-xs">
-                  <div className="w-8 h-[2px] bg-brand-sage/30" />
+                <div className="flex items-center gap-2 font-black uppercase tracking-[0.2em] text-xs" style={{ color: T.muted }}>
+                  <div className="w-8 h-[2px]" style={{ backgroundColor: T.outline }} />
                   {t('recipes.form.steps')}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="space-y-2">
-                    <label className="text-[11px] font-black text-brand-forest uppercase tracking-widest">{t('recipes.form.difficulty_label')}</label>
-                    <select 
-                      className="w-full h-12 px-4 bg-brand-cream/40 border-2 border-brand-sage/10 rounded-xl focus:border-brand-sage/40 outline-none font-bold text-sm transition-all appearance-none cursor-pointer"
+                    <label className="text-[11px] font-black uppercase tracking-widest" style={{ color: T.text }}>{t('recipes.form.difficulty_label')}</label>
+                    <select
+                      className="w-full h-12 px-4 rounded-xl outline-none font-bold text-sm transition-all appearance-none cursor-pointer"
+                      style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.text }}
                       value={formData.difficulty}
                       onChange={(e) => setFormData({ ...formData, difficulty: e.target.value as any })}
                     >
@@ -1004,18 +1100,15 @@ export const GlobalRecipes: React.FC = () => {
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[11px] font-black text-brand-forest uppercase tracking-widest">{t('recipes.form.status_label')}</label>
-                    <div className="flex bg-brand-cream/40 p-1 rounded-xl border border-brand-sage/10 h-12">
+                    <label className="text-[11px] font-black uppercase tracking-widest" style={{ color: T.text }}>{t('recipes.form.status_label')}</label>
+                    <div className="flex p-1 rounded-xl h-12" style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}` }}>
                       {(['draft', 'published', 'archived'] as const).map(status => (
                         <button
                           key={status}
                           type="button"
                           onClick={() => setFormData({ ...formData, status })}
-                          className={`flex-1 rounded-lg text-[9px] font-black uppercase transition-all ${
-                            formData.status === status 
-                              ? 'bg-white text-brand-forest shadow-sm' 
-                              : 'text-brand-text-muted hover:text-brand-forest'
-                          }`}
+                          className="flex-1 rounded-lg text-[9px] font-black uppercase transition-all"
+                          style={formData.status === status ? { backgroundColor: T.surface, color: T.primary } : { color: T.muted }}
                         >
                           {t(`recipes.status.${status}`)}
                         </button>
@@ -1023,20 +1116,21 @@ export const GlobalRecipes: React.FC = () => {
                     </div>
                   </div>
                   <div className="space-y-2">
-                      <AlertTriangle size={14} className="text-brand-sage" /> {t('recipes.form.sibo_risk_label')}
+                    <label className="text-[11px] font-black uppercase tracking-widest flex items-center gap-2" style={{ color: T.text }}>
+                      <AlertTriangle size={14} style={{ color: T.primary }} /> {t('recipes.form.sibo_risk_label')}
+                    </label>
                     <div className="flex gap-2 h-12">
                       {(['safe', 'caution', 'avoid'] as const).map(level => (
                         <button
                           key={level}
                           type="button"
                           onClick={() => setFormData({ ...formData, sibo_risk_level: level })}
-                          className={`flex-1 rounded-xl text-[10px] font-black uppercase transition-all border-2 ${
-                            formData.sibo_risk_level === level 
-                              ? level === 'safe' ? 'bg-green-500 border-green-500 text-white shadow-lg shadow-green-500/20' :
-                                level === 'caution' ? 'bg-amber-500 border-amber-500 text-white shadow-lg shadow-amber-500/20' :
-                                'bg-red-500 border-red-500 text-white shadow-lg shadow-red-500/20'
-                              : 'bg-brand-cream/40 border-brand-sage/10 text-brand-text-muted hover:border-brand-sage/30'
-                          }`}
+                          className="flex-1 rounded-xl text-[10px] font-black uppercase transition-all border-2"
+                          style={formData.sibo_risk_level === level
+                            ? level === 'safe' ? { backgroundColor: T.success, borderColor: T.success, color: T.dark }
+                              : level === 'caution' ? { backgroundColor: T.warning, borderColor: T.warning, color: T.dark }
+                              : { backgroundColor: T.danger, borderColor: T.danger, color: T.white }
+                            : { backgroundColor: T.surfaceHi, borderColor: T.outline, color: T.muted }}
                         >
                           {t(`recipes.sibo_risk.${level}`)}
                         </button>
@@ -1048,8 +1142,8 @@ export const GlobalRecipes: React.FC = () => {
 
               <section className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-brand-forest font-black uppercase tracking-[0.2em] text-xs">
-                    <div className="w-8 h-[2px] bg-brand-sage/30" />
+                  <div className="flex items-center gap-2 font-black uppercase tracking-[0.2em] text-xs" style={{ color: T.muted }}>
+                    <div className="w-8 h-[2px]" style={{ backgroundColor: T.outline }} />
                     {t('recipes.form.ingredients')} ({formData.ingredients.length})
                   </div>
                   <motion.button
@@ -1057,7 +1151,8 @@ export const GlobalRecipes: React.FC = () => {
                     whileTap={{ scale: 0.95 }}
                     type="button"
                     onClick={addIngredient}
-                    className="text-[10px] font-black uppercase tracking-widest bg-brand-forest text-white px-4 py-2 rounded-xl flex items-center gap-2 shadow-lg shadow-brand-forest/10"
+                    className="text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl flex items-center gap-2"
+                    style={{ backgroundColor: T.surface, color: T.primary, border: `1px solid ${T.primary}` }}
                   >
                     <Plus size={14} /> {t('recipes.form.add_ingredient')}
                   </motion.button>
@@ -1065,34 +1160,42 @@ export const GlobalRecipes: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <AnimatePresence>
                     {formData.ingredients.map((ing, idx) => (
-                      <motion.div 
+                      <motion.div
                         key={`ing-${idx}`}
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        className="flex gap-2 items-center bg-brand-cream/30 p-3 rounded-2xl border border-brand-sage/10 group relative"
+                        className="flex gap-2 items-center p-3 rounded-2xl group relative"
+                        style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}` }}
                       >
-                        <div className="flex flex-col gap-1 pr-2 border-r border-brand-sage/10">
+                        <div className="flex flex-col gap-1 pr-2 border-r" style={{ borderColor: T.outline }}>
                           <button 
                             type="button" 
                             onClick={() => moveIngredient(idx, 'up')}
                             disabled={idx === 0}
-                            className="p-1 hover:bg-white rounded transition-colors disabled:opacity-0"
+                            className="p-1 rounded transition-colors disabled:opacity-0"
+                            style={{ color: T.muted }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = T.surface}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                           >
-                            <GripVertical size={14} className="rotate-90 text-brand-sage/40" />
+                            <GripVertical size={14} className="rotate-90 opacity-40" />
                           </button>
                           <button 
                             type="button" 
                             onClick={() => moveIngredient(idx, 'down')}
                             disabled={idx === formData.ingredients.length - 1}
-                            className="p-1 hover:bg-white rounded transition-colors disabled:opacity-0"
+                            className="p-1 rounded transition-colors disabled:opacity-0"
+                            style={{ color: T.muted }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = T.surface}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                           >
-                            <GripVertical size={14} className="rotate-90 text-brand-sage/40" />
+                            <GripVertical size={14} className="rotate-90 opacity-40" />
                           </button>
                         </div>
                         <div className="grid grid-cols-5 gap-2 flex-1">
                           <input
-                            className="col-span-3 bg-white border-2 border-transparent focus:border-brand-sage/20 rounded-xl px-4 py-2 text-sm font-bold outline-none transition-all"
+                            className="col-span-3 rounded-xl px-4 py-2 text-sm font-bold outline-none transition-all"
+                            style={{ backgroundColor: T.surface, border: `1px solid ${T.outline}`, color: T.text }}
                             placeholder={t('recipes.form.name_placeholder')}
                             value={ing.name || ''}
                             onChange={(e) => {
@@ -1102,7 +1205,8 @@ export const GlobalRecipes: React.FC = () => {
                             }}
                           />
                           <input
-                            className="col-span-1 bg-white border-2 border-transparent focus:border-brand-sage/20 rounded-xl px-2 py-2 text-sm font-bold text-center outline-none transition-all"
+                            className="col-span-1 rounded-xl px-2 py-2 text-sm font-bold text-center outline-none transition-all"
+                            style={{ backgroundColor: T.surface, border: `1px solid ${T.outline}`, color: T.text }}
                             placeholder={t('recipes.form.amount_label')}
                             value={ing.amount || ''}
                             onChange={(e) => {
@@ -1112,7 +1216,8 @@ export const GlobalRecipes: React.FC = () => {
                             }}
                           />
                           <input
-                            className="col-span-1 bg-white border-2 border-transparent focus:border-brand-sage/20 rounded-xl px-2 py-2 text-sm font-bold text-center outline-none transition-all"
+                            className="col-span-1 rounded-xl px-2 py-2 text-sm font-bold text-center outline-none transition-all"
+                            style={{ backgroundColor: T.surface, border: `1px solid ${T.outline}`, color: T.text }}
                             placeholder={t('recipes.form.unit_label')}
                             value={ing.unit || ''}
                             onChange={(e) => {
@@ -1130,7 +1235,7 @@ export const GlobalRecipes: React.FC = () => {
                               ingredients: prev.ingredients.filter((_, i) => i !== idx)
                             }));
                           }}
-                          className="p-2 text-red-400 hover:bg-red-500 hover:text-white rounded-lg transition-all"
+                          className="p-2 rounded-lg transition-all" style={{ color: T.danger }}
                         >
                           <X size={16} />
                         </button>
@@ -1138,7 +1243,7 @@ export const GlobalRecipes: React.FC = () => {
                     ))}
                   </AnimatePresence>
                   {formData.ingredients.length === 0 && (
-                    <div className="col-span-2 py-10 border-2 border-dashed border-brand-sage/20 rounded-3xl flex flex-col items-center justify-center text-brand-text-muted gap-2">
+                    <div className="col-span-2 py-10 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center gap-2" style={{ borderColor: T.primary15, color: T.muted }}>
                       <Info size={24} className="opacity-20" />
                       <p className="text-xs font-bold uppercase tracking-widest opacity-40">{t('recipes.form.no_ingredients')}</p>
                     </div>
@@ -1148,8 +1253,8 @@ export const GlobalRecipes: React.FC = () => {
 
               <section className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-brand-forest font-black uppercase tracking-[0.2em] text-xs">
-                    <div className="w-8 h-[2px] bg-brand-sage/30" />
+                  <div className="flex items-center gap-2 font-black uppercase tracking-[0.2em] text-xs" style={{ color: T.muted }}>
+                    <div className="w-8 h-[2px]" style={{ backgroundColor: T.outline }} />
                     {t('recipes.form.steps')} ({formData.steps.length})
                   </div>
                   <motion.button
@@ -1157,7 +1262,8 @@ export const GlobalRecipes: React.FC = () => {
                     whileTap={{ scale: 0.95 }}
                     type="button"
                     onClick={addStep}
-                    className="text-[10px] font-black uppercase tracking-widest bg-brand-teal text-white px-4 py-2 rounded-xl flex items-center gap-2 shadow-lg shadow-brand-teal/10"
+                    className="text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl flex items-center gap-2"
+                    style={{ backgroundColor: T.surface, color: T.primary, border: `1px solid ${T.primary}` }}
                   >
                     <Plus size={14} /> {t('recipes.form.add_step')}
                   </motion.button>
@@ -1170,10 +1276,11 @@ export const GlobalRecipes: React.FC = () => {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        className="flex gap-4 items-start bg-brand-cream/30 p-4 rounded-3xl border border-brand-sage/10 group"
+                        className="flex gap-4 items-start p-4 rounded-3xl group"
+                        style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}` }}
                       >
                         <div className="flex flex-col gap-2 mt-1">
-                          <div className="w-10 h-10 rounded-full bg-brand-forest text-white flex items-center justify-center text-sm font-black shrink-0 shadow-lg shadow-brand-forest/20">
+                          <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-black shrink-0" style={{ backgroundColor: T.primary, color: T.dark }}>
                             {idx + 1}
                           </div>
                           <div className="flex flex-col gap-1 items-center">
@@ -1181,22 +1288,29 @@ export const GlobalRecipes: React.FC = () => {
                                type="button" 
                                onClick={() => moveStep(idx, 'up')}
                                disabled={idx === 0}
-                               className="p-1 hover:bg-white rounded transition-colors disabled:opacity-0"
+                               className="p-1 rounded transition-colors disabled:opacity-0"
+                               style={{ color: T.muted }}
+                               onMouseEnter={(e) => e.currentTarget.style.backgroundColor = T.surface}
+                               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                              >
-                               <ChevronUp size={14} className="text-brand-sage/40" />
+                               <ChevronUp size={14} className="opacity-40" />
                              </button>
                              <button 
                                type="button" 
                                onClick={() => moveStep(idx, 'down')}
                                disabled={idx === formData.steps.length - 1}
-                               className="p-1 hover:bg-white rounded transition-colors disabled:opacity-0"
+                               className="p-1 rounded transition-colors disabled:opacity-0"
+                               style={{ color: T.muted }}
+                               onMouseEnter={(e) => e.currentTarget.style.backgroundColor = T.surface}
+                               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                              >
-                               <ChevronDown size={14} className="text-brand-sage/40" />
+                               <ChevronDown size={14} className="opacity-40" />
                              </button>
                           </div>
                         </div>
                         <textarea
-                          className="flex-1 bg-white border-2 border-transparent focus:border-brand-sage/20 rounded-2xl px-6 py-4 text-sm font-medium outline-none transition-all min-h-[100px] resize-none shadow-sm"
+                          className="flex-1 rounded-2xl px-6 py-4 text-sm font-medium outline-none transition-all min-h-[100px] resize-none"
+                          style={{ backgroundColor: T.surface, border: `1px solid ${T.outline}`, color: T.text }}
                           placeholder={t('recipes.form.step_placeholder', { index: idx + 1 })}
                           value={step}
                           onChange={(e) => {
@@ -1213,7 +1327,7 @@ export const GlobalRecipes: React.FC = () => {
                               steps: prev.steps.filter((_, i) => i !== idx)
                             }));
                           }}
-                          className="p-3 text-red-400 hover:bg-red-500 hover:text-white rounded-xl transition-all self-start"
+                          className="p-3 rounded-xl transition-all self-start" style={{ color: T.danger }}
                         >
                           <Trash2 size={20} />
                         </button>
@@ -1221,7 +1335,7 @@ export const GlobalRecipes: React.FC = () => {
                     ))}
                   </AnimatePresence>
                   {formData.steps.length === 0 && (
-                    <div className="py-10 border-2 border-dashed border-brand-sage/20 rounded-3xl flex flex-col items-center justify-center text-brand-text-muted gap-2">
+                    <div className="py-10 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center gap-2" style={{ borderColor: T.primary15, color: T.muted }}>
                       <Info size={24} className="opacity-20" />
                       <p className="text-xs font-bold uppercase tracking-widest opacity-40">{t('recipes.form.no_steps')}</p>
                     </div>
@@ -1234,10 +1348,10 @@ export const GlobalRecipes: React.FC = () => {
 
           <div className="lg:col-span-4 space-y-8">
             <section className="space-y-4">
-              <label className="text-[11px] font-black text-brand-forest uppercase tracking-widest flex items-center gap-2">
-                <ImageIcon size={16} className="text-brand-sage" /> {t('recipes.ai.title')}
+              <label className="text-[11px] font-black uppercase tracking-widest flex items-center gap-2" style={{ color: T.text }}>
+                <ImageIcon size={16} style={{ color: T.primary }} /> {t('recipes.ai.title')}
               </label>
-              <div className="aspect-[4/5] rounded-[2.5rem] bg-brand-cream/50 border-4 border-white shadow-2xl overflow-hidden relative group">
+              <div className="aspect-[4/5] rounded-[2.5rem] overflow-hidden relative group" style={{ backgroundColor: T.surfaceHi, border: `2px solid ${T.outline}` }}>
                 <AnimatePresence mode="wait">
                   {formData.image_url ? (
                     <motion.img 
@@ -1249,10 +1363,11 @@ export const GlobalRecipes: React.FC = () => {
                       className="w-full h-full object-cover" 
                     />
                   ) : (
-                    <motion.div 
+                    <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="flex flex-col items-center justify-center h-full text-brand-text-muted/40 p-8 text-center"
+                      className="flex flex-col items-center justify-center h-full p-8 text-center"
+                      style={{ color: T.muted }}
                     >
                       <ImageIcon size={64} strokeWidth={1} className="mb-4" />
                       <p className="text-sm font-black uppercase tracking-widest leading-tight">{t('recipes.ai.no_image')}</p>
@@ -1262,8 +1377,8 @@ export const GlobalRecipes: React.FC = () => {
                 </AnimatePresence>
 
                 {refreshImageMutation.isPending && (
-                  <div className="absolute inset-0 bg-brand-forest/60 backdrop-blur-md flex flex-col items-center justify-center text-white p-8 text-center z-20">
-                    <Loader2 size={48} className="animate-spin mb-4 text-brand-sage" />
+                  <div className="absolute inset-0 backdrop-blur-md flex flex-col items-center justify-center p-8 text-center z-20" style={{ backgroundColor: T.dark80, color: T.text }}>
+                    <Loader2 size={48} className="animate-spin mb-4 text-brand-primary" />
                     <p className="text-lg font-black tracking-tight leading-tight">{t('recipes.ai.processing')}</p>
                     <p className="text-xs font-medium opacity-70 mt-2 italic">{t('recipes.ai.processing_hint')}</p>
                   </div>
@@ -1274,17 +1389,19 @@ export const GlobalRecipes: React.FC = () => {
                 <motion.div 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="space-y-4 bg-white/40 backdrop-blur-md p-6 rounded-[2rem] shadow-xl border border-brand-sage/10 relative overflow-hidden"
+                  className="space-y-4 backdrop-blur-md p-6 rounded-[2rem] relative overflow-hidden"
+                  style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}` }}
                 >
-                  <div className="absolute -top-12 -right-12 w-24 h-24 bg-brand-sage/10 rounded-full blur-3xl animate-pulse" />
+                  <div className="absolute -top-12 -right-12 w-24 h-24 rounded-full blur-3xl animate-pulse" style={{ backgroundColor: T.primary05 }} />
                   
                   <div className="flex items-center gap-2">
-                    <Wand2 size={16} className="text-brand-sage" />
-                    <h4 className="text-xs font-black text-brand-forest uppercase tracking-widest">{t('recipes.ai.title')}</h4>
+                    <Wand2 size={16} style={{ color: T.primary }} />
+                    <h4 className="text-xs font-black uppercase tracking-widest" style={{ color: T.text }}>{t('recipes.ai.title')}</h4>
                   </div>
                   <textarea
                     placeholder={t('recipes.ai.feedback_placeholder')}
-                    className="w-full bg-white/60 border-2 border-transparent focus:border-brand-sage/20 rounded-2xl px-4 py-4 text-xs font-medium outline-none min-h-[120px] resize-none transition-all placeholder:italic"
+                    className="w-full rounded-2xl px-4 py-4 text-xs font-medium outline-none min-h-[120px] resize-none transition-all placeholder:italic"
+                    style={{ backgroundColor: T.surface, border: `1px solid ${T.outline}`, color: T.text }}
                     value={imageFeedback}
                     onChange={(e) => setImageFeedback(e.target.value)}
                   />
@@ -1294,14 +1411,15 @@ export const GlobalRecipes: React.FC = () => {
                     type="button"
                     onClick={() => refreshImageMutation.mutate({ slug: formData.slug, issue: imageFeedback })}
                     disabled={refreshImageMutation.isPending}
-                    className="w-full h-12 rounded-xl bg-brand-forest text-white font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-brand-forest/20 disabled:opacity-50 relative group"
+                    className="w-full h-12 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50 relative group transition-all"
+                    style={{ backgroundColor: T.surface, color: T.primary, border: `1px solid ${T.primary}` }}
                   >
                     <Sparkles size={14} className="group-hover:animate-spin-slow" />
                     <span>{refreshImageMutation.isPending ? t('recipes.ai.processing_btn') : t('recipes.ai.regenerate_btn')}</span>
                     {refreshImageMutation.isPending && (
                       <motion.div 
                         layoutId="btn-shimmer"
-                        className="absolute inset-0 bg-white/20"
+                        className="absolute inset-0 bg-white/10"
                         animate={{ x: ['-100%', '100%'] }}
                         transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
                       />
@@ -1312,10 +1430,10 @@ export const GlobalRecipes: React.FC = () => {
             </section>
 
             <section className="space-y-4">
-              <label className="text-[11px] font-black text-brand-forest uppercase tracking-widest flex items-center gap-2">
-                <Filter size={16} className="text-brand-teal" /> {t('recipes.form.tags_allergens')}
+              <label className="text-[11px] font-black uppercase tracking-widest flex items-center gap-2" style={{ color: T.text }}>
+                <Filter size={16} style={{ color: T.primary }} /> {t('recipes.form.tags_allergens')}
               </label>
-              <div className="flex flex-wrap gap-2 p-6 bg-brand-cream/30 rounded-[2rem] border border-brand-sage/10 max-h-[300px] overflow-y-auto custom-scrollbar">
+              <div className="flex flex-wrap gap-2 p-6 rounded-[2rem] max-h-[300px] overflow-y-auto custom-scrollbar" style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}` }}>
                 {tags?.map(tag => {
                   const label = activeLang === 'es' ? tag.es : tag.en;
                   return (
@@ -1323,55 +1441,46 @@ export const GlobalRecipes: React.FC = () => {
                       key={tag.id}
                       type="button"
                       onClick={() => toggleTag(tag.key)}
-                      className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-tighter transition-all ${
-                        formData.tags.includes(tag.key)
-                          ? 'bg-brand-teal text-white shadow-lg shadow-brand-teal/20 scale-105'
-                          : 'bg-white text-brand-text-muted border-2 border-transparent hover:border-brand-sage/20'
-                      }`}
+                      className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-tighter transition-all"
+                      style={formData.tags.includes(tag.key)
+                        ? { backgroundColor: T.primary, color: T.dark }
+                        : { backgroundColor: T.surface, color: T.muted, border: `1px solid ${T.outline}` }}
                     >
                       {t(`tags.items.${tag.key}`, { defaultValue: label })}
                     </button>
                   );
                 })}
-                {tags?.length === 0 && <p className="text-xs text-brand-text-muted italic text-center w-full py-4 opacity-40">{t('recipes.form.no_tags_hint')}</p>}
+                {tags?.length === 0 && <p className="text-xs italic text-center w-full py-4 opacity-40" style={{ color: T.muted }}>{t('recipes.form.no_tags_hint')}</p>}
               </div>
             </section>
 
-            <div className="p-6 bg-brand-sage/5 rounded-[2rem] border border-brand-sage/10">
-              <h4 className="text-[10px] font-black text-brand-forest uppercase tracking-widest mb-3 flex items-center gap-2">
-                <Info size={12} /> {t('recipes.form.style_guide')}
+            <div className="p-6 rounded-[2rem]" style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}` }}>
+              <h4 className="text-[10px] font-black uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: T.text }}>
+                <Info size={12} style={{ color: T.primary }} /> {t('recipes.form.style_guide')}
               </h4>
-              <ul className="text-[10px] text-brand-text-muted space-y-2 font-medium">
-                <li className="flex gap-2">
-                  <span className="text-brand-sage">•</span>
-                  <span>{t('recipes.form.style_guide_slug')}</span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="text-brand-sage">•</span>
-                  <span>{t('recipes.form.style_guide_ingredients')}</span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="text-brand-sage">•</span>
-                  <span>{t('recipes.form.style_guide_sibo')}</span>
-                </li>
+              <ul className="text-[10px] space-y-2 font-medium" style={{ color: T.muted }}>
+                <li className="flex gap-2"><span style={{ color: T.primary }}>•</span><span>{t('recipes.form.style_guide_slug')}</span></li>
+                <li className="flex gap-2"><span style={{ color: T.primary }}>•</span><span>{t('recipes.form.style_guide_ingredients')}</span></li>
+                <li className="flex gap-2"><span style={{ color: T.primary }}>•</span><span>{t('recipes.form.style_guide_sibo')}</span></li>
               </ul>
             </div>
           </div>
         </div>
 
-        <div className="mt-10 pt-8 border-t border-brand-sage/10 flex flex-col md:flex-row gap-4">
-          <Button 
-            variant="secondary" 
-            type="button" 
-            className="px-10 h-14 rounded-2xl font-black uppercase tracking-widest text-[10px]" 
+        <div className="mt-10 pt-8 flex flex-col md:flex-row gap-4" style={{ borderTop: `1px solid ${T.outline}` }}>
+          <button
+            type="button"
+            className="px-10 h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all"
+            style={{ backgroundColor: T.surfaceHi, color: T.text, border: `1px solid ${T.outline}` }}
             onClick={handleCloseModal}
           >
             {t('common.discard_changes')}
-          </Button>
-          <Button 
+          </button>
+          <button
             form="recipe-form"
-            type="submit" 
-            className="flex-1 h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-2xl shadow-brand-forest/20 flex items-center justify-center gap-3"
+            type="submit"
+            className="flex-1 h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 transition-all disabled:opacity-50"
+            style={{ backgroundColor: T.primary, color: T.dark }}
             disabled={createMutation.isPending || updateMutation.isPending}
           >
             {createMutation.isPending || updateMutation.isPending ? (
@@ -1382,7 +1491,7 @@ export const GlobalRecipes: React.FC = () => {
                 <ArrowRight size={18} />
               </>
             )}
-          </Button>
+          </button>
         </div>
       </Modal>
 
@@ -1391,11 +1500,11 @@ export const GlobalRecipes: React.FC = () => {
           width: 4px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
-          background: rgba(0,0,0,0.03);
+          background: ${T.black03};
           border-radius: 10px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #3B4D3C;
+          background: ${T.outline};
           border-radius: 10px;
         }
         @keyframes spin-slow {

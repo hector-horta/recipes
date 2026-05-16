@@ -27,12 +27,33 @@ export const Login: React.FC = () => {
     }
   };
 
+  const T = {
+    primary:    'var(--brand-primary)',
+    primary07:  'rgba(0, 255, 194, 0.07)',
+    primary12:  'rgba(0, 255, 194, 0.12)',
+    primary15:  'rgba(0, 255, 194, 0.15)',
+    primary25:  'rgba(0, 255, 194, 0.25)',
+    teal05:     'rgba(0, 209, 160, 0.05)',
+    danger:     'var(--danger)',
+    danger10:   'rgba(248, 113, 113, 0.10)',
+    danger30:   'rgba(248, 113, 113, 0.30)',
+    text:       'var(--brand-text)',
+    muted:      'var(--brand-text-muted)',
+    surface:    'var(--surface-organic)',
+    surfaceHi:  'var(--surface-light)',
+    surfaceLo:  'var(--surface-dark)',
+    lowest:     'var(--surface-lowest)',
+    outline:    'var(--outline)',
+    black65:    'rgba(0, 0, 0, 0.65)',
+    hover:      '#00E1AB',
+  } as const;
+
   const inputStyle: React.CSSProperties = {
-    backgroundColor: 'var(--surface-light)',
-    border: '1px solid var(--outline)',
+    backgroundColor: T.surfaceHi,
+    border: `1px solid ${T.outline}`,
     borderRadius: '0.75rem',
-    color: 'var(--brand-text)',
-    caretColor: 'var(--brand-primary)',
+    color: T.text,
+    caretColor: T.primary,
     width: '100%',
     height: '3rem',
     padding: '0 1rem',
@@ -44,19 +65,19 @@ export const Login: React.FC = () => {
   };
 
   const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    e.target.style.borderColor = 'var(--brand-primary)';
-    e.target.style.boxShadow = '0 0 0 3px rgba(0,255,194,0.12)';
+    e.target.style.borderColor = T.primary;
+    e.target.style.boxShadow = `0 0 0 3px ${T.primary12}`;
   };
 
   const handleInputBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    e.target.style.borderColor = 'var(--outline)';
+    e.target.style.borderColor = T.outline;
     e.target.style.boxShadow = 'none';
   };
 
   return (
     <div
       className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
-      style={{ backgroundColor: 'var(--surface-dark)' }}
+      style={{ backgroundColor: T.surfaceLo }}
     >
       {/* Ambient glow top-left */}
       <div
@@ -67,7 +88,7 @@ export const Login: React.FC = () => {
           width: '40%',
           height: '40%',
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(0,255,194,0.07) 0%, transparent 70%)',
+          background: `radial-gradient(circle, ${T.primary07} 0%, transparent 70%)`,
           filter: 'blur(60px)',
         }}
       />
@@ -80,7 +101,7 @@ export const Login: React.FC = () => {
           width: '40%',
           height: '40%',
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(0,209,160,0.05) 0%, transparent 70%)',
+          background: `radial-gradient(circle, ${T.teal05} 0%, transparent 70%)`,
           filter: 'blur(80px)',
         }}
       />
@@ -93,11 +114,11 @@ export const Login: React.FC = () => {
         style={{
           width: '100%',
           maxWidth: '26rem',
-          backgroundColor: 'var(--surface-organic)',
-          border: '1px solid var(--outline)',
+          backgroundColor: T.surface,
+          border: `1px solid ${T.outline}`,
           borderRadius: '1.5rem',
           padding: '2.5rem',
-          boxShadow: '0 32px 64px -16px rgba(0,0,0,0.65)',
+          boxShadow: `0 32px 64px -16px ${T.black65}`,
         }}
       >
         {/* ── Header ── */}
@@ -111,10 +132,10 @@ export const Login: React.FC = () => {
               width: '5rem',
               height: '5rem',
               borderRadius: '1.25rem',
-              backgroundColor: 'var(--surface-lowest)',
-              border: '1px solid var(--outline)',
-              color: 'var(--brand-primary)',
-              boxShadow: '0 0 32px rgba(0,255,194,0.15)',
+              backgroundColor: T.lowest,
+              border: `1px solid ${T.outline}`,
+              color: T.primary,
+              boxShadow: `0 0 32px ${T.primary15}`,
               marginBottom: '1.5rem',
             }}
           >
@@ -123,7 +144,7 @@ export const Login: React.FC = () => {
 
           <h2
             style={{
-              color: 'var(--brand-text)',
+              color: T.text,
               fontSize: '2.25rem',
               fontWeight: 900,
               letterSpacing: '-0.025em',
@@ -135,7 +156,7 @@ export const Login: React.FC = () => {
           </h2>
           <p
             style={{
-              color: 'var(--brand-text-muted)',
+              color: T.muted,
               fontSize: '0.875rem',
               fontWeight: 500,
               marginTop: '0.5rem',
@@ -162,11 +183,11 @@ export const Login: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.75rem',
-                  backgroundColor: 'rgba(248,113,113,0.1)',
-                  border: '1px solid rgba(248,113,113,0.3)',
+                  backgroundColor: T.danger10,
+                  border: `1px solid ${T.danger30}`,
                   borderRadius: '0.75rem',
                   padding: '0.75rem 1rem',
-                  color: 'var(--danger)',
+                  color: T.danger,
                   fontSize: '0.875rem',
                   fontWeight: 500,
                 }}
@@ -185,7 +206,7 @@ export const Login: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               <label
                 style={{
-                  color: 'var(--brand-text-muted)',
+                  color: T.muted,
                   fontSize: '0.7rem',
                   fontWeight: 700,
                   textTransform: 'uppercase',
@@ -212,7 +233,7 @@ export const Login: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               <label
                 style={{
-                  color: 'var(--brand-text-muted)',
+                  color: T.muted,
                   fontSize: '0.7rem',
                   fontWeight: 700,
                   textTransform: 'uppercase',
@@ -245,8 +266,8 @@ export const Login: React.FC = () => {
             style={{
               width: '100%',
               padding: '0.875rem',
-              backgroundColor: 'var(--brand-primary)',
-              color: 'var(--surface-lowest)',
+              backgroundColor: T.primary,
+              color: T.lowest,
               borderRadius: '0.875rem',
               border: 'none',
               fontSize: '1rem',
@@ -254,7 +275,7 @@ export const Login: React.FC = () => {
               letterSpacing: '0.02em',
               cursor: isLoading ? 'not-allowed' : 'pointer',
               opacity: isLoading ? 0.6 : 1,
-              boxShadow: '0 0 24px rgba(0,255,194,0.25)',
+              boxShadow: `0 0 24px ${T.primary25}`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -263,10 +284,10 @@ export const Login: React.FC = () => {
               transition: 'background-color 0.15s',
             }}
             onMouseEnter={(e) => {
-              if (!isLoading) e.currentTarget.style.backgroundColor = '#00E1AB';
+              if (!isLoading) e.currentTarget.style.backgroundColor = T.hover;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--brand-primary)';
+              e.currentTarget.style.backgroundColor = T.primary;
             }}
           >
             {isLoading ? (
@@ -297,7 +318,7 @@ export const Login: React.FC = () => {
             letterSpacing: '0.15em',
             fontWeight: 700,
             marginTop: '1.5rem',
-            color: 'var(--brand-text-muted)',
+            color: T.muted,
             opacity: 0.4,
           }}
         >

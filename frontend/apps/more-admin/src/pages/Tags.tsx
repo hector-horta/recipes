@@ -24,7 +24,11 @@ const T = {
   text:      'var(--brand-text)',
   muted:     'var(--brand-text-muted)',
   primary:   'var(--brand-primary)',
+  primary08: 'rgba(0, 255, 194, 0.08)',
+  primary15: 'rgba(0, 255, 194, 0.15)',
   danger:    '#F87171',
+  danger08:  'rgba(248, 113, 113, 0.08)',
+  danger15:  'rgba(248, 113, 113, 0.15)',
 } as const;
 
 const cardStyle: React.CSSProperties = {
@@ -138,7 +142,7 @@ export const Tags: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <motion.div variants={itemVariants}>
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(0,255,194,0.08)', color: T.primary }}>
+            <div className="p-2 rounded-lg" style={{ backgroundColor: T.primary08, color: T.primary }}>
               <Languages size={24} />
             </div>
             <h2 className="text-4xl font-extrabold tracking-tight" style={{ color: T.text }}>
@@ -222,13 +226,13 @@ export const Tags: React.FC = () => {
                           <div className="flex items-center gap-4">
                             <div
                               className="w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 duration-300"
-                              style={{ backgroundColor: 'rgba(0,255,194,0.08)', color: T.primary }}
+                              style={{ backgroundColor: T.primary08, color: T.primary }}
                             >
                               <TagIcon size={22} strokeWidth={2.5} />
                             </div>
                             <code
                               className="text-[11px] font-bold font-mono px-3 py-1.5 rounded-lg"
-                              style={{ color: T.primary, backgroundColor: 'rgba(0,255,194,0.08)', border: '1px solid rgba(0,255,194,0.15)' }}
+                              style={{ color: T.primary, backgroundColor: T.primary08, border: `1px solid ${T.primary15}` }}
                             >
                               {tag.key}
                             </code>
@@ -252,7 +256,7 @@ export const Tags: React.FC = () => {
                               whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
                               onClick={() => { setEditingTag(tag); setIsModalOpen(true); }}
                               className="p-3 rounded-xl transition-all"
-                              style={{ backgroundColor: 'rgba(0,255,194,0.08)', color: T.primary, border: '1px solid rgba(0,255,194,0.15)' }}
+                              style={{ backgroundColor: T.primary08, color: T.primary, border: `1px solid ${T.primary15}` }}
                               title={t('common.edit')}
                             >
                               <Pencil size={18} />
@@ -265,7 +269,7 @@ export const Tags: React.FC = () => {
                                 }
                               }}
                               className="p-3 rounded-xl transition-all"
-                              style={{ backgroundColor: 'rgba(248,113,113,0.08)', color: T.danger, border: '1px solid rgba(248,113,113,0.15)' }}
+                              style={{ backgroundColor: T.danger08, color: T.danger, border: `1px solid ${T.danger15}` }}
                               title={t('common.delete')}
                             >
                               <Trash2 size={18} />

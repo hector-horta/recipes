@@ -26,8 +26,14 @@ const T = {
   text:      'var(--brand-text)',
   muted:     'var(--brand-text-muted)',
   primary:   'var(--brand-primary)',
+  primary08: 'rgba(0, 255, 194, 0.08)',
+  primary12: 'rgba(0, 255, 194, 0.12)',
+  primary15: 'rgba(0, 255, 194, 0.15)',
   danger:    '#F87171',
+  danger08:  'rgba(248, 113, 113, 0.08)',
+  danger15:  'rgba(248, 113, 113, 0.15)',
   warning:   '#FFB703',
+  warning12: 'rgba(255, 183, 3, 0.12)',
 } as const;
 
 const cardStyle: React.CSSProperties = {
@@ -129,7 +135,7 @@ export const Tenants: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <motion.div variants={itemVariants}>
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(0,255,194,0.08)', color: T.primary }}>
+            <div className="p-2 rounded-lg" style={{ backgroundColor: T.primary08, color: T.primary }}>
               <Building2 size={24} />
             </div>
             <h2 className="text-4xl font-extrabold tracking-tight" style={{ color: T.text }}>
@@ -244,8 +250,8 @@ export const Tenants: React.FC = () => {
                           <span
                             className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tighter"
                             style={org.status === 'active'
-                              ? { backgroundColor: 'rgba(0,255,194,0.12)', color: T.primary }
-                              : { backgroundColor: 'rgba(255,183,3,0.12)', color: T.warning }}
+                              ? { backgroundColor: T.primary12, color: T.primary }
+                              : { backgroundColor: T.warning12, color: T.warning }}
                           >
                             {org.status === 'active' ? t('tenants.table.status_online') : t('tenants.table.status_suspended')}
                           </span>
@@ -271,7 +277,7 @@ export const Tenants: React.FC = () => {
                               whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
                               onClick={() => { setEditingOrg(org); setIsModalOpen(true); }}
                               className="p-3 rounded-xl transition-all"
-                              style={{ backgroundColor: 'rgba(0,255,194,0.08)', color: T.primary, border: '1px solid rgba(0,255,194,0.15)' }}
+                              style={{ backgroundColor: T.primary08, color: T.primary, border: `1px solid ${T.primary15}` }}
                               title={t('tenants.actions.edit')}
                             >
                               <Pencil size={18} />
@@ -288,8 +294,8 @@ export const Tenants: React.FC = () => {
                               }}
                               className="p-3 rounded-xl transition-all"
                               style={org.status === 'active'
-                                ? { backgroundColor: 'rgba(248,113,113,0.08)', color: T.danger, border: '1px solid rgba(248,113,113,0.15)' }
-                                : { backgroundColor: 'rgba(0,255,194,0.08)', color: T.primary, border: '1px solid rgba(0,255,194,0.15)' }}
+                                ? { backgroundColor: T.danger08, color: T.danger, border: `1px solid ${T.danger15}` }
+                                : { backgroundColor: T.primary08, color: T.primary, border: `1px solid ${T.primary15}` }}
                               title={org.status === 'active' ? t('tenants.actions.suspend') : t('tenants.actions.activate')}
                             >
                               <Power size={18} />
@@ -367,7 +373,7 @@ export const Tenants: React.FC = () => {
               />
               <div
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold px-2 py-1 rounded"
-                style={{ color: T.primary, backgroundColor: 'rgba(0,255,194,0.08)' }}
+                style={{ color: T.primary, backgroundColor: T.primary08 }}
               >
                 wati.app/{'{'+'slug'}{'}'} 
               </div>

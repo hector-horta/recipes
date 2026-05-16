@@ -56,17 +56,29 @@ const T = {
   text:       'var(--brand-text)',        // #E0E2E8
   muted:      'var(--brand-text-muted)', // #B9CBC1
   primary:    'var(--brand-primary)',     // #00FFC2
+  primary08:  'rgba(0, 255, 194, 0.08)',
+  primary15:  'rgba(0, 255, 194, 0.15)',
+  primary20:  'rgba(0, 255, 194, 0.20)',
   danger:     'var(--danger)',            // #F87171
+  danger08:   'rgba(248, 113, 113, 0.08)',
+  danger15:   'rgba(248, 113, 113, 0.15)',
   warning:    'var(--warning)',           // #FFB703
+  warning08:  'rgba(255, 183, 3, 0.08)',
+  warning15:  'rgba(255, 183, 3, 0.15)',
   success:    'var(--success)',           // #00FFC2
+  neutral08:  'rgba(131, 149, 140, 0.08)',
+  neutral10:  'rgba(131, 149, 140, 0.10)',
+  neutral15:  'rgba(131, 149, 140, 0.15)',
+  black50:    'rgba(0, 0, 0, 0.50)',
+  shadowLg:   '0 12px 48px -12px rgba(0, 0, 0, 0.50)',
 } as const;
 
 // ─── Stat variant configs ────────────────────────────────────────────────────
 const variantConfig = {
-  success: { color: '#00FFC2', bg: 'rgba(0,255,194,0.08)', border: 'rgba(0,255,194,0.15)' },
-  info:    { color: '#83958C', bg: 'rgba(131,149,140,0.08)', border: 'rgba(131,149,140,0.15)' },
-  danger:  { color: '#F87171', bg: 'rgba(248,113,113,0.08)', border: 'rgba(248,113,113,0.15)' },
-  warning: { color: '#FFB703', bg: 'rgba(255,183,3,0.08)',   border: 'rgba(255,183,3,0.15)' },
+  success: { color: T.primary, bg: T.primary08, border: T.primary15 },
+  info:    { color: T.outlineSt, bg: T.neutral08, border: T.neutral15 },
+  danger:  { color: T.danger, bg: T.danger08, border: T.danger15 },
+  warning: { color: T.warning, bg: T.warning08, border: T.warning15 },
 };
 
 // ─── Shared card style ───────────────────────────────────────────────────────
@@ -334,26 +346,26 @@ export const Dashboard: React.FC = () => {
               <YAxis
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: '#83958C', fontSize: 11, fontWeight: 600 }}
+                tick={{ fill: T.muted, fontSize: 11, fontWeight: 600 }}
                 dx={-10}
               />
               <Tooltip
                 contentStyle={{
+                  backgroundColor: T.surface,
+                  border: `1px solid ${T.outline}`,
                   borderRadius: '1rem',
-                  border: '1px solid rgba(58,74,67,0.8)',
-                  boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+                  boxShadow: T.shadowLg,
                   padding: '0.75rem 1rem',
-                  backgroundColor: '#1C2024',
                   backdropFilter: 'blur(10px)',
                 }}
-                itemStyle={{ color: '#00FFC2', fontWeight: 700 }}
-                labelStyle={{ color: '#E0E2E8', fontWeight: 900, marginBottom: '4px' }}
-                cursor={{ stroke: 'rgba(0,255,194,0.2)', strokeWidth: 1 }}
+                itemStyle={{ color: T.primary, fontWeight: 700 }}
+                labelStyle={{ color: T.text, fontWeight: 900, marginBottom: '4px' }}
+                cursor={{ stroke: T.primary20, strokeWidth: 1 }}
               />
               <Area
                 type="monotone"
                 dataKey="count"
-                stroke="#00FFC2"
+                stroke={T.primary}
                 strokeWidth={2.5}
                 fillOpacity={1}
                 fill="url(#colorCount)"
@@ -372,7 +384,7 @@ export const Dashboard: React.FC = () => {
         >
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ backgroundColor: 'rgba(131,149,140,0.1)', color: T.outlineSt }}
+            style={{ backgroundColor: T.neutral10, color: T.outlineSt }}
           >
             <BarChart3 size={20} />
           </div>
@@ -419,7 +431,7 @@ export const Dashboard: React.FC = () => {
                     <div className="flex items-center gap-3">
                       <div
                         className="w-8 h-8 rounded-lg flex items-center justify-center"
-                        style={{ backgroundColor: 'rgba(0,255,194,0.08)', color: T.primary }}
+                        style={{ backgroundColor: T.primary08, color: T.primary }}
                       >
                         <ChefHat size={16} />
                       </div>
@@ -459,11 +471,11 @@ export const Dashboard: React.FC = () => {
                       className="text-xs font-bold transition-all px-3 py-1.5 rounded-lg"
                       style={{
                         color: T.primary,
-                        backgroundColor: 'rgba(0,255,194,0.08)',
-                        border: '1px solid rgba(0,255,194,0.15)',
+                        backgroundColor: T.primary08,
+                        border: `1px solid ${T.primary15}`,
                       }}
-                      onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'rgba(0,255,194,0.15)')}
-                      onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'rgba(0,255,194,0.08)')}
+                      onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.backgroundColor = T.primary15)}
+                      onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.backgroundColor = T.primary08)}
                     >
                       {t('dashboard.table.review')}
                     </Link>
