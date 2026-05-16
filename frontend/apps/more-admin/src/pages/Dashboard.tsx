@@ -1,13 +1,13 @@
 import React, { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
-import { 
-  BarChart3, 
-  TrendingUp, 
-  SearchX, 
-  AlertCircle, 
-  Cpu, 
-  ArrowUpRight, 
+import {
+  BarChart3,
+  TrendingUp,
+  SearchX,
+  AlertCircle,
+  Cpu,
+  ArrowUpRight,
   Clock,
   RefreshCcw,
   ChefHat
@@ -15,11 +15,11 @@ import {
 import { Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   AreaChart,
   Area
@@ -46,6 +46,38 @@ interface Stats {
   ingest_by_day: { day: string; action: string; count: number | string }[];
 }
 
+// ─── Design tokens (inline for clarity) ─────────────────────────────────────
+const T = {
+  surface:    'var(--surface-organic)',   // #1C2024 — card background
+  surfaceHi:  'var(--surface-light)',     // #272A2E — elevated rows / inputs
+  lowest:     'var(--surface-lowest)',    // #0B0F12 — icon backgrounds
+  outline:    'var(--outline)',           // #3A4A43
+  outlineSt:  'var(--outline-strong)',    // #83958C
+  text:       'var(--brand-text)',        // #E0E2E8
+  muted:      'var(--brand-text-muted)', // #B9CBC1
+  primary:    'var(--brand-primary)',     // #00FFC2
+  danger:     'var(--danger)',            // #F87171
+  warning:    'var(--warning)',           // #FFB703
+  success:    'var(--success)',           // #00FFC2
+} as const;
+
+// ─── Stat variant configs ────────────────────────────────────────────────────
+const variantConfig = {
+  success: { color: '#00FFC2', bg: 'rgba(0,255,194,0.08)', border: 'rgba(0,255,194,0.15)' },
+  info:    { color: '#83958C', bg: 'rgba(131,149,140,0.08)', border: 'rgba(131,149,140,0.15)' },
+  danger:  { color: '#F87171', bg: 'rgba(248,113,113,0.08)', border: 'rgba(248,113,113,0.15)' },
+  warning: { color: '#FFB703', bg: 'rgba(255,183,3,0.08)',   border: 'rgba(255,183,3,0.15)' },
+};
+
+// ─── Shared card style ───────────────────────────────────────────────────────
+const cardStyle: React.CSSProperties = {
+  backgroundColor: T.surface,
+  border: `1px solid ${T.outline}`,
+  borderRadius: '1.25rem',
+  overflow: 'hidden',
+};
+
+// ─── Component ───────────────────────────────────────────────────────────────
 export const Dashboard: React.FC = () => {
   const { t } = useTranslation();
   const { data: stats, isLoading, refetch } = useQuery({
@@ -59,191 +91,272 @@ export const Dashboard: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-brand-text-muted">
-        <Loader2 className="animate-spin mb-4" size={48} />
+      <div
+        className="flex flex-col items-center justify-center min-h-[60vh]"
+        style={{ color: T.muted }}
+      >
+        <Loader2 className="animate-spin mb-4" size={48} style={{ color: T.primary }} />
         <p className="font-medium animate-pulse">{t('dashboard.loading_stats')}</p>
       </div>
     );
   }
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className="space-y-8 pb-12"
     >
+      {/* ── Page header ── */}
       <div className="flex items-end justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-brand-forest">{t('dashboard.title')}</h2>
-          <p className="text-brand-text-muted mt-1">{t('dashboard.subtitle')}</p>
+          <h2
+            className="text-3xl font-bold"
+            style={{ color: T.text }}
+          >
+            {t('dashboard.title')}
+          </h2>
+          <p className="mt-1" style={{ color: T.muted }}>
+            {t('dashboard.subtitle')}
+          </p>
         </div>
-        <button 
+        <button
           onClick={() => {
             refetch();
             logger.info('ADMIN_DASHBOARD_REFRESH');
           }}
-          className="flex items-center gap-2 text-brand-sage bg-brand-sage/10 px-4 py-2 rounded-xl text-sm font-medium hover:bg-brand-sage/20 transition-all"
+          className="flex items-center gap-2 text-sm font-medium transition-all"
+          style={{
+            color: T.primary,
+            backgroundColor: 'rgba(0,255,194,0.08)',
+            border: '1px solid rgba(0,255,194,0.15)',
+            borderRadius: '0.75rem',
+            padding: '0.5rem 1rem',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(0,255,194,0.14)')}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'rgba(0,255,194,0.08)')}
         >
           <RefreshCcw size={16} />
           {t('common.update')}
         </button>
       </div>
 
-      {/* Grid de Resumen */}
+      {/* ── Stat cards grid ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard 
+        <StatCard
           title={t('dashboard.stats.uptime')}
           value={stats?.nvidia.uptime_percent_24h ? `${stats.nvidia.uptime_percent_24h}%` : 'N/A'}
-          icon={<Cpu size={24} />}
+          icon={<Cpu size={22} />}
           description={t('dashboard.stats.last_24h')}
           variant="success"
         />
-        <StatCard 
+        <StatCard
           title={t('dashboard.stats.success_ingest')}
           value={stats?.nvidia.success_24h || 0}
-          icon={<ArrowUpRight size={24} />}
+          icon={<ArrowUpRight size={22} />}
           description={t('dashboard.stats.today')}
           variant="info"
         />
-        <StatCard 
+        <StatCard
           title={t('dashboard.stats.failed_ingest')}
           value={stats?.nvidia.failures_24h || 0}
-          icon={<AlertCircle size={24} />}
+          icon={<AlertCircle size={22} />}
           description={t('dashboard.stats.today')}
           variant="danger"
         />
-        <StatCard 
+        <StatCard
           title={t('dashboard.stats.success_rate')}
           value={stats?.nvidia.uptime_percent_24h ? `${Math.round(stats.nvidia.uptime_percent_24h)}%` : '0%'}
-          icon={<TrendingUp size={24} />}
+          icon={<TrendingUp size={22} />}
           description={t('dashboard.stats.nvidia_api')}
           variant="warning"
         />
       </div>
 
+      {/* ── Search panels ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Top Searches */}
-        <div className="bg-white rounded-3xl shadow-xl shadow-brand-forest/5 border border-brand-sage/10 p-6 space-y-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-brand-sage/10 text-brand-sage flex items-center justify-center">
+        <div style={cardStyle}>
+          <div
+            className="flex items-center gap-3 p-6"
+            style={{ borderBottom: `1px solid ${T.outline}` }}
+          >
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ backgroundColor: 'rgba(0,255,194,0.1)', color: T.primary }}
+            >
               <TrendingUp size={20} />
             </div>
-            <h3 className="text-xl font-bold text-brand-forest">{t('dashboard.top_searches')}</h3>
+            <h3 className="text-xl font-bold" style={{ color: T.text }}>
+              {t('dashboard.top_searches')}
+            </h3>
           </div>
-          <div className="space-y-3">
+          <div className="p-6 space-y-3">
             {stats?.top_searches.map((search, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3 bg-brand-cream/30 rounded-xl">
-                <span className="font-medium text-brand-text capitalize">{search.term || t('common.empty')}</span>
-                <span className="bg-brand-sage text-white px-3 py-1 rounded-lg text-xs font-bold">
+              <div
+                key={idx}
+                className="flex items-center justify-between rounded-xl px-4 py-3"
+                style={{ backgroundColor: T.surfaceHi }}
+              >
+                <span className="font-medium capitalize" style={{ color: T.text }}>
+                  {search.term || t('common.empty')}
+                </span>
+                <span
+                  className="text-xs font-bold px-3 py-1 rounded-lg"
+                  style={{ backgroundColor: T.primary, color: T.lowest }}
+                >
                   {search.count} {t('common.searches')}
                 </span>
               </div>
             ))}
             {stats?.top_searches.length === 0 && (
-              <p className="text-center text-brand-text-muted py-8 italic">{t('dashboard.no_data')}</p>
+              <p className="text-center py-8 italic" style={{ color: T.muted }}>
+                {t('dashboard.no_data')}
+              </p>
             )}
           </div>
         </div>
 
         {/* Failed Searches */}
-        <div className="bg-white rounded-3xl shadow-xl shadow-brand-forest/5 border border-brand-sage/10 p-6 space-y-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-red-50 text-red-400 flex items-center justify-center">
+        <div style={cardStyle}>
+          <div
+            className="flex items-center gap-3 p-6"
+            style={{ borderBottom: `1px solid ${T.outline}` }}
+          >
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ backgroundColor: 'rgba(248,113,113,0.1)', color: T.danger }}
+            >
               <SearchX size={20} />
             </div>
-            <h3 className="text-xl font-bold text-brand-forest">{t('dashboard.failed_searches')}</h3>
+            <h3 className="text-xl font-bold" style={{ color: T.text }}>
+              {t('dashboard.failed_searches')}
+            </h3>
           </div>
-          <div className="space-y-3">
+          <div className="p-6 space-y-3">
             {stats?.failed_searches.map((search, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3 bg-red-50/30 rounded-xl">
-                <span className="font-medium text-red-900 capitalize">{search.term || t('common.empty')}</span>
-                <span className="text-red-400 text-xs font-bold">
+              <div
+                key={idx}
+                className="flex items-center justify-between rounded-xl px-4 py-3"
+                style={{ backgroundColor: T.surfaceHi }}
+              >
+                <span className="font-medium capitalize" style={{ color: T.text }}>
+                  {search.term || t('common.empty')}
+                </span>
+                <span className="text-xs font-bold" style={{ color: T.danger }}>
                   {search.count} {t('dashboard.stats.today')}
                 </span>
               </div>
             ))}
             {stats?.failed_searches.length === 0 && (
-              <p className="text-center text-brand-text-muted py-8 italic">{t('dashboard.congratulations')}</p>
+              <p className="text-center py-8 italic" style={{ color: T.muted }}>
+                {t('dashboard.congratulations')}
+              </p>
             )}
           </div>
         </div>
       </div>
-      
-      {/* Ingest Activity Chart */}
-      <motion.div 
+
+      {/* ── Ingest Activity Chart ── */}
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] shadow-2xl shadow-brand-forest/5 border border-brand-sage/10 p-8 space-y-8 relative overflow-hidden"
+        style={{
+          ...cardStyle,
+          borderRadius: '1.5rem',
+          padding: '2rem',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
       >
-        <div className="absolute top-0 right-0 p-8 opacity-10">
-          <BarChart3 size={120} strokeWidth={1} className="text-brand-forest" />
+        {/* Watermark icon */}
+        <div style={{ position: 'absolute', top: '2rem', right: '2rem', opacity: 0.04 }}>
+          <BarChart3 size={120} strokeWidth={1} style={{ color: T.primary }} />
         </div>
 
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
+        {/* Chart header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10 mb-8">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-brand-forest text-white flex items-center justify-center shadow-lg shadow-brand-forest/20">
-              <BarChart3 size={28} />
+            <div
+              className="w-14 h-14 rounded-2xl flex items-center justify-center"
+              style={{ backgroundColor: T.lowest, color: T.primary, border: `1px solid ${T.outline}`, boxShadow: '0 0 20px rgba(0,255,194,0.1)' }}
+            >
+              <BarChart3 size={26} />
             </div>
             <div>
-              <h3 className="text-2xl font-black text-brand-forest tracking-tight">{t('dashboard.ingest_activity')}</h3>
-              <p className="text-sm text-brand-text-muted font-medium">{t('dashboard.ingest_subtitle')}</p>
+              <h3 className="text-2xl font-black tracking-tight" style={{ color: T.text }}>
+                {t('dashboard.ingest_activity')}
+              </h3>
+              <p className="text-sm font-medium" style={{ color: T.muted }}>
+                {t('dashboard.ingest_subtitle')}
+              </p>
             </div>
           </div>
-          <div className="flex items-center gap-6 bg-brand-cream/50 p-2 rounded-2xl px-4 border border-brand-sage/10">
-             <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-brand-sage shadow-sm shadow-brand-sage/50" />
-                <span className="text-xs font-bold text-brand-forest uppercase tracking-wider">{t('dashboard.legend_success')}</span>
-             </div>
-             <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-red-400 shadow-sm shadow-red-400/50" />
-                <span className="text-xs font-bold text-brand-forest uppercase tracking-wider">{t('dashboard.legend_failure')}</span>
-             </div>
+          {/* Legend */}
+          <div
+            className="flex items-center gap-6 px-4 py-2 rounded-2xl"
+            style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}` }}
+          >
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: T.primary }} />
+              <span className="text-xs font-bold uppercase tracking-wider" style={{ color: T.muted }}>
+                {t('dashboard.legend_success')}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: T.danger }} />
+              <span className="text-xs font-bold uppercase tracking-wider" style={{ color: T.muted }}>
+                {t('dashboard.legend_failure')}
+              </span>
+            </div>
           </div>
         </div>
-        
-        <div className="h-[350px] w-full mt-4">
+
+        {/* Chart */}
+        <div className="h-[350px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={stats?.ingest_by_day || []}>
               <defs>
                 <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#4a6741" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#4a6741" stopOpacity={0}/>
+                  <stop offset="5%"  stopColor="#00FFC2" stopOpacity={0.25} />
+                  <stop offset="95%" stopColor="#00FFC2" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis 
-                dataKey="day" 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }}
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(58,74,67,0.5)" />
+              <XAxis
+                dataKey="day"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: '#83958C', fontSize: 11, fontWeight: 600 }}
                 dy={15}
               />
-              <YAxis 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }}
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: '#83958C', fontSize: 11, fontWeight: 600 }}
                 dx={-10}
               />
-              <Tooltip 
-                contentStyle={{ 
-                  borderRadius: '24px', 
-                  border: '1px solid rgba(74, 103, 65, 0.1)', 
-                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)',
-                  padding: '16px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                  backdropFilter: 'blur(10px)'
+              <Tooltip
+                contentStyle={{
+                  borderRadius: '1rem',
+                  border: '1px solid rgba(58,74,67,0.8)',
+                  boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+                  padding: '0.75rem 1rem',
+                  backgroundColor: '#1C2024',
+                  backdropFilter: 'blur(10px)',
                 }}
-                itemStyle={{ color: '#4a6741', fontWeight: 'bold' }}
-                labelStyle={{ color: '#1a2e1a', fontWeight: '900', marginBottom: '4px' }}
+                itemStyle={{ color: '#00FFC2', fontWeight: 700 }}
+                labelStyle={{ color: '#E0E2E8', fontWeight: 900, marginBottom: '4px' }}
+                cursor={{ stroke: 'rgba(0,255,194,0.2)', strokeWidth: 1 }}
               />
-              <Area 
-                type="monotone" 
-                dataKey="count" 
-                stroke="#4a6741" 
-                strokeWidth={4}
-                fillOpacity={1} 
-                fill="url(#colorCount)" 
+              <Area
+                type="monotone"
+                dataKey="count"
+                stroke="#00FFC2"
+                strokeWidth={2.5}
+                fillOpacity={1}
+                fill="url(#colorCount)"
                 animationDuration={2000}
               />
             </AreaChart>
@@ -251,56 +364,106 @@ export const Dashboard: React.FC = () => {
         </div>
       </motion.div>
 
-      {/* Low Conversion Recipes */}
-      <div className="bg-white rounded-3xl shadow-xl shadow-brand-forest/5 border border-brand-sage/10 overflow-hidden">
-        <div className="p-6 border-b border-brand-sage/5 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-brand-forest/10 text-brand-forest flex items-center justify-center">
+      {/* ── Low Conversion Recipes table ── */}
+      <div style={cardStyle}>
+        <div
+          className="p-6 flex items-center gap-3"
+          style={{ borderBottom: `1px solid ${T.outline}` }}
+        >
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{ backgroundColor: 'rgba(131,149,140,0.1)', color: T.outlineSt }}
+          >
             <BarChart3 size={20} />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-brand-forest">{t('dashboard.low_conversion')}</h3>
-            <p className="text-xs text-brand-text-muted mt-1">{t('dashboard.low_conversion_subtitle')}</p>
+            <h3 className="text-xl font-bold" style={{ color: T.text }}>
+              {t('dashboard.low_conversion')}
+            </h3>
+            <p className="text-xs mt-0.5" style={{ color: T.muted }}>
+              {t('dashboard.low_conversion_subtitle')}
+            </p>
           </div>
         </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-brand-cream/30">
-                <th className="px-6 py-4 text-sm font-semibold text-brand-forest">{t('dashboard.table.recipe')}</th>
-                <th className="px-6 py-4 text-sm font-semibold text-brand-forest">{t('dashboard.table.views')}</th>
-                <th className="px-6 py-4 text-sm font-semibold text-brand-forest">{t('dashboard.table.favorites')}</th>
-                <th className="px-6 py-4 text-sm font-semibold text-brand-forest">{t('dashboard.table.conv_ratio')}</th>
-                <th className="px-6 py-4 text-sm font-semibold text-brand-forest text-right">{t('dashboard.table.action')}</th>
+              <tr style={{ backgroundColor: T.surfaceHi }}>
+                {[
+                  t('dashboard.table.recipe'),
+                  t('dashboard.table.views'),
+                  t('dashboard.table.favorites'),
+                  t('dashboard.table.conv_ratio'),
+                  t('dashboard.table.action'),
+                ].map((col, i) => (
+                  <th
+                    key={i}
+                    className={`px-6 py-4 text-xs font-bold uppercase tracking-widest ${i === 4 ? 'text-right' : ''}`}
+                    style={{ color: T.muted }}
+                  >
+                    {col}
+                  </th>
+                ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-brand-sage/5">
+            <tbody>
               {stats?.low_conversion_recipes.map((recipe) => (
-                <tr key={recipe.recipe_id} className="hover:bg-brand-cream/20 transition-colors">
+                <tr
+                  key={recipe.recipe_id}
+                  style={{ borderTop: `1px solid ${T.outline}` }}
+                  onMouseEnter={(e) => ((e.currentTarget as HTMLTableRowElement).style.backgroundColor = T.surfaceHi)}
+                  onMouseLeave={(e) => ((e.currentTarget as HTMLTableRowElement).style.backgroundColor = 'transparent')}
+                >
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-brand-sage/10 flex items-center justify-center text-brand-sage">
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center"
+                        style={{ backgroundColor: 'rgba(0,255,194,0.08)', color: T.primary }}
+                      >
                         <ChefHat size={16} />
                       </div>
-                      <span className="font-semibold text-brand-text">{recipe.title}</span>
+                      <span className="font-semibold" style={{ color: T.text }}>
+                        {recipe.title}
+                      </span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 font-medium text-brand-text-muted">{recipe.views}</td>
-                  <td className="px-6 py-4 font-medium text-brand-text-muted">{recipe.favorites}</td>
+                  <td className="px-6 py-4 font-medium" style={{ color: T.muted }}>
+                    {recipe.views}
+                  </td>
+                  <td className="px-6 py-4 font-medium" style={{ color: T.muted }}>
+                    {recipe.favorites}
+                  </td>
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 h-2 bg-brand-cream rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-brand-forest" 
-                          style={{ width: `${Math.min(recipe.conversionRate * 100, 100)}%` }}
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="flex-1 h-1.5 rounded-full overflow-hidden"
+                        style={{ backgroundColor: T.outline, maxWidth: '6rem' }}
+                      >
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${Math.min(recipe.conversionRate * 100, 100)}%`,
+                            backgroundColor: T.primary,
+                          }}
                         />
                       </div>
-                      <span className="text-xs font-bold text-brand-forest">{(recipe.conversionRate * 100).toFixed(1)}%</span>
+                      <span className="text-xs font-bold" style={{ color: T.primary }}>
+                        {(recipe.conversionRate * 100).toFixed(1)}%
+                      </span>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <Link 
+                    <Link
                       to={`/recipes?edit=${recipe.recipe_id}`}
-                      className="text-xs font-bold text-brand-sage hover:underline bg-brand-sage/5 px-3 py-1.5 rounded-lg transition-all hover:bg-brand-sage/10"
+                      className="text-xs font-bold transition-all px-3 py-1.5 rounded-lg"
+                      style={{
+                        color: T.primary,
+                        backgroundColor: 'rgba(0,255,194,0.08)',
+                        border: '1px solid rgba(0,255,194,0.15)',
+                      }}
+                      onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'rgba(0,255,194,0.15)')}
+                      onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'rgba(0,255,194,0.08)')}
                     >
                       {t('dashboard.table.review')}
                     </Link>
@@ -309,7 +472,11 @@ export const Dashboard: React.FC = () => {
               ))}
               {stats?.low_conversion_recipes.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-brand-text-muted italic">
+                  <td
+                    colSpan={5}
+                    className="px-6 py-12 text-center italic"
+                    style={{ color: T.muted }}
+                  >
                     {t('dashboard.table.no_conversion')}
                   </td>
                 </tr>
@@ -322,38 +489,64 @@ export const Dashboard: React.FC = () => {
   );
 };
 
-const StatCard: React.FC<{ 
-  title: string; 
-  value: string | number; 
-  icon: React.ReactNode; 
+// ─── StatCard ────────────────────────────────────────────────────────────────
+const StatCard: React.FC<{
+  title: string;
+  value: string | number;
+  icon: React.ReactNode;
   description: string;
   variant: 'success' | 'danger' | 'info' | 'warning';
 }> = ({ title, value, icon, description, variant }) => {
-  const styles = {
-    success: 'bg-green-50 text-green-600 border-green-100',
-    danger: 'bg-red-50 text-red-600 border-red-100',
-    info: 'bg-brand-sage/10 text-brand-sage border-brand-sage/20',
-    warning: 'bg-brand-cream text-brand-forest border-brand-sage/10'
-  };
+  const v = variantConfig[variant];
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -5 }}
+      whileHover={{ y: -4 }}
       transition={{ duration: 0.3 }}
-      className={`p-6 rounded-3xl border shadow-lg shadow-black/5 bg-white space-y-4`}
+      style={{
+        backgroundColor: 'var(--surface-organic)',
+        border: '1px solid var(--outline)',
+        borderRadius: '1.25rem',
+        padding: '1.5rem',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1rem',
+      }}
     >
       <div className="flex items-center justify-between">
-        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${styles[variant].split(' ')[0]} ${styles[variant].split(' ')[1]}`}>
+        {/* Icon */}
+        <div
+          className="w-12 h-12 rounded-2xl flex items-center justify-center"
+          style={{ backgroundColor: v.bg, color: v.color, border: `1px solid ${v.border}` }}
+        >
           {icon}
         </div>
+        {/* Value */}
         <div className="text-right">
-          <p className="text-xs font-bold text-brand-text-muted uppercase tracking-wider">{title}</p>
-          <p className="text-2xl font-black text-brand-forest mt-1">{value}</p>
+          <p
+            className="text-xs font-bold uppercase tracking-wider"
+            style={{ color: 'var(--brand-text-muted)' }}
+          >
+            {title}
+          </p>
+          <p
+            className="text-2xl font-black mt-1"
+            style={{ color: v.color }}
+          >
+            {value}
+          </p>
         </div>
       </div>
-      <div className="pt-4 border-t border-brand-sage/5 flex items-center gap-2 text-xs text-brand-text-muted">
+      {/* Footer */}
+      <div
+        className="pt-4 flex items-center gap-2 text-xs"
+        style={{
+          borderTop: '1px solid var(--outline)',
+          color: 'var(--brand-text-muted)',
+        }}
+      >
         <Clock size={14} />
         {description}
       </div>

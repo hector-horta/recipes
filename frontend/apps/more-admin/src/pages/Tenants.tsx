@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
-import { Badge, Button, Input } from '@wati/ui-kit';
 import { Building2, Plus, Search, Loader2, Pencil, Power, ArrowRight } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -18,18 +17,33 @@ interface Organization {
   userCount: number;
 }
 
-const containerVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { 
-    opacity: 1, 
-    y: 0,
-    transition: { duration: 0.5, staggerChildren: 0.1 }
-  }
+// ─── Design tokens ─────────────────────────────────────────────────────────
+const T = {
+  dark:      '#101417',
+  surface:   'var(--surface-organic)',
+  surfaceHi: 'var(--surface-light)',
+  outline:   'var(--outline)',
+  text:      'var(--brand-text)',
+  muted:     'var(--brand-text-muted)',
+  primary:   'var(--brand-primary)',
+  danger:    '#F87171',
+  warning:   '#FFB703',
+} as const;
+
+const cardStyle: React.CSSProperties = {
+  backgroundColor: T.surface,
+  border: `1px solid ${T.outline}`,
+  borderRadius: '1.5rem',
+  overflow: 'hidden',
 };
 
+const containerVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, staggerChildren: 0.1 } },
+};
 const itemVariants = {
   hidden: { opacity: 0, x: -20 },
-  visible: { opacity: 1, x: 0 }
+  visible: { opacity: 1, x: 0 },
 };
 
 export const Tenants: React.FC = () => {
@@ -48,15 +62,13 @@ export const Tenants: React.FC = () => {
     }
   }, []);
 
-
   const { data: organizations, isLoading } = useQuery({
     queryKey: ['organizations'],
     queryFn: () => api.get<Organization[]>('/admin/organizations'),
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: { name: string; slug: string }) => 
-      api.post('/admin/organizations', data),
+    mutationFn: (data: { name: string; slug: string }) => api.post('/admin/organizations', data),
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['organizations'] });
       setIsModalOpen(false);
@@ -67,11 +79,11 @@ export const Tenants: React.FC = () => {
     onError: (err) => {
       logger.error('ADMIN_ORG_CREATE_FAIL', err);
       toast.error(err?.message || t('tenants.messages.error_create'));
-    }
+    },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: { name: string; slug: string } }) => 
+    mutationFn: ({ id, data }: { id: string; data: { name: string; slug: string } }) =>
       api.put(`/admin/organizations/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['organizations'] });
@@ -80,7 +92,7 @@ export const Tenants: React.FC = () => {
     },
     onError: (error: any) => {
       toast.error(error?.message || t('tenants.messages.error_update'));
-    }
+    },
   });
 
   const toggleStatusMutation = useMutation({
@@ -91,7 +103,7 @@ export const Tenants: React.FC = () => {
     },
     onError: (error: any) => {
       toast.error(error?.message || t('tenants.messages.error_status'));
-    }
+    },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -104,177 +116,198 @@ export const Tenants: React.FC = () => {
     }
   };
 
-  const filteredOrgs = organizations?.filter(org => 
-    org.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    org.slug.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredOrgs = organizations?.filter(
+    (org) =>
+      org.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      org.slug.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
-    <motion.div 
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="space-y-8 pb-12"
-    >
-      {/* Header Section */}
+    <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-8 pb-12">
+
+      {/* ── Header ── */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <motion.div variants={itemVariants}>
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-brand-forest/10 text-brand-forest rounded-lg">
+            <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(0,255,194,0.08)', color: T.primary }}>
               <Building2 size={24} />
             </div>
-            <h2 className="text-4xl font-extrabold text-brand-forest tracking-tight">{t('common.tenants')}</h2>
+            <h2 className="text-4xl font-extrabold tracking-tight" style={{ color: T.text }}>
+              {t('common.tenants')}
+            </h2>
           </div>
-          <p className="text-brand-text-muted font-medium">{t('tenants.subtitle')}</p>
+          <p className="font-medium" style={{ color: T.muted }}>{t('tenants.subtitle')}</p>
         </motion.div>
-        
-        <motion.button 
+
+        <motion.button
           variants={itemVariants}
           whileHover={{ scale: 1.02, y: -2 }}
           whileTap={{ scale: 0.98 }}
-          onClick={() => {
-            setEditingOrg(null);
-            setNewTenant({ name: '', slug: '' });
-            setIsModalOpen(true);
-          }}
-          className="flex items-center justify-center gap-2 bg-brand-forest text-white px-8 py-4 rounded-2xl font-bold hover:shadow-2xl hover:shadow-brand-forest/30 transition-all group"
+          onClick={() => { setEditingOrg(null); setNewTenant({ name: '', slug: '' }); setIsModalOpen(true); }}
+          className="flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold transition-all group"
+          style={{ backgroundColor: T.primary, color: T.dark }}
         >
           <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
           <span>{t('tenants.create')}</span>
         </motion.button>
       </div>
 
-      {/* Main Content Table */}
-      <motion.div 
-        variants={itemVariants}
-        className="bg-white/80 backdrop-blur-xl rounded-[2rem] shadow-2xl shadow-brand-forest/5 border border-brand-sage/20 overflow-hidden"
-      >
-        <div className="p-8 border-b border-brand-sage/10 flex flex-col md:flex-row items-center gap-6">
+      {/* ── Table card ── */}
+      <motion.div variants={itemVariants} style={cardStyle}>
+
+        {/* Search row */}
+        <div className="p-6 flex flex-col md:flex-row items-center gap-6" style={{ borderBottom: `1px solid ${T.outline}` }}>
           <div className="relative flex-1 w-full">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-brand-text-muted/60" size={20} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2" size={18} style={{ color: T.muted }} />
             <input
               type="text"
               placeholder={t('tenants.search_placeholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-14 pr-6 py-4 bg-brand-cream/40 border-2 border-transparent focus:border-brand-sage/30 rounded-2xl outline-none transition-all placeholder:text-brand-text-muted/40 text-brand-forest font-medium"
+              className="w-full pl-12 pr-5 py-3 rounded-xl outline-none font-medium transition-all"
+              style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.text }}
             />
           </div>
-          <div className="flex items-center gap-2 text-sm text-brand-text-muted font-semibold bg-brand-cream/40 px-4 py-2 rounded-xl border border-brand-sage/10">
+          <div
+            className="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl shrink-0"
+            style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.muted }}
+          >
             <span>{t('tenants.total')}:</span>
-            <span className="text-brand-forest font-bold">{filteredOrgs?.length || 0}</span>
+            <span className="font-bold" style={{ color: T.primary }}>{filteredOrgs?.length || 0}</span>
           </div>
         </div>
 
+        {/* Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-brand-cream/20">
-                <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest">{t('tenants.table.org')}</th>
-                <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest">{t('tenants.table.id')}</th>
-                <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest">{t('tenants.table.status')}</th>
-                <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest">{t('tenants.table.users')}</th>
-                <th className="px-8 py-5 text-xs font-bold text-brand-forest uppercase tracking-widest text-right">{t('tenants.table.actions')}</th>
+              <tr style={{ backgroundColor: T.surfaceHi }}>
+                {[t('tenants.table.org'), t('tenants.table.id'), t('tenants.table.status'), t('tenants.table.users'), t('tenants.table.actions')].map((col, i) => (
+                  <th key={i} className={`px-8 py-5 text-xs font-bold uppercase tracking-widest ${i === 4 ? 'text-right' : ''}`} style={{ color: T.muted }}>
+                    {col}
+                  </th>
+                ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-brand-sage/10">
+            <tbody>
               <AnimatePresence mode="popLayout">
-                {isLoading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <tr key={`loading-${i}`} className="animate-pulse">
-                      <td colSpan={5} className="px-8 py-6">
-                        <div className="h-12 bg-brand-cream/60 rounded-2xl w-full"></div>
-                      </td>
-                    </tr>
-                  ))
-                ) : filteredOrgs?.map((org) => (
-                  <motion.tr 
-                    layout
-                    key={org.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className="hover:bg-brand-cream/30 transition-all group"
-                  >
-                    <td className="px-8 py-6">
-                      <div className="flex items-center gap-4">
-                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 duration-300 ${
-                          org.status === 'active' ? 'bg-brand-sage/15 text-brand-sage shadow-inner' : 'bg-red-50 text-red-400'
-                        }`}>
-                          <Building2 size={22} strokeWidth={2.5} />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="font-bold text-brand-forest text-lg">{org.name}</span>
-                          <span className="text-xs text-brand-text-muted font-medium">ID: {org.id.slice(0, 8)}...</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-8 py-6">
-                      <code className="text-[11px] font-bold font-mono text-brand-teal bg-brand-teal/10 px-3 py-1.5 rounded-lg border border-brand-teal/20">
-                        {org.slug}
-                      </code>
-                    </td>
-                    <td className="px-8 py-6">
-                      <Badge 
-                        className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tighter"
-                        variant={org.status === 'active' ? 'success' : 'warning'}
+                {isLoading
+                  ? Array.from({ length: 5 }).map((_, i) => (
+                      <tr key={`sk-${i}`} className="animate-pulse">
+                        <td colSpan={5} className="px-8 py-6">
+                          <div className="h-12 rounded-2xl w-full" style={{ backgroundColor: T.surfaceHi }} />
+                        </td>
+                      </tr>
+                    ))
+                  : filteredOrgs?.map((org) => (
+                      <motion.tr
+                        layout
+                        key={org.id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="transition-all group"
+                        style={{ borderTop: `1px solid ${T.outline}` }}
+                        onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.backgroundColor = T.surfaceHi)}
+                        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.backgroundColor = 'transparent')}
                       >
-                        {org.status === 'active' ? t('tenants.table.status_online') : t('tenants.table.status_suspended')}
-                      </Badge>
-                    </td>
-                    <td className="px-8 py-6">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-brand-cream border-2 border-white flex items-center justify-center text-xs font-bold text-brand-forest shadow-sm">
-                          {org.userCount}
-                        </div>
-                        <span className="text-sm text-brand-text-muted font-bold">{t('tenants.table.users_suffix')}</span>
-                      </div>
-                    </td>
-                    <td className="px-8 py-6 text-right">
-                      <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
-                        <motion.button 
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          onClick={() => {
-                            setEditingOrg(org);
-                            setIsModalOpen(true);
-                          }}
-                          className="p-3 bg-brand-sage/10 text-brand-sage hover:bg-brand-sage hover:text-white rounded-xl transition-all shadow-sm"
-                          title={t('tenants.actions.edit')}
-                        >
-                          <Pencil size={18} />
-                        </motion.button>
-                        <motion.button 
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          onClick={() => {
-                            const action = org.status === 'active' ? t('tenants.actions.suspend').toLowerCase() : t('tenants.actions.activate').toLowerCase();
-                            if (confirm(t('tenants.messages.confirm_status', { action }))) {
-                              toggleStatusMutation.mutate(org.id);
-                            }
-                          }}
-                          className={`p-3 rounded-xl transition-all shadow-sm ${
-                            org.status === 'active' 
-                              ? 'bg-red-50 text-red-400 hover:bg-red-500 hover:text-white' 
-                              : 'bg-brand-forest/10 text-brand-forest hover:bg-brand-forest hover:text-white'
-                          }`}
-                          title={org.status === 'active' ? t('tenants.actions.suspend') : t('tenants.actions.activate')}
-                        >
-                          <Power size={18} />
-                        </motion.button>
-                      </div>
-                    </td>
-                  </motion.tr>
-                ))}
+                        {/* Name */}
+                        <td className="px-8 py-6">
+                          <div className="flex items-center gap-4">
+                            <div
+                              className="w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 duration-300"
+                              style={org.status === 'active'
+                                ? { backgroundColor: 'rgba(0,255,194,0.08)', color: T.primary }
+                                : { backgroundColor: 'rgba(248,113,113,0.08)', color: T.danger }}
+                            >
+                              <Building2 size={22} strokeWidth={2.5} />
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="font-bold text-lg" style={{ color: T.text }}>{org.name}</span>
+                              <span className="text-xs font-medium" style={{ color: T.muted }}>ID: {org.id.slice(0, 8)}…</span>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Slug */}
+                        <td className="px-8 py-6">
+                          <code
+                            className="text-[11px] font-bold font-mono px-3 py-1.5 rounded-lg"
+                            style={{ color: T.primary, backgroundColor: 'rgba(0,255,194,0.08)', border: '1px solid rgba(0,255,194,0.15)' }}
+                          >
+                            {org.slug}
+                          </code>
+                        </td>
+
+                        {/* Status */}
+                        <td className="px-8 py-6">
+                          <span
+                            className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tighter"
+                            style={org.status === 'active'
+                              ? { backgroundColor: 'rgba(0,255,194,0.12)', color: T.primary }
+                              : { backgroundColor: 'rgba(255,183,3,0.12)', color: T.warning }}
+                          >
+                            {org.status === 'active' ? t('tenants.table.status_online') : t('tenants.table.status_suspended')}
+                          </span>
+                        </td>
+
+                        {/* Users */}
+                        <td className="px-8 py-6">
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+                              style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.text }}
+                            >
+                              {org.userCount}
+                            </div>
+                            <span className="text-sm font-bold" style={{ color: T.muted }}>{t('tenants.table.users_suffix')}</span>
+                          </div>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-8 py-6 text-right">
+                          <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
+                            <motion.button
+                              whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                              onClick={() => { setEditingOrg(org); setIsModalOpen(true); }}
+                              className="p-3 rounded-xl transition-all"
+                              style={{ backgroundColor: 'rgba(0,255,194,0.08)', color: T.primary, border: '1px solid rgba(0,255,194,0.15)' }}
+                              title={t('tenants.actions.edit')}
+                            >
+                              <Pencil size={18} />
+                            </motion.button>
+                            <motion.button
+                              whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                              onClick={() => {
+                                const action = org.status === 'active'
+                                  ? t('tenants.actions.suspend').toLowerCase()
+                                  : t('tenants.actions.activate').toLowerCase();
+                                if (confirm(t('tenants.messages.confirm_status', { action }))) {
+                                  toggleStatusMutation.mutate(org.id);
+                                }
+                              }}
+                              className="p-3 rounded-xl transition-all"
+                              style={org.status === 'active'
+                                ? { backgroundColor: 'rgba(248,113,113,0.08)', color: T.danger, border: '1px solid rgba(248,113,113,0.15)' }
+                                : { backgroundColor: 'rgba(0,255,194,0.08)', color: T.primary, border: '1px solid rgba(0,255,194,0.15)' }}
+                              title={org.status === 'active' ? t('tenants.actions.suspend') : t('tenants.actions.activate')}
+                            >
+                              <Power size={18} />
+                            </motion.button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    ))}
               </AnimatePresence>
+
               {!isLoading && filteredOrgs?.length === 0 && (
                 <motion.tr initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                   <td colSpan={5} className="px-8 py-20 text-center">
                     <div className="flex flex-col items-center gap-3">
-                      <div className="w-16 h-16 bg-brand-cream/50 rounded-full flex items-center justify-center text-brand-text-muted/30">
+                      <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: T.surfaceHi, color: T.muted }}>
                         <Building2 size={32} />
                       </div>
-                      <p className="text-brand-text-muted font-bold">{t('tenants.table.no_tenants')}</p>
+                      <p className="font-bold" style={{ color: T.muted }}>{t('tenants.table.no_tenants')}</p>
                     </div>
                   </td>
                 </motion.tr>
@@ -284,23 +317,25 @@ export const Tenants: React.FC = () => {
         </div>
       </motion.div>
 
+      {/* ── Modal ── */}
       <Modal
         isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setEditingOrg(null);
-        }}
+        onClose={() => { setIsModalOpen(false); setEditingOrg(null); }}
         title={editingOrg ? t('tenants.modal.update_title') : t('tenants.modal.create_title')}
       >
         <form onSubmit={handleSubmit} className="p-2 space-y-6">
+
+          {/* Name field */}
           <div className="space-y-3">
-            <label className="text-sm font-black text-brand-forest uppercase tracking-widest flex items-center gap-2">
-              <span className="w-1.5 h-1.5 bg-brand-sage rounded-full" />
+            <label className="text-sm font-black uppercase tracking-widest flex items-center gap-2" style={{ color: T.text }}>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: T.primary }} />
               {t('tenants.modal.name_label')}
             </label>
-            <Input
+            <input
+              type="text"
               placeholder={t('tenants.modal.name_placeholder')}
-              className="h-14 rounded-2xl border-2 border-brand-sage/10 focus:border-brand-sage/40 transition-all text-lg font-bold"
+              className="w-full h-14 rounded-2xl px-5 outline-none font-bold text-lg transition-all"
+              style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.text }}
               value={editingOrg ? editingOrg.name : newTenant.name}
               onChange={(e) => {
                 if (editingOrg) setEditingOrg({ ...editingOrg, name: e.target.value });
@@ -309,16 +344,19 @@ export const Tenants: React.FC = () => {
               required
             />
           </div>
-          
+
+          {/* Slug field */}
           <div className="space-y-3">
-            <label className="text-sm font-black text-brand-forest uppercase tracking-widest flex items-center gap-2">
-              <span className="w-1.5 h-1.5 bg-brand-teal rounded-full" />
+            <label className="text-sm font-black uppercase tracking-widest flex items-center gap-2" style={{ color: T.text }}>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: T.primary }} />
               {t('tenants.modal.slug_label')}
             </label>
-            <div className="relative group">
-              <Input
+            <div className="relative">
+              <input
+                type="text"
                 placeholder={t('tenants.modal.slug_placeholder')}
-                className="h-14 rounded-2xl border-2 border-brand-sage/10 focus:border-brand-sage/40 transition-all text-lg font-mono lowercase"
+                className="w-full h-14 rounded-2xl px-5 pr-36 outline-none font-mono lowercase text-lg transition-all"
+                style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.text }}
                 value={editingOrg ? editingOrg.slug : newTenant.slug}
                 onChange={(e) => {
                   const val = e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
@@ -327,24 +365,25 @@ export const Tenants: React.FC = () => {
                 }}
                 required
               />
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-brand-teal bg-brand-teal/10 px-2 py-1 rounded">
-                wati.app/{"{"}slug{"}"}
+              <div
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold px-2 py-1 rounded"
+                style={{ color: T.primary, backgroundColor: 'rgba(0,255,194,0.08)' }}
+              >
+                wati.app/{'{'+'slug'}{'}'} 
               </div>
             </div>
-            <p className="text-[11px] text-brand-text-muted font-medium italic pl-1">
+            <p className="text-[11px] font-medium italic pl-1" style={{ color: T.muted }}>
               {t('tenants.modal.slug_hint')}
             </p>
           </div>
 
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="pt-4"
-          >
-            <Button 
-              type="submit" 
-              className="w-full h-16 rounded-[1.25rem] text-lg font-black tracking-tight shadow-xl shadow-brand-forest/20 flex items-center justify-center gap-3"
+          {/* Submit */}
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="pt-4">
+            <button
+              type="submit"
               disabled={createMutation.isPending || updateMutation.isPending}
+              className="w-full h-16 rounded-[1.25rem] text-lg font-black tracking-tight flex items-center justify-center gap-3 transition-all disabled:opacity-60"
+              style={{ backgroundColor: T.primary, color: T.dark }}
             >
               {createMutation.isPending || updateMutation.isPending ? (
                 <Loader2 className="animate-spin" size={24} />
@@ -354,7 +393,7 @@ export const Tenants: React.FC = () => {
                   <ArrowRight size={20} />
                 </>
               )}
-            </Button>
+            </button>
           </motion.div>
         </form>
       </Modal>

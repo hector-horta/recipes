@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Button, Input } from '@wati/ui-kit';
-import { ShieldCheck, Loader2 } from 'lucide-react';
+import { ShieldCheck, Loader2, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { logger } from '../utils/logger';
@@ -21,70 +20,209 @@ export const Login: React.FC = () => {
       logger.info('ADMIN_LOGIN_SUCCESS', { email });
       navigate('/tenants');
     } catch (err) {
-      logger.error('ADMIN_LOGIN_FAILED', { 
-        email, 
-        error: err instanceof Error ? err.message : 'Unknown' 
+      logger.error('ADMIN_LOGIN_FAILED', {
+        email,
+        error: err instanceof Error ? err.message : 'Unknown',
       });
     }
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-brand-cream p-4 relative overflow-hidden">
-      {/* Background Decor */}
-      <div className="absolute inset-0 bg-dots opacity-[0.15] pointer-events-none" />
-      <div className="absolute top-[10%] left-[10%] w-[30%] h-[30%] bg-brand-sage/10 rounded-full blur-[100px] pointer-events-none animate-pulse" />
-      <div className="absolute bottom-[10%] right-[10%] w-[30%] h-[30%] bg-brand-teal/10 rounded-full blur-[100px] pointer-events-none" />
+  const inputStyle: React.CSSProperties = {
+    backgroundColor: 'var(--surface-light)',
+    border: '1px solid var(--outline)',
+    borderRadius: '0.75rem',
+    color: 'var(--brand-text)',
+    caretColor: 'var(--brand-primary)',
+    width: '100%',
+    height: '3rem',
+    padding: '0 1rem',
+    fontSize: '0.875rem',
+    fontWeight: 500,
+    outline: 'none',
+    transition: 'border-color 0.15s, box-shadow 0.15s',
+    fontFamily: 'inherit',
+  };
 
-      <motion.div 
-        initial={{ opacity: 0, y: 20, scale: 0.95 }}
+  const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.style.borderColor = 'var(--brand-primary)';
+    e.target.style.boxShadow = '0 0 0 3px rgba(0,255,194,0.12)';
+  };
+
+  const handleInputBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.style.borderColor = 'var(--outline)';
+    e.target.style.boxShadow = 'none';
+  };
+
+  return (
+    <div
+      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+      style={{ backgroundColor: 'var(--surface-dark)' }}
+    >
+      {/* Ambient glow top-left */}
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          top: '-10%',
+          left: '-5%',
+          width: '40%',
+          height: '40%',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(0,255,194,0.07) 0%, transparent 70%)',
+          filter: 'blur(60px)',
+        }}
+      />
+      {/* Ambient glow bottom-right */}
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          bottom: '-10%',
+          right: '-5%',
+          width: '40%',
+          height: '40%',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(0,209,160,0.05) 0%, transparent 70%)',
+          filter: 'blur(80px)',
+        }}
+      />
+
+      <motion.div
+        initial={{ opacity: 0, y: 24, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-        className="max-w-md w-full space-y-8 bg-white/80 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-2xl shadow-brand-forest/10 border border-brand-sage/20 relative z-10"
+        transition={{ duration: 0.45, ease: 'easeOut' }}
+        className="relative z-10"
+        style={{
+          width: '100%',
+          maxWidth: '26rem',
+          backgroundColor: 'var(--surface-organic)',
+          border: '1px solid var(--outline)',
+          borderRadius: '1.5rem',
+          padding: '2.5rem',
+          boxShadow: '0 32px 64px -16px rgba(0,0,0,0.65)',
+        }}
       >
-        <div className="text-center">
-          <motion.div 
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.2 }}
-            className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-brand-forest text-white mb-6 shadow-xl shadow-brand-forest/20 rotate-3"
+        {/* ── Header ── */}
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <motion.div
+            initial={{ scale: 0, rotate: -15 }}
+            animate={{ scale: 1, rotate: 3 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.15 }}
+            className="inline-flex items-center justify-center"
+            style={{
+              width: '5rem',
+              height: '5rem',
+              borderRadius: '1.25rem',
+              backgroundColor: 'var(--surface-lowest)',
+              border: '1px solid var(--outline)',
+              color: 'var(--brand-primary)',
+              boxShadow: '0 0 32px rgba(0,255,194,0.15)',
+              marginBottom: '1.5rem',
+            }}
           >
             <ShieldCheck size={40} />
           </motion.div>
-          <h2 className="text-4xl font-black text-brand-forest tracking-tight">{t('auth.login_title')}</h2>
-          <p className="mt-2 text-brand-text-muted font-medium">{t('auth.login_subtitle')}</p>
+
+          <h2
+            style={{
+              color: 'var(--brand-text)',
+              fontSize: '2.25rem',
+              fontWeight: 900,
+              letterSpacing: '-0.025em',
+              lineHeight: 1.1,
+              margin: 0,
+            }}
+          >
+            {t('auth.login_title')}
+          </h2>
+          <p
+            style={{
+              color: 'var(--brand-text-muted)',
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              marginTop: '0.5rem',
+            }}
+          >
+            {t('auth.login_subtitle')}
+          </p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        {/* ── Form ── */}
+        <form
+          style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
+          onSubmit={handleSubmit}
+          data-bwignore="true"
+        >
+          {/* Error banner */}
           <AnimatePresence mode="wait">
             {error && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-sm font-medium flex items-center gap-2"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  backgroundColor: 'rgba(248,113,113,0.1)',
+                  border: '1px solid rgba(248,113,113,0.3)',
+                  borderRadius: '0.75rem',
+                  padding: '0.75rem 1rem',
+                  color: 'var(--danger)',
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                }}
               >
-                <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
-                {error === 'Acceso denegado. Se requiere rol de super_admin.' ? t('auth.error_denied') : t('auth.error_generic')}
+                <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                {error === 'Acceso denegado. Se requiere rol de super_admin.'
+                  ? t('auth.error_denied')
+                  : t('auth.error_generic')}
               </motion.div>
             )}
           </AnimatePresence>
 
-          <div className="space-y-5">
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-brand-forest ml-1">{t('auth.email_label')}</label>
-              <Input
+          {/* Fields */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {/* Email */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <label
+                style={{
+                  color: 'var(--brand-text-muted)',
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.1em',
+                  marginLeft: '0.25rem',
+                }}
+              >
+                {t('auth.email_label')}
+              </label>
+              <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="admin@more.com"
                 required
-                autoComplete="email"
-                className="h-12 rounded-xl bg-brand-cream/50 border-none focus:ring-2 focus:ring-brand-sage/30"
+                autoComplete="username email"
+                style={inputStyle}
+                onFocus={handleInputFocus}
+                onBlur={handleInputBlur}
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-brand-forest ml-1">{t('auth.password_label')}</label>
-              <Input
+
+            {/* Password */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <label
+                style={{
+                  color: 'var(--brand-text-muted)',
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.1em',
+                  marginLeft: '0.25rem',
+                }}
+              >
+                {t('auth.password_label')}
+              </label>
+              <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -92,23 +230,52 @@ export const Login: React.FC = () => {
                 required
                 autoComplete="current-password"
                 data-bwignore
-                className="h-12 rounded-xl bg-brand-cream/50 border-none focus:ring-2 focus:ring-brand-sage/30"
+                style={inputStyle}
+                onFocus={handleInputFocus}
+                onBlur={handleInputBlur}
               />
             </div>
           </div>
 
-          <Button
+          {/* Submit button */}
+          <motion.button
             type="submit"
-            className="w-full bg-brand-forest hover:bg-brand-forest/90 text-white py-4 rounded-2xl font-bold transition-all shadow-xl shadow-brand-forest/20 text-lg group"
             disabled={isLoading}
+            whileTap={{ scale: 0.98 }}
+            style={{
+              width: '100%',
+              padding: '0.875rem',
+              backgroundColor: 'var(--brand-primary)',
+              color: 'var(--surface-lowest)',
+              borderRadius: '0.875rem',
+              border: 'none',
+              fontSize: '1rem',
+              fontWeight: 700,
+              letterSpacing: '0.02em',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              opacity: isLoading ? 0.6 : 1,
+              boxShadow: '0 0 24px rgba(0,255,194,0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              fontFamily: 'inherit',
+              transition: 'background-color 0.15s',
+            }}
+            onMouseEnter={(e) => {
+              if (!isLoading) e.currentTarget.style.backgroundColor = '#00E1AB';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--brand-primary)';
+            }}
           >
             {isLoading ? (
-              <div className="flex items-center justify-center gap-2">
-                <Loader2 className="animate-spin" size={20} />
+              <>
+                <Loader2 className="animate-spin" size={18} />
                 <span>{t('auth.verifying')}</span>
-              </div>
+              </>
             ) : (
-              <div className="flex items-center justify-center gap-2">
+              <>
                 <span>{t('auth.submit_button')}</span>
                 <motion.span
                   animate={{ x: [0, 5, 0] }}
@@ -116,12 +283,24 @@ export const Login: React.FC = () => {
                 >
                   →
                 </motion.span>
-              </div>
+              </>
             )}
-          </Button>
+          </motion.button>
         </form>
 
-        <p className="text-center text-[10px] text-brand-text-muted uppercase tracking-widest font-bold opacity-50">
+        {/* Footer */}
+        <p
+          style={{
+            textAlign: 'center',
+            fontSize: '0.6rem',
+            textTransform: 'uppercase',
+            letterSpacing: '0.15em',
+            fontWeight: 700,
+            marginTop: '1.5rem',
+            color: 'var(--brand-text-muted)',
+            opacity: 0.4,
+          }}
+        >
           {t('auth.restricted_access')}
         </p>
       </motion.div>
