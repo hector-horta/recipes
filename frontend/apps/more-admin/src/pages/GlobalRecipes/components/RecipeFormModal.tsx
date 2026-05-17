@@ -195,22 +195,7 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
                   </AnimatePresence>
                 </div>
                 <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black uppercase tracking-widest flex items-center gap-2" style={{ color: T.text }}>
-                      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: T.primary }} />
-                      {t('recipes.form.slug')}
-                    </label>
-                    <input
-                      placeholder={t('recipes.form.placeholder_slug')}
-                      className="w-full h-12 rounded-xl px-4 outline-none transition-all font-bold font-mono text-[10px]"
-                      style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.primary }}
-                      value={(formData as any).id || ''}
-                      onChange={(e) => setFormData(prev => ({ ...prev, id: e.target.value }))}
-                      required
-                      disabled={!!editingRecipe}
-                    />
-                  </div>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <label className="text-[11px] font-black uppercase tracking-widest flex items-center gap-2" style={{ color: T.text }}>
                         <Clock size={12} style={{ color: T.primary }} /> {t('recipes.form.prep_time')}
@@ -233,18 +218,6 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
                         style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.text }}
                         value={formData.cookTimeMinutes}
                         onChange={(e) => setFormData({ ...formData, cookTimeMinutes: parseInt(e.target.value) || 0 })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-tighter flex items-center gap-1" style={{ color: T.muted }}>
-                        <Users size={12} /> {t('recipes.form.servings')}
-                      </label>
-                      <input
-                        type="number"
-                        className="w-full h-12 rounded-xl px-4 outline-none font-bold text-center transition-all"
-                        style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.text }}
-                        value={(formData as any).servings || 1}
-                        onChange={(e) => setFormData({ ...formData, servings: parseInt(e.target.value) || 1 })}
                       />
                     </div>
                   </div>
