@@ -1,15 +1,27 @@
 import express from 'express';
 import { Op, fn, col, literal } from 'sequelize';
+import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
+import { sequelize } from '../config/database.js';
 import { ActivityLog } from '../models/ActivityLog.js';
 import { FavoriteRecipe } from '../models/FavoriteRecipe.js';
 import { Organization } from '../models/Organization.js';
 import { Recipe } from '../models/Recipe.js';
 import { Tag } from '../models/Tag.js';
 import { User } from '../models/User.js';
+import { UserOrganization } from '../models/UserOrganization.js';
+import { Profile } from '../models/Profile.js';
 import { ActivityLogger } from '../services/ActivityLogger.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { validateBody } from '../middleware/validate.js';
-import { organizationSchema, adminRecipeSchema, tagSchema } from '../models/validators.js';
+import { 
+  organizationSchema, 
+  organizationUpdateSchema, 
+  adminRecipeSchema, 
+  tagSchema,
+  addOrgUserSchema,
+  bulkOrgUsersSchema
+} from '../models/validators.js';
 
 const router = express.Router();
 
@@ -255,9 +267,9 @@ router.post('/organizations', validateBody(organizationSchema), asyncHandler(asy
  * PUT /admin/organizations/:id
  * Actualiza una organización.
  */
-router.put('/organizations/:id', optionalAuthenticateToken, checkRole(['super_admin']), validateBody(organizationSchema), asyncHandler(async (req, res) => {
+router.put('/organizations/:id', optionalAuthenticateToken, checkRole(['super_admin']), validateBody(organizationUpdateSchema), asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { name, slug } = req.body;
+  const { name, slug, is_active } = req.body;
 
   const organization = await Organization.findByPk(id);
   if (!organization) {
@@ -287,14 +299,26 @@ router.put('/organizations/:id', optionalAuthenticateToken, checkRole(['super_ad
     throw error;
   }
 
-  await organization.update({
+  const updateFields = {
     name,
     slug: slug.toLowerCase()
+  };
+  if (is_active !== undefined) {
+    updateFields.is_active = is_active;
+  }
+
+  await organization.update(updateFields);
+
+  ActivityLogger.log('ADMIN_ORG_UPDATE', { 
+    organizationId: organization.id, 
+    name: organization.name,
+    is_active: organization.is_active
   });
 
-  ActivityLogger.log('ADMIN_ORG_UPDATE', { organizationId: organization.id, name: organization.name });
-
-  res.json(organization);
+  res.json({
+    ...organization.toJSON(),
+    status: organization.is_active ? 'active' : 'suspended'
+  });
 }));
 
 /**
@@ -322,6 +346,251 @@ router.delete('/organizations/:id', optionalAuthenticateToken, checkRole(['super
   });
 
   res.json({ message: `Organización ${organization.is_active ? 'activada' : 'suspendida'} correctamente`, organization });
+}));
+
+/**
+ * GET /admin/organizations/:id
+ * Obtiene el detalle de una organización y la lista de sus usuarios.
+ */
+router.get('/organizations/:id', optionalAuthenticateToken, checkRole(['super_admin']), asyncHandler(async (req, res) => {
+  const org = await Organization.findByPk(req.params.id, {
+    include: [{
+      model: User,
+      as: 'users',
+      attributes: ['id', 'email', 'display_name', 'is_active'],
+      through: { attributes: ['role', 'created_at'] }
+    }]
+  });
+  if (!org) {
+    const error = new Error('Organización no encontrada.');
+    error.status = 404;
+    throw error;
+  }
+
+  res.json({
+    ...org.toJSON(),
+    status: org.is_active ? 'active' : 'suspended',
+    userCount: org.users.length,
+    users: org.users.map(u => ({
+      id: u.id,
+      email: u.email,
+      displayName: u.display_name,
+      isActive: u.is_active,
+      role: u.UserOrganization.role,
+      joinedAt: u.UserOrganization.created_at
+    }))
+  });
+}));
+
+/**
+ * POST /admin/organizations/:id/users
+ * Agrega un usuario individual a la organización. Si no existe, lo crea con password temporal.
+ */
+router.post('/organizations/:id/users', optionalAuthenticateToken, checkRole(['super_admin']), validateBody(addOrgUserSchema), asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { displayName, email, role } = req.body;
+
+  const org = await Organization.findByPk(id);
+  if (!org) {
+    const error = new Error('Organización no encontrada.');
+    error.status = 404;
+    throw error;
+  }
+
+  // Buscar usuario
+  let user = await User.findOne({ where: { email: email.toLowerCase() } });
+  let createdNewUser = false;
+
+  if (user) {
+    // Verificar si ya pertenece a la organización
+    const exists = await UserOrganization.findOne({
+      where: {
+        user_id: user.id,
+        organization_id: org.id
+      }
+    });
+    if (exists) {
+      const error = new Error('El usuario ya pertenece a esta organización.');
+      error.status = 409;
+      throw error;
+    }
+  } else {
+    // Crear nuevo usuario
+    const saltRounds = 12;
+    const tempPassword = crypto.randomUUID();
+    const passwordHash = await bcrypt.hash(tempPassword, saltRounds);
+
+    user = await User.create({
+      email: email.toLowerCase(),
+      password_hash: passwordHash,
+      display_name: displayName,
+      accepted_terms_at: new Date(),
+      is_verified: false
+    });
+    createdNewUser = true;
+
+    // Crear perfil por defecto
+    await Profile.create({ user_id: user.id, language: 'es' });
+  }
+
+  // Asociar al tenant
+  const userOrg = await UserOrganization.create({
+    user_id: user.id,
+    organization_id: org.id,
+    role: role || 'user'
+  });
+
+  ActivityLogger.log('ADMIN_ORG_USER_ADD', { 
+    organizationId: org.id, 
+    userId: user.id, 
+    role: userOrg.role,
+    createdNewUser 
+  });
+
+  res.status(201).json({
+    id: user.id,
+    email: user.email,
+    displayName: user.display_name,
+    isActive: user.is_active,
+    role: userOrg.role,
+    joinedAt: userOrg.created_at,
+    createdNewUser
+  });
+}));
+
+/**
+ * POST /admin/organizations/:id/users/bulk
+ * Subida masiva de usuarios en formato JSON.
+ */
+router.post('/organizations/:id/users/bulk', optionalAuthenticateToken, checkRole(['super_admin']), validateBody(bulkOrgUsersSchema), asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { users } = req.body;
+
+  const org = await Organization.findByPk(id);
+  if (!org) {
+    const error = new Error('Organización no encontrada.');
+    error.status = 404;
+    throw error;
+  }
+
+  const results = {
+    total: users.length,
+    created: 0,
+    associated: 0,
+    errors: []
+  };
+
+  await sequelize.transaction(async (t) => {
+    for (let i = 0; i < users.length; i++) {
+      const uData = users[i];
+      const emailLower = uData.email.toLowerCase();
+      try {
+        let user = await User.findOne({ where: { email: emailLower } }, { transaction: t });
+        let createdNewUser = false;
+
+        if (user) {
+          // Verificar si ya pertenece a la organización
+          const exists = await UserOrganization.findOne({
+            where: {
+              user_id: user.id,
+              organization_id: org.id
+            }
+          }, { transaction: t });
+
+          if (exists) {
+            results.errors.push({
+              row: i + 1,
+              email: uData.email,
+              reason: 'El usuario ya pertenece a esta organización.'
+            });
+            continue;
+          }
+        } else {
+          // Crear nuevo usuario
+          const saltRounds = 12;
+          const tempPassword = crypto.randomUUID();
+          const passwordHash = await bcrypt.hash(tempPassword, saltRounds);
+
+          user = await User.create({
+            email: emailLower,
+            password_hash: passwordHash,
+            display_name: uData.displayName,
+            accepted_terms_at: new Date(),
+            is_verified: false
+          }, { transaction: t });
+
+          await Profile.create({ user_id: user.id, language: 'es' }, { transaction: t });
+          createdNewUser = true;
+        }
+
+        // Asociar
+        await UserOrganization.create({
+          user_id: user.id,
+          organization_id: org.id,
+          role: uData.role || 'user'
+        }, { transaction: t });
+
+        if (createdNewUser) {
+          results.created++;
+        } else {
+          results.associated++;
+        }
+      } catch (err) {
+        results.errors.push({
+          row: i + 1,
+          email: uData.email,
+          reason: err.message || 'Error inesperado al procesar el usuario.'
+        });
+      }
+    }
+  });
+
+  ActivityLogger.log('ADMIN_ORG_USER_BULK', { 
+    organizationId: org.id, 
+    total: results.total,
+    created: results.created,
+    associated: results.associated,
+    errorsCount: results.errors.length
+  });
+
+  res.json(results);
+}));
+
+/**
+ * DELETE /admin/organizations/:id/users/:userId
+ * Remueve un usuario de la organización (desasociar sin eliminar la cuenta).
+ */
+router.delete('/organizations/:id/users/:userId', optionalAuthenticateToken, checkRole(['super_admin']), asyncHandler(async (req, res) => {
+  const { id, userId } = req.params;
+
+  const org = await Organization.findByPk(id);
+  if (!org) {
+    const error = new Error('Organización no encontrada.');
+    error.status = 404;
+    throw error;
+  }
+
+  const relation = await UserOrganization.findOne({
+    where: {
+      user_id: userId,
+      organization_id: org.id
+    }
+  });
+
+  if (!relation) {
+    const error = new Error('El usuario no pertenece a esta organización.');
+    error.status = 404;
+    throw error;
+  }
+
+  await relation.destroy();
+
+  ActivityLogger.log('ADMIN_ORG_USER_REMOVE', { 
+    organizationId: org.id, 
+    userId 
+  });
+
+  res.json({ message: 'Usuario removido de la organización correctamente' });
 }));
 
 /**

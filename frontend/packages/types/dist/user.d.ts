@@ -12,6 +12,7 @@ export interface UserProfile {
     severities?: Record<string, SeverityLevel>;
     conditions?: string[];
     is_verified: boolean;
+    role?: string;
     createdAt?: string;
 }
 //# sourceMappingURL=user.d.ts.map

@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { recipeQuerySchema } from '../../models/validators.js';
+import { 
+  recipeQuerySchema, 
+  addOrgUserSchema, 
+  bulkOrgUsersSchema, 
+  organizationUpdateSchema 
+} from '../../models/validators.js';
 
 describe('validators', () => {
   describe('recipeQuerySchema', () => {
@@ -114,6 +119,108 @@ describe('validators', () => {
 
       const result = recipeQuerySchema.safeParse(complete);
       expect(result.success).toBe(true);
+    });
+  });
+
+  describe('addOrgUserSchema', () => {
+    it('should validate valid user with default role', () => {
+      const result = addOrgUserSchema.safeParse({
+        displayName: 'John Doe',
+        email: 'john@example.com'
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.role).toBe('user');
+      }
+    });
+
+    it('should validate valid admin user', () => {
+      const result = addOrgUserSchema.safeParse({
+        displayName: 'Jane Doe',
+        email: 'jane@example.com',
+        role: 'admin'
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('should reject display name that is too short', () => {
+      const result = addOrgUserSchema.safeParse({
+        displayName: 'A',
+        email: 'john@example.com'
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject invalid email', () => {
+      const result = addOrgUserSchema.safeParse({
+        displayName: 'John Doe',
+        email: 'invalid-email'
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject invalid role', () => {
+      const result = addOrgUserSchema.safeParse({
+        displayName: 'John Doe',
+        email: 'john@example.com',
+        role: 'superadmin'
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('bulkOrgUsersSchema', () => {
+    it('should validate a valid array of users', () => {
+      const result = bulkOrgUsersSchema.safeParse({
+        users: [
+          { displayName: 'John Doe', email: 'john@example.com' },
+          { displayName: 'Jane Doe', email: 'jane@example.com', role: 'admin' }
+        ]
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('should reject an empty array of users', () => {
+      const result = bulkOrgUsersSchema.safeParse({
+        users: []
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject an array exceeding 500 users', () => {
+      const users = Array.from({ length: 501 }, (_, i) => ({
+        displayName: `User ${i}`,
+        email: `user${i}@example.com`
+      }));
+      const result = bulkOrgUsersSchema.safeParse({ users });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('organizationUpdateSchema', () => {
+    it('should validate valid update with active status', () => {
+      const result = organizationUpdateSchema.safeParse({
+        name: 'NutriCorp',
+        slug: 'nutricorp',
+        is_active: true
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('should validate valid update without status', () => {
+      const result = organizationUpdateSchema.safeParse({
+        name: 'NutriCorp',
+        slug: 'nutricorp'
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('should reject invalid slug format', () => {
+      const result = organizationUpdateSchema.safeParse({
+        name: 'NutriCorp',
+        slug: 'Nutri Corp'
+      });
+      expect(result.success).toBe(false);
     });
   });
 });

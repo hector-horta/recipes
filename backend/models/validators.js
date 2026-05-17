@@ -82,3 +82,18 @@ export const organizationSchema = z.object({
     .regex(/^[a-z0-9-]+$/, "El slug solo puede contener letras minúsculas, números y guiones")
 });
 
+export const addOrgUserSchema = z.object({
+  displayName: z.string().trim().min(2, "El nombre debe tener al menos 2 caracteres"),
+  email: z.string().email("Email inválido"),
+  role: z.enum(['user', 'admin']).default('user')
+});
+
+export const bulkOrgUsersSchema = z.object({
+  users: z.array(addOrgUserSchema).min(1).max(500)
+});
+
+export const organizationUpdateSchema = organizationSchema.extend({
+  is_active: z.boolean().optional()
+});
+
+

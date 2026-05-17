@@ -82,6 +82,7 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 13. **Tag Consistency**: Los tags son globales. Al crear/editar contenido, se deben usar los `keys` del catálogo de tags para asegurar la integridad de las traducciones en todas las apps. **Prohibido hardcodear strings de tags en las recetas.**
 14. **XSS Sanitization**: Todo contenido HTML proveniente de fuentes externas (AI, OCR, Scrapers) DEBE ser sanitizado en el frontend usando `DOMPurify` con una whitelist estricta antes de renderizarse.
 15. **Telemetry First**: Ninguna feature está completa sin su correspondiente evento de analytics (Umami) y logs estructurados (ActivityLogger).
+16. **Pure JS Dependencies (Bcrypt)**: Para evitar fallos y crashes de compilación nativa en entornos de contenedores Docker o despliegues en la nube, se prohíbe el uso de `bcrypt` (librería nativa de C++). En su lugar, se debe utilizar **`bcryptjs`** (implementación pura de JavaScript). Toda nueva funcionalidad de autenticación o encriptación de contraseñas debe importar y utilizar `bcryptjs` de forma estricta.
 ---
 
 ## 📁 Estructura Completa del Proyecto
@@ -114,7 +115,7 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 │   │   ├── Recipe.js             # Filtrado por organization_id
 │   │   ├── SearchLog.js
 │   │   ├── ActivityLog.js
-│   │   └── validators.js         # Schemas Zod (recipeQuerySchema)
+│   │   └── validators.js         # Schemas Zod (recipeQuerySchema, addOrgUserSchema, bulkOrgUsersSchema, organizationUpdateSchema, registerSchema, loginSchema, etc.)
 │   ├── middleware/
 │   │   ├── auth.js               # authenticateToken, optionalAuthenticateToken
 │   │   ├── validate.js           # validateQuery(zodSchema) → req.validatedQuery

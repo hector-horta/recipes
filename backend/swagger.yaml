@@ -415,6 +415,65 @@ paths:
         '409':
           description: Organization already exists
   /admin/organizations/{id}:
+    get:
+      tags:
+        - Admin
+      summary: Get organization details and collaborators list
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detailed organization data with associated users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  slug:
+                    type: string
+                  is_active:
+                    type: boolean
+                  settings:
+                    type: object
+                  status:
+                    type: string
+                    enum: [active, suspended]
+                  userCount:
+                    type: integer
+                  users:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        email:
+                          type: string
+                        displayName:
+                          type: string
+                        isActive:
+                          type: boolean
+                        role:
+                          type: string
+                          enum: [admin, user]
+                        joinedAt:
+                          type: string
+                          format: date-time
+        '404':
+          description: Organization not found
     put:
       tags:
         - Admin
@@ -443,6 +502,8 @@ paths:
                   type: string
                 slug:
                   type: string
+                is_active:
+                  type: boolean
       responses:
         '200':
           description: Organization updated
@@ -474,6 +535,172 @@ paths:
                     type: string
                   organization:
                     $ref: '#/components/schemas/Organization'
+  /admin/organizations/{id}/users:
+    post:
+      tags:
+        - Admin
+      summary: Add a single collaborator user to organization
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - displayName
+                - role
+              properties:
+                email:
+                  type: string
+                  format: email
+                displayName:
+                  type: string
+                role:
+                  type: string
+                  enum: [admin, user]
+      responses:
+        '201':
+          description: Collaborator user added/associated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  email:
+                    type: string
+                  displayName:
+                    type: string
+                  isActive:
+                    type: boolean
+                  role:
+                    type: string
+                    enum: [admin, user]
+                  joinedAt:
+                    type: string
+                    format: date-time
+                  createdNewUser:
+                    type: boolean
+        '400':
+          description: Validation error
+        '404':
+          description: Organization not found
+        '409':
+          description: User already belongs to organization
+  /admin/organizations/{id}/users/bulk:
+    post:
+      tags:
+        - Admin
+      summary: Bulk upload and associate collaborator users
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - users
+              properties:
+                users:
+                  type: array
+                  maxItems: 500
+                  items:
+                    type: object
+                    required:
+                      - email
+                      - displayName
+                      - role
+                    properties:
+                      email:
+                        type: string
+                        format: email
+                      displayName:
+                        type: string
+                      role:
+                        type: string
+                        enum: [admin, user]
+      responses:
+        '200':
+          description: Bulk import processed with detailed summary of succeeded and failed records
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  created:
+                    type: integer
+                  associated:
+                    type: integer
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        row:
+                          type: integer
+                        email:
+                          type: string
+                        reason:
+                          type: string
+        '400':
+          description: Validation error or limit exceeded
+        '404':
+          description: Organization not found
+  /admin/organizations/{id}/users/{userId}:
+    delete:
+      tags:
+        - Admin
+      summary: Disassociate a user from organization
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User disassociated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '404':
+          description: Organization or user relationship not found
   /admin/recipes:
     get:
       tags:
