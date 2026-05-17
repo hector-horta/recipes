@@ -40,53 +40,53 @@ interface Tag {
 
 interface Recipe {
   id: string;
-  title_es: string;
-  title_en: string;
-  slug: string;
-  prep_time_minutes: number;
-  cook_time_minutes: number;
-  servings: number;
-  difficulty: 'easy' | 'medium' | 'hard';
-  status: 'draft' | 'published' | 'archived';
-  sibo_risk_level: 'safe' | 'caution' | 'avoid';
+  title: string;
+  titleEn: string;
+  // slug not returned by API
+  prepTimeMinutes: number;
+  cookTimeMinutes: number;
+  // servings not returned by API
+  // difficulty not returned by API
+  // status not returned by API
+  safetyLevel: 'safe' | 'review' | 'unsafe';
   ingredients: any[];
-  steps: any[];
+  instructions: string[];
   tags: string[];
-  image_url: string | null;
-  image_filename: string | null;
-  created_at: string;
+  imageUrl: string;
+  // image_filename not returned by API
+  // created_at not returned by API
 }
 
 interface RecipeFormData {
-  title_es: string;
-  title_en: string;
-  slug: string;
-  prep_time_minutes: number;
-  cook_time_minutes: number;
-  servings: number;
-  difficulty: 'easy' | 'medium' | 'hard';
-  status: 'draft' | 'published' | 'archived';
-  sibo_risk_level: 'safe' | 'caution' | 'avoid';
+  title: string;
+  titleEn: string;
+  // slug not returned by API
+  prepTimeMinutes: number;
+  cookTimeMinutes: number;
+  // servings not returned by API
+  // difficulty not returned by API
+  // status not returned by API
+  safetyLevel: 'safe' | 'review' | 'unsafe';
   ingredients: any[];
-  steps: any[];
+  instructions: string[];
   tags: string[];
-  image_url: string | null;
+  imageUrl: string;
 }
 
 const INITIAL_FORM_STATE: RecipeFormData = {
-  title_es: '',
-  title_en: '',
-  slug: '',
-  prep_time_minutes: 0,
-  cook_time_minutes: 0,
+  title: '',
+  titleEn: '',
+  // slug: '',
+  prepTimeMinutes: 0,
+  cookTimeMinutes: 0,
   servings: 1,
   difficulty: 'medium',
   status: 'draft',
-  sibo_risk_level: 'safe',
+  safetyLevel: 'safe',
   ingredients: [],
-  steps: [],
+  instructions: [],
   tags: [],
-  image_url: null
+  imageUrl: ''
 };
 
 // ─── Design tokens ─────────────────────────────────────────────────────────
@@ -151,6 +151,9 @@ export const GlobalRecipes: React.FC = () => {
   }, [viewMode]);
 
   const [activeLang, setActiveLang] = useState<'es' | 'en'>('es');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
+  const [totalRecipes, setTotalRecipes] = useState(0);
   const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
@@ -159,8 +162,12 @@ export const GlobalRecipes: React.FC = () => {
 
   // Queries
   const { data: recipes, isLoading: recipesLoading } = useQuery({
-    queryKey: ['global-recipes'],
-    queryFn: () => api.get<Recipe[]>('/admin/recipes'),
+    queryKey: ['global-recipes', currentPage, pageSize],
+    queryFn: async () => {
+      const data = await api.get<{ recipes: Recipe[]; total: number }>(`/recipes?number=${pageSize}&offset=${(currentPage - 1) * pageSize}`);
+      setTotalRecipes(data.total || 0);
+      return data.recipes;
+    },
   });
 
   const { data: tags } = useQuery({
@@ -176,9 +183,9 @@ export const GlobalRecipes: React.FC = () => {
   const filteredRecipes = useMemo(() => {
     return recipes?.filter(recipe => {
       const matchesSearch = 
-        recipe.title_es.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        recipe.title_en.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        recipe.slug.toLowerCase().includes(searchTerm.toLowerCase());
+        (recipe.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (recipe.titleEn || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (recipe.id || '').toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesTags = selectedTags.length === 0 || selectedTags.every(tag => recipe.tags?.includes(tag));
       
@@ -278,7 +285,7 @@ export const GlobalRecipes: React.FC = () => {
       api.post(`/api/ingest/${slug}/refresh-image`, { issue }),
     onSuccess: (data: any, variables) => {
       queryClient.invalidateQueries({ queryKey: ['global-recipes'] });
-      setFormData(prev => ({ ...prev, image_url: data.recipe.image_url }));
+      setFormData(prev => ({ ...prev, image_url: data.recipe.imageUrl }));
       setImageFeedback('');
       logger.info('ADMIN_RECIPE_IMAGE_REFRESH', { slug: variables.slug });
       toast.success(t('recipes.regenerate_success'));
@@ -292,19 +299,19 @@ export const GlobalRecipes: React.FC = () => {
   const handleEdit = (recipe: Recipe) => {
     setEditingRecipe(recipe);
     setFormData({
-      title_es: recipe.title_es,
-      title_en: recipe.title_en,
-      slug: recipe.slug,
-      prep_time_minutes: recipe.prep_time_minutes,
-      cook_time_minutes: recipe.cook_time_minutes,
-      servings: recipe.servings,
-      difficulty: recipe.difficulty,
-      status: recipe.status,
-      sibo_risk_level: recipe.sibo_risk_level,
+      title: recipe.title,
+      titleEn: recipe.titleEn,
+      // slug mapped from recipe
+      prepTimeMinutes: recipe.prepTimeMinutes,
+      cookTimeMinutes: recipe.cookTimeMinutes,
+      // servings: recipe.servings,
+      // difficulty: recipe.difficulty,
+      // status: recipe.status,
+      safetyLevel: recipe.safetyLevel,
       ingredients: recipe.ingredients || [],
-      steps: recipe.steps || [],
+      instructions: recipe.instructions || [],
       tags: recipe.tags || [],
-      image_url: recipe.image_url
+      imageUrl: recipe.imageUrl
     });
     setImageFeedback('');
     setIsModalOpen(true);
@@ -364,7 +371,7 @@ export const GlobalRecipes: React.FC = () => {
   const addStep = () => {
     setFormData(prev => ({
       ...prev,
-      steps: [...prev.steps, '']
+      instructions: [...prev.instructions, '']
     }));
   };
 
@@ -385,7 +392,7 @@ export const GlobalRecipes: React.FC = () => {
   };
 
   const moveStep = (index: number, direction: 'up' | 'down') => {
-    const newSteps = [...formData.steps];
+    const newSteps = [...formData.instructions];
     const newIndex = direction === 'up' ? index - 1 : index + 1;
     if (newIndex < 0 || newIndex >= newSteps.length) return;
     [newSteps[index], newSteps[newIndex]] = [newSteps[newIndex], newSteps[index]];
@@ -552,10 +559,10 @@ export const GlobalRecipes: React.FC = () => {
                       <td className="px-8 py-6">
                         <div className="flex items-center gap-4">
                           <div className="w-16 h-16 rounded-[1.25rem] overflow-hidden flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform duration-300" style={{ backgroundColor: T.primary08, color: T.primary, border: `1px solid ${T.primary15}` }}>
-                            {recipe.image_url ? (
+                            {recipe.imageUrl ? (
                               <img 
-                                src={recipe.image_url} 
-                                alt={t('recipes.image_alt', { title: activeLang === 'es' ? recipe.title_es : recipe.title_en })} 
+                                src={recipe.imageUrl} 
+                                alt={t('recipes.image_alt', { title: activeLang === 'es' ? recipe.title : recipe.titleEn })} 
                                 className="w-full h-full object-cover" 
                               />
                             ) : (
@@ -564,22 +571,22 @@ export const GlobalRecipes: React.FC = () => {
                           </div>
                           <div className="flex flex-col min-w-0">
                             <span className="font-bold text-lg leading-tight truncate" style={{ color: T.text }}>
-                              {activeLang === 'es' ? recipe.title_es : recipe.title_en}
+                              {activeLang === 'es' ? recipe.title : recipe.titleEn}
                             </span>
                             <div className="flex items-center gap-3 mt-1">
                               <button
                                 onClick={() => {
-                                  navigator.clipboard.writeText(recipe.slug);
+                                  navigator.clipboard.writeText(recipe.id);
                                   toast.success(t('recipes.messages.copy_slug_success'));
                                 }}
                                 className="text-[10px] font-black font-mono uppercase px-2 py-0.5 rounded transition-colors"
                                 style={{ color: T.primary, backgroundColor: T.primary08, border: `1px solid ${T.primary15}` }}
                               >
-                                {recipe.slug}
+                                {recipe.id}
                               </button>
                               <div className="flex items-center gap-1 text-xs font-medium" style={{ color: T.muted }}>
                                 <Clock size={12} />
-                                {recipe.prep_time_minutes + recipe.cook_time_minutes} {t('recipes.ui.minutes_suffix')}
+                                {recipe.prepTimeMinutes + recipe.cookTimeMinutes} {t('recipes.ui.minutes_suffix')}
                               </div>
                             </div>
                           </div>
@@ -588,13 +595,13 @@ export const GlobalRecipes: React.FC = () => {
                       <td className="px-8 py-6">
                         <span
                           className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full"
-                          style={recipe.difficulty === 'easy'
+                          style={(recipe as any).difficulty === 'easy'
                             ? { backgroundColor: T.success15, color: T.success }
-                            : recipe.difficulty === 'medium'
+                            : (recipe as any).difficulty === 'medium'
                             ? { backgroundColor: T.warning15, color: T.warningBadge }
                             : { backgroundColor: T.danger15, color: T.danger }}
                         >
-                          {t(`recipes.difficulty.${recipe.difficulty}`)}
+                          {t(`recipes.difficulty.${(recipe as any).difficulty}`)}
                         </span>
                       </td>
                       <td className="px-8 py-6">
@@ -602,23 +609,23 @@ export const GlobalRecipes: React.FC = () => {
                           <div 
                             className="w-2.5 h-2.5 rounded-full shadow-sm" 
                             style={{ 
-                              backgroundColor: recipe.sibo_risk_level === 'safe' ? T.success :
-                                               recipe.sibo_risk_level === 'caution' ? T.warning : T.danger 
+                              backgroundColor: recipe.safetyLevel === 'safe' ? T.success :
+                                               recipe.safetyLevel === 'caution' ? T.warning : T.danger 
                             }} 
                           />
-                          <span className="text-sm font-bold capitalize" style={{ color: T.text }}>{t(`recipes.sibo_risk.${recipe.sibo_risk_level}`)}</span>
+                          <span className="text-sm font-bold capitalize" style={{ color: T.text }}>{t(`recipes.sibo_risk.${recipe.safetyLevel}`)}</span>
                         </div>
                       </td>
                       <td className="px-8 py-6">
                         <span
                           className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest"
-                          style={recipe.status === 'published'
+                          style={(recipe as any).status === 'published'
                             ? { backgroundColor: T.primary12, color: T.primary }
-                            : recipe.status === 'draft'
+                            : (recipe as any).status === 'draft'
                             ? { backgroundColor: T.warning12, color: T.warning }
                             : { backgroundColor: T.muted12, color: T.grey }}
                         >
-                          {recipe.status === 'published' ? `● ${t('recipes.status.published')}` : recipe.status === 'draft' ? `○ ${t('recipes.status.draft')}` : t('recipes.status.archived')}
+                          {(recipe as any).status === 'published' ? `● ${t('recipes.status.published')}` : (recipe as any).status === 'draft' ? `○ ${t('recipes.status.draft')}` : t('recipes.status.archived')}
                         </span>
                       </td>
                       <td className="px-8 py-6 text-right">
@@ -708,10 +715,10 @@ export const GlobalRecipes: React.FC = () => {
                           onChange={() => toggleSelection(recipe.id)}
                         />
                       </div>
-                      {recipe.image_url ? (
+                      {recipe.imageUrl ? (
                         <img
-                          src={recipe.image_url}
-                          alt={t('recipes.image_alt', { title: activeLang === 'es' ? recipe.title_es : recipe.title_en })}
+                          src={recipe.imageUrl}
+                          alt={t('recipes.image_alt', { title: activeLang === 'es' ? recipe.title : recipe.titleEn })}
                           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                         />
                       ) : (
@@ -722,11 +729,11 @@ export const GlobalRecipes: React.FC = () => {
                       <div className="absolute top-4 right-4 flex flex-col gap-2">
                         <span
                           className="backdrop-blur-md px-3 py-1 rounded-full text-[9px] font-black"
-                          style={recipe.status === 'published'
+                          style={(recipe as any).status === 'published'
                             ? { backgroundColor: T.primary85, color: T.dark }
                             : { backgroundColor: T.warning85, color: T.dark }}
                         >
-                          {recipe.status === 'published' ? t('recipes.status.published') : recipe.status === 'draft' ? t('recipes.status.draft') : t('recipes.status.archived')}
+                          {(recipe as any).status === 'published' ? t('recipes.status.published') : (recipe as any).status === 'draft' ? t('recipes.status.draft') : t('recipes.status.archived')}
                         </span>
                       </div>
                       <div 
@@ -759,23 +766,23 @@ export const GlobalRecipes: React.FC = () => {
                         <div 
                           className="w-2 h-2 rounded-full" 
                           style={{ 
-                            backgroundColor: recipe.sibo_risk_level === 'safe' ? T.success :
-                                             recipe.sibo_risk_level === 'caution' ? T.warning : T.danger 
+                            backgroundColor: recipe.safetyLevel === 'safe' ? T.success :
+                                             recipe.safetyLevel === 'caution' ? T.warning : T.danger 
                           }} 
                         />
                         <span className="text-[10px] font-bold uppercase tracking-tighter" style={{ color: T.muted }}>
-                          {t('recipes.risk_label')} {t(`recipes.sibo_risk.${recipe.sibo_risk_level}`)}
+                          {t('recipes.risk_label')} {t(`recipes.sibo_risk.${recipe.safetyLevel}`)}
                         </span>
                       </div>
                       <h3 className="font-bold text-lg leading-tight mb-2 line-clamp-1" style={{ color: T.text }}>
-                        {activeLang === 'es' ? recipe.title_es : recipe.title_en}
+                        {activeLang === 'es' ? recipe.title : recipe.titleEn}
                       </h3>
                       <div className="flex items-center justify-between text-[11px] font-bold" style={{ color: T.muted }}>
                         <div className="flex items-center gap-3">
-                          <span className="flex items-center gap-1"><Clock size={12} /> {recipe.prep_time_minutes + recipe.cook_time_minutes}{t('recipes.ui.minutes_short')}</span>
-                          <span className="flex items-center gap-1"><Users size={12} /> {recipe.servings}</span>
+                          <span className="flex items-center gap-1"><Clock size={12} /> {recipe.prepTimeMinutes + recipe.cookTimeMinutes}{t('recipes.ui.minutes_short')}</span>
+                          <span className="flex items-center gap-1"><Users size={12} /> {(recipe as any).servings}</span>
                         </div>
-                        <span className="uppercase tracking-widest text-[9px] px-2 py-0.5 rounded-md" style={{ backgroundColor: T.surfaceHi, color: T.muted }}>{t(`recipes.difficulty.${recipe.difficulty}`)}</span>
+                        <span className="uppercase tracking-widest text-[9px] px-2 py-0.5 rounded-md" style={{ backgroundColor: T.surfaceHi, color: T.muted }}>{t(`recipes.difficulty.${(recipe as any).difficulty}`)}</span>
                       </div>
                     </div>
                   </motion.div>
@@ -790,6 +797,55 @@ export const GlobalRecipes: React.FC = () => {
           </div>
         )}
       </motion.div>
+
+      {/* ─── Pagination ─── */}
+      {totalRecipes > pageSize && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '24px 0' }}>
+          <button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            style={{
+              padding: '8px 16px', borderRadius: '12px',
+              border: `1px solid ${currentPage === 1 ? T.outline : T.primary}`,
+              backgroundColor: currentPage === 1 ? 'transparent' : T.primary08,
+              color: currentPage === 1 ? T.muted : T.primary,
+              cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+              fontWeight: 700, fontSize: '13px',
+            }}
+          >{'← Anterior'}</button>
+
+          {Array.from({ length: Math.ceil(totalRecipes / pageSize) }, (_, i) => i + 1).map(page => (
+            <button
+              key={page}
+              onClick={() => setCurrentPage(page)}
+              style={{
+                width: '36px', height: '36px', borderRadius: '10px',
+                border: `1px solid ${page === currentPage ? T.primary : T.outline}`,
+                backgroundColor: page === currentPage ? T.primary12 : 'transparent',
+                color: page === currentPage ? T.primary : T.muted,
+                cursor: 'pointer', fontWeight: 800, fontSize: '13px',
+              }}
+            >{page}</button>
+          ))}
+
+          <button
+            onClick={() => setCurrentPage(p => Math.min(Math.ceil(totalRecipes / pageSize), p + 1))}
+            disabled={currentPage >= Math.ceil(totalRecipes / pageSize)}
+            style={{
+              padding: '8px 16px', borderRadius: '12px',
+              border: `1px solid ${currentPage >= Math.ceil(totalRecipes / pageSize) ? T.outline : T.primary}`,
+              backgroundColor: currentPage >= Math.ceil(totalRecipes / pageSize) ? 'transparent' : T.primary08,
+              color: currentPage >= Math.ceil(totalRecipes / pageSize) ? T.muted : T.primary,
+              cursor: currentPage >= Math.ceil(totalRecipes / pageSize) ? 'not-allowed' : 'pointer',
+              fontWeight: 700, fontSize: '13px',
+            }}
+          >{'Siguiente →'}</button>
+
+          <span style={{ color: T.muted, fontSize: '12px', fontWeight: 600, marginLeft: '12px' }}>
+            {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, totalRecipes)} de {totalRecipes}
+          </span>
+        </div>
+      )}
       
       <AnimatePresence>
         {selectedIds.length > 0 && (
@@ -904,13 +960,13 @@ export const GlobalRecipes: React.FC = () => {
                             placeholder={t('recipes.form.placeholder_title')}
                             className="w-full h-12 rounded-xl px-4 outline-none transition-all font-bold"
                             style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.text }}
-                            value={formData.title_es}
+                            value={formData.title}
                             onChange={(e) => {
                               const val = e.target.value;
                               setFormData(prev => ({
                                 ...prev,
                                 title_es: val,
-                                slug: editingRecipe ? prev.slug : val.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-').replace(/[^\w-]/g, '')
+                                // slug auto-gen disabled for now // prev.slug : val.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-').replace(/[^\w-]/g, '')
                               }));
                             }}
                             required
@@ -932,8 +988,8 @@ export const GlobalRecipes: React.FC = () => {
                             placeholder={t('recipes.form.placeholder_title')}
                             className="w-full h-12 rounded-xl px-4 outline-none transition-all font-bold"
                             style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.text }}
-                            value={formData.title_en}
-                            onChange={(e) => setFormData({ ...formData, title_en: e.target.value })}
+                            value={formData.titleEn}
+                            onChange={(e) => setFormData({ ...formData, titleEn: e.target.value })}
                             required
                           />
                         </motion.div>
@@ -950,7 +1006,7 @@ export const GlobalRecipes: React.FC = () => {
                         placeholder={t('recipes.form.placeholder_slug')}
                         className="w-full h-12 rounded-xl px-4 outline-none transition-all font-bold font-mono text-[10px]"
                         style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.primary }}
-                        value={formData.slug}
+                        value={formData.id}
                         onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
                         required
                       />
@@ -964,8 +1020,8 @@ export const GlobalRecipes: React.FC = () => {
                           type="number"
                           className="w-full h-12 rounded-xl px-4 outline-none transition-all font-bold"
                           style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.text }}
-                          value={formData.prep_time_minutes}
-                          onChange={(e) => setFormData({ ...formData, prep_time_minutes: parseInt(e.target.value) || 0 })}
+                          value={formData.prepTimeMinutes}
+                          onChange={(e) => setFormData({ ...formData, prepTimeMinutes: parseInt(e.target.value) || 0 })}
                         />
                       </div>
                       <div className="space-y-2">
@@ -976,8 +1032,8 @@ export const GlobalRecipes: React.FC = () => {
                           type="number"
                           className="w-full h-12 rounded-xl px-4 outline-none transition-all font-bold"
                           style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.text }}
-                          value={formData.cook_time_minutes}
-                          onChange={(e) => setFormData({ ...formData, cook_time_minutes: parseInt(e.target.value) || 0 })}
+                          value={formData.cookTimeMinutes}
+                          onChange={(e) => setFormData({ ...formData, cookTimeMinutes: parseInt(e.target.value) || 0 })}
                         />
                       </div>
                       <div className="space-y-2">
@@ -1124,9 +1180,9 @@ export const GlobalRecipes: React.FC = () => {
                         <button
                           key={level}
                           type="button"
-                          onClick={() => setFormData({ ...formData, sibo_risk_level: level })}
+                          onClick={() => setFormData({ ...formData, safetyLevel: level })}
                           className="flex-1 rounded-xl text-[10px] font-black uppercase transition-all border-2"
-                          style={formData.sibo_risk_level === level
+                          style={formData.safetyLevel === level
                             ? level === 'safe' ? { backgroundColor: T.success, borderColor: T.success, color: T.dark }
                               : level === 'caution' ? { backgroundColor: T.warning, borderColor: T.warning, color: T.dark }
                               : { backgroundColor: T.danger, borderColor: T.danger, color: T.white }
@@ -1255,7 +1311,7 @@ export const GlobalRecipes: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 font-black uppercase tracking-[0.2em] text-xs" style={{ color: T.muted }}>
                     <div className="w-8 h-[2px]" style={{ backgroundColor: T.outline }} />
-                    {t('recipes.form.steps')} ({formData.steps.length})
+                    {t('recipes.form.steps')} ({formData.instructions.length})
                   </div>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
@@ -1270,7 +1326,7 @@ export const GlobalRecipes: React.FC = () => {
                 </div>
                 <div className="space-y-4">
                   <AnimatePresence>
-                    {formData.steps.map((step, idx) => (
+                    {formData.instructions.map((step, idx) => (
                       <motion.div 
                         key={`step-${idx}`}
                         initial={{ opacity: 0, y: 10 }}
@@ -1298,7 +1354,7 @@ export const GlobalRecipes: React.FC = () => {
                              <button 
                                type="button" 
                                onClick={() => moveStep(idx, 'down')}
-                               disabled={idx === formData.steps.length - 1}
+                               disabled={idx === formData.instructions.length - 1}
                                className="p-1 rounded transition-colors disabled:opacity-0"
                                style={{ color: T.muted }}
                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = T.surface}
@@ -1314,7 +1370,7 @@ export const GlobalRecipes: React.FC = () => {
                           placeholder={t('recipes.form.step_placeholder', { index: idx + 1 })}
                           value={step}
                           onChange={(e) => {
-                            const newSteps = [...formData.steps];
+                            const newSteps = [...formData.instructions];
                             newSteps[idx] = e.target.value;
                             setFormData({ ...formData, steps: newSteps });
                           }}
@@ -1324,7 +1380,7 @@ export const GlobalRecipes: React.FC = () => {
                           onClick={() => {
                             setFormData(prev => ({
                               ...prev,
-                              steps: prev.steps.filter((_, i) => i !== idx)
+                              steps: prev.instructions.filter((_, i) => i !== idx)
                             }));
                           }}
                           className="p-3 rounded-xl transition-all self-start" style={{ color: T.danger }}
@@ -1334,7 +1390,7 @@ export const GlobalRecipes: React.FC = () => {
                       </motion.div>
                     ))}
                   </AnimatePresence>
-                  {formData.steps.length === 0 && (
+                  {formData.instructions.length === 0 && (
                     <div className="py-10 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center gap-2" style={{ borderColor: T.primary15, color: T.muted }}>
                       <Info size={24} className="opacity-20" />
                       <p className="text-xs font-bold uppercase tracking-widest opacity-40">{t('recipes.form.no_steps')}</p>
@@ -1353,12 +1409,12 @@ export const GlobalRecipes: React.FC = () => {
               </label>
               <div className="aspect-[4/5] rounded-[2.5rem] overflow-hidden relative group" style={{ backgroundColor: T.surfaceHi, border: `2px solid ${T.outline}` }}>
                 <AnimatePresence mode="wait">
-                  {formData.image_url ? (
+                  {formData.imageUrl ? (
                     <motion.img 
-                      key={formData.image_url}
+                      key={formData.imageUrl}
                       initial={{ opacity: 0, scale: 1.1 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      src={formData.image_url} 
+                      src={formData.imageUrl} 
                       alt={t('recipes.ai.image_alt')} 
                       className="w-full h-full object-cover" 
                     />
@@ -1409,7 +1465,7 @@ export const GlobalRecipes: React.FC = () => {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     type="button"
-                    onClick={() => refreshImageMutation.mutate({ slug: formData.slug, issue: imageFeedback })}
+                    onClick={() => refreshImageMutation.mutate({ slug: formData.id, issue: imageFeedback })}
                     disabled={refreshImageMutation.isPending}
                     className="w-full h-12 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50 relative group transition-all"
                     style={{ backgroundColor: T.surface, color: T.primary, border: `1px solid ${T.primary}` }}

@@ -19,6 +19,10 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: apiHost,
           changeOrigin: true
+        },
+        '/public': {
+          target: apiHost,
+          changeOrigin: true
         }
       }
     },
