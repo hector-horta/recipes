@@ -496,9 +496,13 @@ router.post('/voice', asyncHandler(async (req, res) => {
 }));
 
 router.post('/:slug/:action', asyncHandler(async (req, res) => {
-  const { slug, action } = req.params;
+  const { slug: slugOrId, action } = req.params;
 
-  const recipe = await Recipe.findOne({ where: { slug } });
+  // uuid regex to check if it's an id
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slugOrId);
+  const whereClause = isUuid ? { id: slugOrId } : { slug: slugOrId };
+
+  const recipe = await Recipe.findOne({ where: whereClause });
   if (!recipe) {
     return res.status(404).json({ error: 'Recipe not found.' });
   }

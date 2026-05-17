@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
@@ -89,7 +89,7 @@ const INITIAL_FORM_STATE: RecipeFormData = {
   imageUrl: ''
 };
 
-// ─── Design tokens ─────────────────────────────────────────────────────────
+// ÔöÇÔöÇÔöÇ Design tokens ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 const T = {
   dark:      'var(--surface-dark)',
   dark80:    'rgba(16, 20, 23, 0.8)',
@@ -625,7 +625,7 @@ export const GlobalRecipes: React.FC = () => {
                             ? { backgroundColor: T.warning12, color: T.warning }
                             : { backgroundColor: T.muted12, color: T.grey }}
                         >
-                          {(recipe as any).status === 'published' ? `● ${t('recipes.status.published')}` : (recipe as any).status === 'draft' ? `○ ${t('recipes.status.draft')}` : t('recipes.status.archived')}
+                          {(recipe as any).status === 'published' ? `ÔùÅ ${t('recipes.status.published')}` : (recipe as any).status === 'draft' ? `Ôùï ${t('recipes.status.draft')}` : t('recipes.status.archived')}
                         </span>
                       </td>
                       <td className="px-8 py-6 text-right">
@@ -798,7 +798,7 @@ export const GlobalRecipes: React.FC = () => {
         )}
       </motion.div>
 
-      {/* ─── Pagination ─── */}
+      {/* ÔöÇÔöÇÔöÇ Pagination ÔöÇÔöÇÔöÇ */}
       {totalRecipes > pageSize && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '24px 0' }}>
           <button
@@ -812,7 +812,7 @@ export const GlobalRecipes: React.FC = () => {
               cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
               fontWeight: 700, fontSize: '13px',
             }}
-          >{'← Anterior'}</button>
+          >{'ÔåÉ Anterior'}</button>
 
           {Array.from({ length: Math.ceil(totalRecipes / pageSize) }, (_, i) => i + 1).map(page => (
             <button
@@ -839,10 +839,10 @@ export const GlobalRecipes: React.FC = () => {
               cursor: currentPage >= Math.ceil(totalRecipes / pageSize) ? 'not-allowed' : 'pointer',
               fontWeight: 700, fontSize: '13px',
             }}
-          >{'Siguiente →'}</button>
+          >{'Siguiente ÔåÆ'}</button>
 
           <span style={{ color: T.muted, fontSize: '12px', fontWeight: 600, marginLeft: '12px' }}>
-            {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, totalRecipes)} de {totalRecipes}
+            {(currentPage - 1) * pageSize + 1}ÔÇô{Math.min(currentPage * pageSize, totalRecipes)} de {totalRecipes}
           </span>
         </div>
       )}
@@ -1150,9 +1150,9 @@ export const GlobalRecipes: React.FC = () => {
                       value={formData.difficulty}
                       onChange={(e) => setFormData({ ...formData, difficulty: e.target.value as any })}
                     >
-                      <option value="easy">○ {t('recipes.difficulty.easy')}</option>
-                      <option value="medium">◒ {t('recipes.difficulty.medium')}</option>
-                      <option value="hard">● {t('recipes.difficulty.hard')}</option>
+                      <option value="easy">Ôùï {t('recipes.difficulty.easy')}</option>
+                      <option value="medium">ÔùÆ {t('recipes.difficulty.medium')}</option>
+                      <option value="hard">ÔùÅ {t('recipes.difficulty.hard')}</option>
                     </select>
                   </div>
                   <div className="space-y-2">
@@ -1515,9 +1515,9 @@ export const GlobalRecipes: React.FC = () => {
                 <Info size={12} style={{ color: T.primary }} /> {t('recipes.form.style_guide')}
               </h4>
               <ul className="text-[10px] space-y-2 font-medium" style={{ color: T.muted }}>
-                <li className="flex gap-2"><span style={{ color: T.primary }}>•</span><span>{t('recipes.form.style_guide_slug')}</span></li>
-                <li className="flex gap-2"><span style={{ color: T.primary }}>•</span><span>{t('recipes.form.style_guide_ingredients')}</span></li>
-                <li className="flex gap-2"><span style={{ color: T.primary }}>•</span><span>{t('recipes.form.style_guide_sibo')}</span></li>
+                <li className="flex gap-2"><span style={{ color: T.primary }}>ÔÇó</span><span>{t('recipes.form.style_guide_slug')}</span></li>
+                <li className="flex gap-2"><span style={{ color: T.primary }}>ÔÇó</span><span>{t('recipes.form.style_guide_ingredients')}</span></li>
+                <li className="flex gap-2"><span style={{ color: T.primary }}>ÔÇó</span><span>{t('recipes.form.style_guide_sibo')}</span></li>
               </ul>
             </div>
           </div>
