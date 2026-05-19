@@ -115,7 +115,7 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 │   │   ├── Recipe.js             # Filtrado por organization_id
 │   │   ├── SearchLog.js
 │   │   ├── ActivityLog.js
-│   │   └── validators.js         # Schemas Zod (recipeQuerySchema, addOrgUserSchema, bulkOrgUsersSchema, organizationUpdateSchema, registerSchema, loginSchema, etc.)
+│   │   └── validators.js         # Schemas Zod (recipeQuerySchema, adminRecipeSchema, addOrgUserSchema, bulkOrgUsersSchema, organizationUpdateSchema, registerSchema, loginSchema, etc.)
 │   ├── middleware/
 │   │   ├── auth.js               # authenticateToken, optionalAuthenticateToken
 │   │   ├── validate.js           # validateQuery(zodSchema) → req.validatedQuery
@@ -132,7 +132,11 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 │   │   ├── RecipeProvider.js     # Búsqueda en DB + caché Redis + filtrado por intolerancias
 │   │   ├── NvidiaNIM.js          # OCR (Llama 4), estructurar recetas, generar imágenes (SDXL)
 │   │   ├── GroqWhisper.js        # Transcripción de audio
-│   │   └── IEmailService.js      # Facade de correos (Dev/Resend)
+│   │   ├── IEmailService.js      # Facade de correos (Dev/Resend)
+│   │   ├── AdminStatsService.js   # Servicio para cálculo de estadísticas de administración
+│   │   ├── OrganizationService.js # Servicio para gestión de inquilinos y membresías de usuarios
+│   │   ├── AdminRecipeService.js  # Servicio para CRUD y gestión de recetas globales
+│   │   └── AdminTagService.js     # Servicio para CRUD y gestión de etiquetas globales
 │   ├── utils/
 │   │   ├── tagTranslations.js    # TAG_TRANSLATIONS map, normalizeTag(), normalizeTags()
 │   │   ├── ingestSanitizer.js    # sanitizeStructuredRecipe() — mapea output LLM a ENUMs/tipos DB
@@ -141,7 +145,9 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 │   │   └── migrateToTenant.js    # Script de migración multi-tenant (ver docs/MigrationGuideToMultitenant.md)
 │   ├── migrations/               # Sequelize CLI migrations (.cjs)
 │   ├── seeders/
-│   ├── tests/
+│   ├── tests/                    # Tests unitarios e integración del backend (*.test.js)
+│   │   ├── AdminStatsService.test.js
+│   │   └── OrganizationService.test.js
 │   ├── scratch/                  # ⚠️ Scripts temporales de debug — NO COMMITEAR (en .gitignore)
 │   ├── public/recipes/           # Imágenes estáticas de recetas (servido por Express)
 │   └── ingest_logs/              # Recovery logs de ingesta (JSON)
@@ -401,6 +407,34 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 |---|---|---|---|---|
 | POST | `/` | Público | `{ term, userId? }` | `{ message, searchLog }` |
 | GET | `/stats` | Público | — | `{ totalFailed, totalSuggested, conversionRate, recentFailedTerms }` |
+
+### Admin Routes (`/admin/*`)
+
+| Method | Path | Auth | Body | Response |
+|---|---|---|---|---|
+| GET | `/stats` | Admin (`super_admin`) | — | Agregados de rendimiento, uptime de NVIDIA y estadísticas de uso |
+| GET | `/organizations` | Admin (`super_admin`) | — | Lista de todas las organizaciones con contador de usuarios |
+| POST | `/organizations` | Admin (`super_admin`) | `{ name, slug }` | Objeto de la organización creada |
+| GET | `/organizations/:id` | Admin (`super_admin`) | — | Detalle de la organización e información de sus usuarios asociados |
+| PUT | `/organizations/:id` | Admin (`super_admin`) | `{ name, slug, is_active }` | Organización actualizada y limpia caché de recetas |
+| DELETE | `/organizations/:id` | Admin (`super_admin`) | — | Alterna el estado activo/suspendido de la organización y limpia caché |
+| POST | `/organizations/:id/users` | Admin (`super_admin`) | `{ displayName, email, role }` | Asocia o crea un nuevo usuario y lo añade a la organización |
+| POST | `/organizations/:id/users/bulk` | Admin (`super_admin`) | `{ users: [{ displayName, email, role }] }` | Procesa masivamente usuarios en transacción y los añade a la org |
+| DELETE | `/organizations/:id/users/:userId` | Admin (`super_admin`) | — | Desasocia un usuario de la organización sin eliminar su cuenta |
+| GET | `/recipes` | Admin (`super_admin`) | — | Recetas globales, con soporte de paginación (`number` y `offset`) |
+| POST | `/recipes` | Admin (`super_admin`) | `{ title_es, title_en, prep_time_minutes, ... }` | `Recipe` creada y limpia caché de RecipeProvider |
+| PUT | `/recipes/:id` | Admin (`super_admin`) | `{ title_es, title_en, prep_time_minutes, ... }` | `Recipe` actualizada y limpia caché de RecipeProvider |
+| DELETE | `/recipes/:id` | Admin (`super_admin`) | — | Receta eliminada y limpia caché de RecipeProvider |
+| GET | `/tags` | Admin (`super_admin`) | — | Lista el diccionario global de etiquetas |
+| POST | `/tags` | Admin (`super_admin`) | `{ key, es, en }` | Tag creado y limpia caché de TagService/RecipeProvider |
+| PUT | `/tags/:id` | Admin (`super_admin`) | `{ key, es, en }` | Tag actualizado y limpia caché de TagService/RecipeProvider |
+| DELETE | `/tags/:id` | Admin (`super_admin`) | — | Tag eliminado y limpia caché de TagService/RecipeProvider |
+
+### Ingestion Routes (`/api/ingest/*`)
+
+| Method | Path | Auth | Body | Response |
+|---|---|---|---|---|
+| POST | `/:slugOrId/:action` | Mixto | `{ issue? }` | Depende de la acción (por ejemplo, para `refresh-image` retorna la receta con la nueva imagen; acepta tanto slug como id UUID en la URL) |
 
 ---
 
@@ -709,11 +743,11 @@ const bulkDeleteMutation = useMutation({
 Permite corregir fallos en la generación original mediante un feedback loop que envía el problema detectado al backend:
 ```typescript
 const refreshImageMutation = useMutation({
-  mutationFn: ({ slug, issue }: { slug: string; issue: string }) => 
-    api.post(`/api/ingest/${slug}/refresh-image`, { issue }),
+  mutationFn: ({ id, issue }: { id: string; issue: string }) => 
+    api.post(`/api/ingest/${id}/refresh-image`, { issue }),
   onSuccess: (data) => {
     queryClient.invalidateQueries({ queryKey: ['global-recipes'] });
-    setFormData(prev => ({ ...prev, image_url: data.recipe.image_url }));
+    setFormData(prev => ({ ...prev, imageUrl: data.recipe.image_url }));
     toast.success(t('recipes.regenerate_success'));
   }
 });

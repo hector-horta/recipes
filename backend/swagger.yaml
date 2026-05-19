@@ -709,15 +709,35 @@ paths:
       security:
         - adminApiKey: []
         - bearerAuth: []
+      parameters:
+        - in: query
+          name: number
+          schema:
+            type: integer
+          description: Maximum number of recipes to return (for pagination)
+        - in: query
+          name: offset
+          schema:
+            type: integer
+          description: Number of recipes to skip (for pagination)
       responses:
         '200':
-          description: List of recipes
+          description: List of recipes (either array of Recipe, or paginated object containing recipes array and total count)
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Recipe'
+                oneOf:
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/Recipe'
+                  - type: object
+                    properties:
+                      recipes:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Recipe'
+                      total:
+                        type: integer
     post:
       tags:
         - Admin
