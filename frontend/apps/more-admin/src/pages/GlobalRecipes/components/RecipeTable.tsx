@@ -149,7 +149,7 @@ export const RecipeTable: React.FC<RecipeTableProps> = ({
                       className="w-2.5 h-2.5 rounded-full shadow-sm" 
                       style={{ 
                         backgroundColor: recipe.safetyLevel === 'safe' ? T.success :
-                                         recipe.safetyLevel === 'review' ? T.warning : T.danger 
+                                         recipe.safetyLevel === 'caution' ? T.warning : T.danger 
                       }} 
                     />
                     <span className="text-sm font-bold capitalize" style={{ color: T.text }}>{t(`recipes.sibo_risk.${recipe.safetyLevel}`)}</span>

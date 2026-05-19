@@ -22,7 +22,23 @@ export const useRecipeMutations = ({
   const { t } = useTranslation();
 
   const createMutation = useMutation({
-    mutationFn: (data: RecipeFormData) => api.post('/admin/recipes', data),
+    mutationFn: (data: RecipeFormData) => {
+      const payload = {
+        title_es: data.title,
+        title_en: data.titleEn,
+        prep_time_minutes: data.prepTimeMinutes,
+        cook_time_minutes: data.cookTimeMinutes,
+        servings: data.servings,
+        difficulty: data.difficulty,
+        status: data.status,
+        sibo_risk_level: data.safetyLevel,
+        ingredients: data.ingredients,
+        steps: data.instructions,
+        tags: data.tags,
+        image_url: data.imageUrl
+      };
+      return api.post('/admin/recipes', payload);
+    },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['global-recipes'] });
       setIsModalOpen(false);
@@ -36,8 +52,24 @@ export const useRecipeMutations = ({
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: RecipeFormData }) => 
-      api.put(`/admin/recipes/${id}`, data),
+    mutationFn: ({ id, data }: { id: string; data: RecipeFormData }) => {
+      const payload = {
+        title_es: data.title,
+        title_en: data.titleEn,
+        prep_time_minutes: data.prepTimeMinutes,
+        cook_time_minutes: data.cookTimeMinutes,
+        servings: data.servings,
+        difficulty: data.difficulty,
+        status: data.status,
+        sibo_risk_level: data.safetyLevel,
+        ingredients: data.ingredients,
+        steps: data.instructions,
+        tags: data.tags,
+        image_url: data.imageUrl
+      };
+      console.log('UPDATING RECIPE PAYLOAD:', JSON.stringify(payload, null, 2));
+      return api.put(`/admin/recipes/${id}`, payload);
+    },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['global-recipes'] });
       setIsModalOpen(false);

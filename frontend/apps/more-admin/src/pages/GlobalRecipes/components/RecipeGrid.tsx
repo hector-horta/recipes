@@ -109,7 +109,7 @@ export const RecipeGrid: React.FC<RecipeGridProps> = ({
                     className="w-2 h-2 rounded-full" 
                     style={{ 
                       backgroundColor: recipe.safetyLevel === 'safe' ? T.success :
-                                       recipe.safetyLevel === 'review' ? T.warning : T.danger 
+                                       recipe.safetyLevel === 'caution' ? T.warning : T.danger 
                     }} 
                   />
                   <span className="text-[10px] font-bold uppercase tracking-tighter" style={{ color: T.muted }}>

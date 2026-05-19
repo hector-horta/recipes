@@ -14,6 +14,8 @@ import { Profile } from '../models/Profile.js';
 import { ActivityLogger } from '../services/ActivityLogger.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { validateBody } from '../middleware/validate.js';
+import { RecipeProvider } from '../services/RecipeProvider.js';
+import { TagService } from '../services/TagService.js';
 import { 
   organizationSchema, 
   organizationUpdateSchema, 
@@ -211,11 +213,26 @@ router.get('/organizations', optionalAuthenticateToken, checkRole(['super_admin'
  * Retorna las recetas globales (Wati core).
  */
 router.get('/recipes', optionalAuthenticateToken, checkRole(['super_admin']), asyncHandler(async (req, res) => {
-  const recipes = await Recipe.findAll({
-    where: { organization_id: null },
-    order: [['created_at', 'DESC']]
-  });
-  res.json(recipes);
+  const { number, offset } = req.query;
+  
+  if (number !== undefined || offset !== undefined) {
+    const limit = Math.min(Math.max(parseInt(number, 10) || 10, 1), 100);
+    const parsedOffset = Math.max(parseInt(offset, 10) || 0, 0);
+
+    const { count, rows } = await Recipe.findAndCountAll({
+      where: { organization_id: null },
+      order: [['created_at', 'DESC']],
+      limit,
+      offset: parsedOffset
+    });
+    return res.json({ recipes: rows, total: count });
+  } else {
+    const recipes = await Recipe.findAll({
+      where: { organization_id: null },
+      order: [['created_at', 'DESC']]
+    });
+    return res.json(recipes);
+  }
 }));
 
 /**
@@ -606,6 +623,7 @@ router.post('/recipes', optionalAuthenticateToken, checkRole(['super_admin']), v
 
   const recipe = await Recipe.create(recipeData);
   ActivityLogger.log('ADMIN_RECIPE_CREATE', { recipeId: recipe.id, title: recipe.title_es });
+  await RecipeProvider.clearCache();
   res.status(201).json(recipe);
 }));
 
@@ -614,6 +632,7 @@ router.post('/recipes', optionalAuthenticateToken, checkRole(['super_admin']), v
  * Actualiza una receta global.
  */
 router.put('/recipes/:id', optionalAuthenticateToken, checkRole(['super_admin']), validateBody(adminRecipeSchema), asyncHandler(async (req, res) => {
+  console.log("PUT /recipes/:id validated body:", JSON.stringify(req.body, null, 2));
   const { id } = req.params;
   const recipe = await Recipe.findByPk(id);
 
@@ -625,6 +644,7 @@ router.put('/recipes/:id', optionalAuthenticateToken, checkRole(['super_admin'])
 
   await recipe.update(req.body);
   ActivityLogger.log('ADMIN_RECIPE_UPDATE', { recipeId: recipe.id, title: recipe.title_es });
+  await RecipeProvider.clearCache();
   res.json(recipe);
 }));
 
@@ -644,6 +664,7 @@ router.delete('/recipes/:id', optionalAuthenticateToken, checkRole(['super_admin
 
   await recipe.destroy();
   ActivityLogger.log('ADMIN_RECIPE_DELETE', { recipeId: id, title: recipe.title_es });
+  await RecipeProvider.clearCache();
   res.json({ message: 'Receta eliminada correctamente' });
 }));
 
@@ -663,6 +684,8 @@ router.post('/tags', optionalAuthenticateToken, checkRole(['super_admin']), vali
 
   const tag = await Tag.create({ key, es, en });
   ActivityLogger.log('ADMIN_TAG_CREATE', { tagId: tag.id, key: tag.key });
+  await TagService.invalidateCache();
+  await RecipeProvider.clearCache();
   res.status(201).json(tag);
 }));
 
@@ -696,6 +719,8 @@ router.put('/tags/:id', optionalAuthenticateToken, checkRole(['super_admin']), v
 
   await tag.update({ key, es, en });
   ActivityLogger.log('ADMIN_TAG_UPDATE', { tagId: tag.id, key: tag.key });
+  await TagService.invalidateCache();
+  await RecipeProvider.clearCache();
   res.json(tag);
 }));
 
@@ -715,6 +740,8 @@ router.delete('/tags/:id', optionalAuthenticateToken, checkRole(['super_admin'])
 
   await tag.destroy();
   ActivityLogger.log('ADMIN_TAG_DELETE', { tagId: id, key: tag.key });
+  await TagService.invalidateCache();
+  await RecipeProvider.clearCache();
   res.json({ message: 'Etiqueta eliminada correctamente' });
 }));
 

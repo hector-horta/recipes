@@ -195,10 +195,10 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
                   </AnimatePresence>
                 </div>
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <div className="space-y-2">
                       <label className="text-[11px] font-black uppercase tracking-widest flex items-center gap-2" style={{ color: T.text }}>
-                        <Clock size={12} style={{ color: T.primary }} /> {t('recipes.form.prep_time')}
+                        <Clock size={12} style={{ color: T.primary }} /> Tiempo de preparación
                       </label>
                       <input
                         type="number"
@@ -210,7 +210,7 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
                     </div>
                     <div className="space-y-2">
                       <label className="text-[11px] font-black uppercase tracking-widest flex items-center gap-2" style={{ color: T.text }}>
-                        <Clock size={12} style={{ color: T.primary }} /> {t('recipes.form.cook_time')}
+                        <Clock size={12} style={{ color: T.primary }} /> Tiempo de cocción
                       </label>
                       <input
                         type="number"
@@ -218,6 +218,18 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
                         style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.text }}
                         value={formData.cookTimeMinutes}
                         onChange={(e) => setFormData({ ...formData, cookTimeMinutes: parseInt(e.target.value) || 0 })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-black uppercase tracking-widest flex items-center gap-2" style={{ color: T.text }}>
+                        <Users size={12} style={{ color: T.primary }} /> Raciones
+                      </label>
+                      <input
+                        type="number"
+                        className="w-full h-12 rounded-xl px-4 outline-none transition-all font-bold"
+                        style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.text }}
+                        value={formData.servings || 1}
+                        onChange={(e) => setFormData({ ...formData, servings: parseInt(e.target.value) || 1 })}
                       />
                     </div>
                   </div>

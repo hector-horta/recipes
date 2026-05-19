@@ -60,7 +60,9 @@ export const adminRecipeSchema = z.object({
   steps: z.array(z.any()).default([]),
   tags: z.array(z.any()).default([]),
   status: z.enum(['draft', 'published', 'archived']).default('draft'),
-  sibo_risk_level: z.enum(['safe', 'caution', 'avoid']).default('safe')
+  sibo_risk_level: z.enum(['safe', 'caution', 'avoid']).default('safe'),
+  image_url: z.string().trim().nullable().optional(),
+  image_filename: z.string().trim().nullable().optional()
 });
 
 export const tagUpsertSchema = z.array(tagSchema);
