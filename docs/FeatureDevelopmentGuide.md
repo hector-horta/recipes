@@ -26,7 +26,7 @@ Al desarrollar en este repositorio:
 4. Si un feature no requiere persistencia, saltar el paso de Database.
 5. Todo texto visible al usuario debe soportar **i18n** (español e inglés).
 6. **Mantener esta guía actualizada**: Al finalizar un feature nuevo o la corrección de un bug, **actualizar este archivo** si el cambio afectó la estructura de carpetas, esquemas de DB, endpoints, patrones, convenciones, componentes reutilizables, tipos TypeScript, eventos de analytics, o cualquier otra sección documentada aquí. Esta guía es la fuente de verdad — si no se actualiza, el próximo agente trabajará con información obsoleta.
-7. **Scratch scripts (OBLIGATORIO)**: Cualquier script desechable o archivo temporal creado para realizar pruebas manuales o de integración **DEBE** ubicarse exclusivamente dentro de la carpeta `backend/scratch/`. Está estrictamente prohibido dejar estos archivos en la raíz del proyecto o en otras carpetas públicas/código fuente. Además, estos scripts son efímeros y **deben eliminarse obligatoriamente** antes de realizar commits. La carpeta `backend/scratch/` está configurada en `.gitignore` para evitar fugas al repositorio.
+7. **Scratch scripts (OBLIGATORIO - MUST ABSOLUTO)**: Cualquier script desechable o archivo temporal creado para realizar pruebas manuales o de integración **DEBE** ubicarse exclusivamente dentro de la carpeta `backend/scratch/`. Este comportamiento es un **MUST** absoluto. Está estrictamente prohibido dejar estos archivos en la raíz del proyecto o en otras carpetas públicas/código fuente. Además, estos scripts son efímeros y **deben eliminarse obligatoriamente** antes de realizar commits. La carpeta `backend/scratch/` está configurada en `.gitignore` para evitar fugas al repositorio.
 
 ---
 

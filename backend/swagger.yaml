@@ -1082,6 +1082,102 @@ paths:
       responses:
         '200':
           description: Active plan details with populated recipes
+  /shop/orders/consolidate:
+    post:
+      tags:
+        - Shop
+      summary: Consolidate ingredients from active nutritional plans of one or more patients
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - patientIds
+              properties:
+                patientIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        '200':
+          description: Consolidated ingredients list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  patients:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        displayName:
+                          type: string
+                        email:
+                          type: string
+                        planTitle:
+                          type: string
+                  ingredients:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        ingredientId:
+                          type: string
+                          format: uuid
+                        nameEs:
+                          type: string
+                        nameEn:
+                          type: string
+                        quantity:
+                          type: string
+                        quantityNumeric:
+                          type: number
+                        unitEs:
+                          type: string
+                        unitEn:
+                          type: string
+                        siboAlert:
+                          type: boolean
+  /shop/orders/export-pdf:
+    post:
+      tags:
+        - Shop
+      summary: Export consolidated ingredients order as a PDF document
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - patientIds
+              properties:
+                patientIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        '200':
+          description: PDF file containing the purchase order
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
   /ingest/image:
     post:
       tags:
