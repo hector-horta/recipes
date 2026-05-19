@@ -26,7 +26,7 @@ Al desarrollar en este repositorio:
 4. Si un feature no requiere persistencia, saltar el paso de Database.
 5. Todo texto visible al usuario debe soportar **i18n** (español e inglés).
 6. **Mantener esta guía actualizada**: Al finalizar un feature nuevo o la corrección de un bug, **actualizar este archivo** si el cambio afectó la estructura de carpetas, esquemas de DB, endpoints, patrones, convenciones, componentes reutilizables, tipos TypeScript, eventos de analytics, o cualquier otra sección documentada aquí. Esta guía es la fuente de verdad — si no se actualiza, el próximo agente trabajará con información obsoleta.
-7. **Scratch scripts**: Los scripts en `backend/scratch/` son efímeros, para verificar funcionalidad durante desarrollo sin desplegar todo el sitio. **Deben eliminarse antes de hacer commit.** La carpeta está en `.gitignore` y no debe entrar al repositorio.
+7. **Scratch scripts (OBLIGATORIO)**: Cualquier script desechable o archivo temporal creado para realizar pruebas manuales o de integración **DEBE** ubicarse exclusivamente dentro de la carpeta `backend/scratch/`. Está estrictamente prohibido dejar estos archivos en la raíz del proyecto o en otras carpetas públicas/código fuente. Además, estos scripts son efímeros y **deben eliminarse obligatoriamente** antes de realizar commits. La carpeta `backend/scratch/` está configurada en `.gitignore` para evitar fugas al repositorio.
 
 ---
 
@@ -115,6 +115,7 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 │   │   ├── Recipe.js             # Filtrado por organization_id
 │   │   ├── SearchLog.js
 │   │   ├── ActivityLog.js
+│   │   ├── NutritionalPlan.js    # Plan alimentario asignado a pacientes
 │   │   └── validators.js         # Schemas Zod (recipeQuerySchema, adminRecipeSchema, addOrgUserSchema, bulkOrgUsersSchema, organizationUpdateSchema, registerSchema, loginSchema, etc.)
 │   ├── middleware/
 │   │   ├── auth.js               # authenticateToken, optionalAuthenticateToken
@@ -126,7 +127,9 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 │   │   ├── recipes.js            # /api/recipes/*
 │   │   ├── ingest.js             # /api/ingest/* (Telegram Bot ingestion)
 │   │   ├── suggestions.js        # /api/suggestions/*
-│   │   └── admin.js              # /admin/*
+│   │   ├── admin.js              # /admin/*
+│   │   ├── nutri.js              # /api/nutri/* (Health Professional BFF)
+│   │   └── plans.js              # /api/plans/* (Patient Plans)
 │   ├── services/
 │   │   ├── ActivityLogger.js     # Telemetría + alertas Telegram (fire-and-forget)
 │   │   ├── RecipeProvider.js     # Búsqueda en DB + caché Redis + filtrado por intolerancias
@@ -136,7 +139,9 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 │   │   ├── AdminStatsService.js   # Servicio para cálculo de estadísticas de administración
 │   │   ├── OrganizationService.js # Servicio para gestión de inquilinos y membresías de usuarios
 │   │   ├── AdminRecipeService.js  # Servicio para CRUD y gestión de recetas globales
-│   │   └── AdminTagService.js     # Servicio para CRUD y gestión de etiquetas globales
+│   │   ├── AdminTagService.js     # Servicio para CRUD y gestión de etiquetas globales
+│   │   ├── NutriRecipeService.js  # Gestión de recetas específicas de clínica
+│   │   └── DietPlanService.js     # Gestión de planes nutricionales y asignaciones
 │   ├── utils/
 │   │   ├── tagTranslations.js    # TAG_TRANSLATIONS map, normalizeTag(), normalizeTags()
 │   │   ├── ingestSanitizer.js    # sanitizeStructuredRecipe() — mapea output LLM a ENUMs/tipos DB
@@ -147,7 +152,9 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 │   ├── seeders/
 │   ├── tests/                    # Tests unitarios e integración del backend (*.test.js)
 │   │   ├── AdminStatsService.test.js
-│   │   └── OrganizationService.test.js
+│   │   ├── OrganizationService.test.js
+│   │   ├── NutriRecipeService.test.js
+│   │   └── DietPlanService.test.js
 │   ├── scratch/                  # ⚠️ Scripts temporales de debug — NO COMMITEAR (en .gitignore)
 │   ├── public/recipes/           # Imágenes estáticas de recetas (servido por Express)
 │   └── ingest_logs/              # Recovery logs de ingesta (JSON)

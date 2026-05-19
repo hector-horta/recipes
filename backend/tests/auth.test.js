@@ -24,6 +24,12 @@ vi.mock('../models/Profile.js', () => ({
   }
 }));
 
+vi.mock('../models/UserOrganization.js', () => ({
+  UserOrganization: {
+    findOne: vi.fn().mockResolvedValue(null)
+  }
+}));
+
 vi.mock('../services/IEmailService.js', () => ({
   IEmailService: {
     sendVerificationEmail: vi.fn().mockResolvedValue({ success: true }),

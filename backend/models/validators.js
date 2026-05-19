@@ -98,4 +98,28 @@ export const organizationUpdateSchema = organizationSchema.extend({
   is_active: z.boolean().optional()
 });
 
+export const nutriRecipeSchema = adminRecipeSchema;
+
+export const nutritionalPlanSchema = z.object({
+  patient_id: z.string().uuid("ID de paciente inválido"),
+  title: z.string().trim().min(2, "El título del plan es requerido"),
+  start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "start_date debe tener formato YYYY-MM-DD"),
+  end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "end_date debe tener formato YYYY-MM-DD"),
+  meals: z.array(z.object({
+    day: z.string().trim().min(1, "El día de la semana es requerido"),
+    meals: z.array(z.object({
+      type: z.string().trim().min(1, "El tipo de comida es requerido"),
+      recipeId: z.string().uuid("ID de receta inválido"),
+      notes: z.string().trim().optional()
+    })).min(1, "Debe haber al menos una comida programada")
+  })).default([]),
+  notes: z.string().trim().optional()
+}).refine(data => {
+  return new Date(data.start_date) <= new Date(data.end_date);
+}, {
+  message: "La fecha de inicio (start_date) debe ser menor o igual a la fecha de fin (end_date)",
+  path: ["end_date"]
+});
+
+
 

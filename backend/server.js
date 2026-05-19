@@ -17,6 +17,8 @@ import ingestRoutes from './routes/ingest.js';
 import adminRoutes from './routes/admin.js';
 import suggestionRoutes from './routes/suggestions.js';
 import recipeRoutes from './routes/recipes.js';
+import nutriRoutes from './routes/nutri.js';
+import planRoutes from './routes/plans.js';
 import { connectDB, sequelize } from './config/database.js';
 import { connectRedis } from './config/redis.js';
 import { ActivityLogger } from './services/ActivityLogger.js';
@@ -61,6 +63,8 @@ app.use('/api/ingest', ingestRoutes);
 app.use('/api/admin', optionalAuthenticateToken, checkRole(['super_admin']), adminRoutes);
 app.use('/api/suggestions', suggestionRoutes);
 app.use('/api/recipes', recipeRoutes);
+app.use('/api/nutri', nutriRoutes);
+app.use('/api/plans', planRoutes);
 
 // Swagger API Documentation
 const swaggerDocument = yamljs.load(path.join(__dirname, 'swagger.yaml'));

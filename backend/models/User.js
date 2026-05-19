@@ -45,7 +45,7 @@ export const User = sequelize.define('User', {
     allowNull: true
   },
   role: {
-    type: DataTypes.ENUM('user', 'admin', 'super_admin'),
+    type: DataTypes.ENUM('user', 'admin', 'super_admin', 'health_professional'),
     defaultValue: 'user',
     allowNull: false
   }

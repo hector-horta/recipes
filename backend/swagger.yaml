@@ -891,6 +891,197 @@ paths:
       responses:
         '200':
           description: Tag deleted
+  /nutri/recipes:
+    get:
+      tags:
+        - Nutrition
+      summary: List recipes visible to the health professional
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: number
+          schema:
+            type: integer
+        - in: query
+          name: offset
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of recipes
+    post:
+      tags:
+        - Nutrition
+      summary: Create an organization-specific recipe
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecipeUpdate'
+      responses:
+        '201':
+          description: Recipe created
+  /nutri/recipes/{id}:
+    put:
+      tags:
+        - Nutrition
+      summary: Update organization-specific recipe
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecipeUpdate'
+      responses:
+        '200':
+          description: Recipe updated
+    delete:
+      tags:
+        - Nutrition
+      summary: Delete organization-specific recipe
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Recipe deleted
+  /nutri/patients/search:
+    get:
+      tags:
+        - Nutrition
+      summary: Search for a global user by email to assign a plan
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: email
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Patient user details
+        '404':
+          description: Patient not found
+  /nutri/patients:
+    get:
+      tags:
+        - Nutrition
+      summary: List unique patients with assigned plans
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of patients
+  /nutri/plans:
+    get:
+      tags:
+        - Nutrition
+      summary: List nutritional plans created by the professional or their organization
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of plans
+    post:
+      tags:
+        - Nutrition
+      summary: Create and assign a nutritional plan to a patient
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NutritionalPlanInput'
+      responses:
+        '201':
+          description: Plan created
+  /nutri/plans/{id}:
+    get:
+      tags:
+        - Nutrition
+      summary: Get details of a nutritional plan
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Plan details
+    put:
+      tags:
+        - Nutrition
+      summary: Update a nutritional plan
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NutritionalPlanInput'
+      responses:
+        '200':
+          description: Plan updated
+    delete:
+      tags:
+        - Nutrition
+      summary: Delete a nutritional plan
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Plan deleted
+  /plans/current:
+    get:
+      tags:
+        - Patients
+      summary: Get the current active nutritional plan for the logged-in patient
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Active plan details with populated recipes
   /ingest/image:
     post:
       tags:
@@ -1102,7 +1293,7 @@ components:
           type: string
         role:
           type: string
-          enum: [user, admin, super_admin]
+          enum: [user, admin, super_admin, health_professional]
         organizations:
           type: array
           nullable: true
@@ -1191,4 +1382,80 @@ components:
           type: string
         category:
           type: string
+    NutritionalPlanInput:
+      type: object
+      required:
+        - patient_id
+        - title
+        - start_date
+        - end_date
+      properties:
+        patient_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        meals:
+          type: array
+          items:
+            type: object
+            properties:
+              day:
+                type: string
+              meals:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                    recipeId:
+                      type: string
+                      format: uuid
+                    notes:
+                      type: string
+        notes:
+          type: string
+    NutritionalPlan:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        patient_id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+          format: uuid
+          nullable: true
+        created_by:
+          type: string
+          format: uuid
+        title:
+          type: string
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        meals:
+          type: array
+          items:
+            type: object
+        notes:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
 
