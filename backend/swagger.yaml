@@ -1072,6 +1072,28 @@ paths:
       responses:
         '200':
           description: Plan deleted
+  /nutri/plans/{id}/export-pdf:
+    get:
+      tags:
+        - Nutrition
+      summary: Export patient's diet plan / nutritional plan as a PDF document
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: PDF file containing the diet plan
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
   /plans/current:
     get:
       tags:

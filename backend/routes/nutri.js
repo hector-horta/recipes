@@ -5,6 +5,8 @@ import { authenticateToken, checkRole } from '../middleware/auth.js';
 import { NutriRecipeService } from '../services/NutriRecipeService.js';
 import { DietPlanService } from '../services/DietPlanService.js';
 import { User } from '../models/User.js';
+import { PDFGeneratorService } from '../services/PDFGeneratorService.js';
+import { DietPlanTemplate } from '../services/pdf/templates/DietPlanTemplate.js';
 import { 
   nutriRecipeSchema, 
   nutritionalPlanSchema 
@@ -151,6 +153,29 @@ router.delete('/plans/:id', asyncHandler(async (req, res) => {
   const organizationId = req.user.organization_id;
   const result = await DietPlanService.deletePlan(id, creatorId, organizationId);
   res.json(result);
+}));
+
+/**
+ * GET /api/nutri/plans/:id/export-pdf
+ * Genera y descarga la pauta alimenticia del plan en formato PDF
+ */
+router.get('/plans/:id/export-pdf', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const creatorId = req.user.id;
+  const organizationId = req.user.organization_id;
+
+  const planDetails = await DietPlanService.getPlanDetails(id, creatorId, organizationId);
+
+  if (!planDetails) {
+    return res.status(404).json({ error: 'Plan nutricional no encontrado.' });
+  }
+
+  const pdfBuffer = await PDFGeneratorService.generatePDF(new DietPlanTemplate(), planDetails);
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="pauta-alimenticia-${id}.pdf"`);
+  res.setHeader('Content-Length', pdfBuffer.length);
+  res.end(pdfBuffer);
 }));
 
 export default router;

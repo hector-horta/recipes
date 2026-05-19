@@ -3,6 +3,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { authenticateToken, checkRole } from '../middleware/auth.js';
 import { IngredientConsolidatorService } from '../services/IngredientConsolidatorService.js';
 import { PDFGeneratorService } from '../services/PDFGeneratorService.js';
+import { PurchaseOrderTemplate } from '../services/pdf/templates/PurchaseOrderTemplate.js';
 
 const router = express.Router();
 
@@ -42,7 +43,7 @@ router.post('/orders/export-pdf', asyncHandler(async (req, res) => {
     return res.status(404).json({ error: 'No se encontraron ingredientes consolidados para los pacientes provistos.' });
   }
 
-  const pdfBuffer = await PDFGeneratorService.generatePurchaseOrderPDF(consolidation);
+  const pdfBuffer = await PDFGeneratorService.generatePDF(new PurchaseOrderTemplate(), consolidation);
 
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', 'attachment; filename="orden-compra.pdf"');
