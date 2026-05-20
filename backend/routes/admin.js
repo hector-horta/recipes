@@ -12,8 +12,11 @@ import {
   adminRecipeSchema, 
   tagSchema,
   addOrgUserSchema,
-  bulkOrgUsersSchema
+  bulkOrgUsersSchema,
+  translateSchema
 } from '../models/validators.js';
+import { translateText } from '../services/NvidiaNIM.js';
+import { config } from '../config/env.js';
 
 const router = express.Router();
 
@@ -184,6 +187,21 @@ router.delete('/tags/:id', optionalAuthenticateToken, checkRole(['super_admin'])
   const { id } = req.params;
   const result = await AdminTagService.deleteTag(id);
   res.json(result);
+}));
+
+/**
+ * POST /admin/translate
+ * Traduce un texto entre ES y EN de manera bidireccional usando NVIDIA NIM o Gemini.
+ */
+router.post('/translate', optionalAuthenticateToken, checkRole(['super_admin', 'admin']), validateBody(translateSchema), asyncHandler(async (req, res) => {
+  const { text, from, to } = req.body;
+  const apiKey = config.NVIDIA_API_KEY || config.GEMINI_API_KEY;
+  if (!apiKey) {
+    return res.status(400).json({ error: 'No translation API key configured (NVIDIA or GEMINI)' });
+  }
+
+  const translation = await translateText(text, from, to, apiKey);
+  res.json({ translation });
 }));
 
 export default router;

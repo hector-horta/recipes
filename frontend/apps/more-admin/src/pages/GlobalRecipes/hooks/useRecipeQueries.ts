@@ -22,7 +22,18 @@ const mapRawToRecipe = (raw: any): Recipe => ({
       : { es: ing.unit || '', en: ing.unit || '' }
   })),
   instructions: Array.isArray(raw.steps)
-    ? raw.steps.map((s: any) => typeof s === 'string' ? s : (s.instruction?.es || s.instruction || ''))
+    ? raw.steps.map((s: any) => {
+        if (typeof s === 'string') {
+          return { es: s, en: s, type: 'active', durationMinutes: 0 };
+        }
+        const instruction = s.instruction || {};
+        return {
+          es: typeof instruction === 'object' ? (instruction.es || '') : (instruction || ''),
+          en: typeof instruction === 'object' ? (instruction.en || '') : '',
+          type: s.type || 'active',
+          durationMinutes: s.durationMinutes || 0
+        };
+      })
     : [],
   tags: Array.isArray(raw.tags)
     ? raw.tags.map((t: any) => typeof t === 'string' ? t : (t.key || t.es || ''))

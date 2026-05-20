@@ -37,7 +37,15 @@ export const useRecipeMutations = ({
           quantity: ing.amount,
           unit: ing.unit
         })),
-        steps: data.instructions,
+        steps: data.instructions.map((step, idx) => ({
+          order: idx + 1,
+          type: step.type || 'active',
+          instruction: {
+            es: step.es || '',
+            en: step.en || ''
+          },
+          durationMinutes: Number(step.durationMinutes) || 0
+        })),
         tags: data.tags,
         image_url: data.imageUrl
       };
@@ -71,7 +79,15 @@ export const useRecipeMutations = ({
           quantity: ing.amount,
           unit: ing.unit
         })),
-        steps: data.instructions,
+        steps: data.instructions.map((step, idx) => ({
+          order: idx + 1,
+          type: step.type || 'active',
+          instruction: {
+            es: step.es || '',
+            en: step.en || ''
+          },
+          durationMinutes: Number(step.durationMinutes) || 0
+        })),
         tags: data.tags,
         image_url: data.imageUrl
       };

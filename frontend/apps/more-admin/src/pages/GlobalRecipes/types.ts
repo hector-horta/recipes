@@ -5,6 +5,13 @@ export interface Tag {
   en: string;
 }
 
+export interface InstructionStep {
+  es: string;
+  en: string;
+  type?: 'active' | 'passive';
+  durationMinutes?: number;
+}
+
 export interface Recipe {
   id: string;
   title: string;
@@ -16,7 +23,7 @@ export interface Recipe {
   status?: 'draft' | 'published' | 'archived';
   safetyLevel: 'safe' | 'caution' | 'avoid';
   ingredients: any[];
-  instructions: string[];
+  instructions: InstructionStep[];
   tags: string[];
   imageUrl: string;
   imageFilename?: string;
@@ -33,7 +40,7 @@ export interface RecipeFormData {
   status?: 'draft' | 'published' | 'archived';
   safetyLevel: 'safe' | 'caution' | 'avoid';
   ingredients: any[];
-  instructions: string[];
+  instructions: InstructionStep[];
   tags: string[];
   imageUrl: string;
 }

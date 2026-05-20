@@ -204,6 +204,31 @@ export async function generateRecipeImage(prompt, apiKey, feedback = '', details
 }
 
 /**
+ * Translates text between Spanish and English using NVIDIA NIM.
+ */
+export async function translateText(text, from, to, apiKey) {
+  const prompt = `Translate the following text from ${from === 'es' ? 'Spanish' : 'English'} to ${to === 'es' ? 'Spanish' : 'English'}.
+Maintain the same capitalization, style, formatting, line breaks, and punctuation.
+Do NOT explain the translation, do NOT add comments, do NOT wrap the output in markdown code blocks or quotes.
+Return ONLY the translation.
+
+Text to translate:
+${text}`;
+
+  const response = await nvidiaChatRequest({
+    model: 'meta/llama-4-maverick-17b-128e-instruct',
+    messages: [
+      { role: 'system', content: 'You are a professional translator. Return ONLY the translated text.' },
+      { role: 'user', content: prompt }
+    ],
+    temperature: 0.1,
+    max_tokens: 1024
+  }, apiKey);
+
+  return response.trim().replace(/^"|"$/g, '');
+}
+
+/**
  * Specifically classifies a recipe into canonical categories
  */
 export async function classifyRecipe(recipe, apiKey) {

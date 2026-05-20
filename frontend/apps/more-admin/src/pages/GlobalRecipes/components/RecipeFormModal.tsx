@@ -16,11 +16,14 @@ import {
   ArrowRight,
   Info,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  Languages
 } from 'lucide-react';
 import { Modal } from '../../../components/Modal';
 import type { Recipe, RecipeFormData, Tag } from '../types';
 import { T } from '../constants';
+import { api } from '../../../lib/api';
+import { toast } from 'react-hot-toast';
 
 interface RecipeFormModalProps {
   isOpen: boolean;
@@ -45,7 +48,7 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
   formData,
   setFormData,
   activeLang,
-  setActiveLang,
+  setActiveLang: _setActiveLang,
   tags,
   imageFeedback,
   setImageFeedback,
@@ -54,6 +57,35 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
   refreshImageMutation
 }) => {
   const { t } = useTranslation();
+
+  const [translatingFields, setTranslatingFields] = React.useState<Record<string, boolean>>({});
+
+  const handleTranslateField = async (
+    text: string,
+    from: 'es' | 'en',
+    to: 'es' | 'en',
+    fieldKey: string,
+    onTranslation: (translated: string) => void
+  ) => {
+    if (!text.trim()) {
+      toast.error('Por favor, ingresa texto para traducir');
+      return;
+    }
+    setTranslatingFields(prev => ({ ...prev, [fieldKey]: true }));
+    try {
+      const data = await api.post<{ translation: string }>('/api/admin/translate', {
+        text,
+        from,
+        to
+      });
+      onTranslation(data.translation);
+      toast.success('Traducido con éxito');
+    } catch (error: any) {
+      toast.error(error?.message || 'Error al traducir');
+    } finally {
+      setTranslatingFields(prev => ({ ...prev, [fieldKey]: false }));
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,7 +115,7 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
   const addStep = () => {
     setFormData(prev => ({
       ...prev,
-      instructions: [...prev.instructions, '']
+      instructions: [...prev.instructions, { es: '', en: '', type: 'active', durationMinutes: 0 }]
     }));
   };
 
@@ -120,119 +152,103 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
                   <div className="w-8 h-[2px]" style={{ backgroundColor: T.outline }} />
                   {t('recipes.form.essential_info')}
                 </div>
-                <div className="flex p-1 rounded-xl" style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}` }}>
-                  <button
-                    type="button"
-                    onClick={() => setActiveLang('es')}
-                    className="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all"
-                    style={activeLang === 'es' ? { backgroundColor: T.surface, color: T.primary } : { color: T.muted }}
-                  >
-                    {t('common.language_es')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveLang('en')}
-                    className="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all"
-                    style={activeLang === 'en' ? { backgroundColor: T.surface, color: T.primary } : { color: T.muted }}
-                  >
-                    {t('common.language_en')}
-                  </button>
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest" style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.primary }}>
+                  <Sparkles size={10} /> Edición Simultánea ES / EN
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-4">
-                  <AnimatePresence mode="wait">
-                    {activeLang === 'es' ? (
-                      <motion.div 
-                        key="title-es"
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 10 }}
-                        className="space-y-2"
-                      >
-                        <label className="text-[11px] font-black uppercase tracking-widest flex items-center gap-2" style={{ color: T.text }}>
-                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: T.primary }} />
-                          {t('recipes.form.title_es')}
-                        </label>
-                        <input
-                          placeholder={t('recipes.form.placeholder_title')}
-                          className="w-full h-12 rounded-xl px-4 outline-none transition-all font-bold"
-                          style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.text }}
-                          value={formData.title}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setFormData(prev => ({
-                              ...prev,
-                              title: val,
-                            }));
-                          }}
-                          required
-                        />
-                      </motion.div>
-                    ) : (
-                      <motion.div 
-                        key="title-en"
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 10 }}
-                        className="space-y-2"
-                      >
-                        <label className="text-[11px] font-black uppercase tracking-widest flex items-center gap-2" style={{ color: T.text }}>
-                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: T.primary }} />
-                          {t('recipes.form.title_en')}
-                        </label>
-                        <input
-                          placeholder={t('recipes.form.placeholder_title')}
-                          className="w-full h-12 rounded-xl px-4 outline-none transition-all font-bold"
-                          style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.text }}
-                          value={formData.titleEn}
-                          onChange={(e) => setFormData({ ...formData, titleEn: e.target.value })}
-                          required
-                        />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2 relative">
+                  <label className="text-[11px] font-black uppercase tracking-widest flex items-center justify-between" style={{ color: T.text }}>
+                    <span className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: T.primary }} />
+                      Título (ES)
+                    </span>
+                    <button
+                      type="button"
+                      disabled={translatingFields['title_es']}
+                      onClick={() => handleTranslateField(formData.title, 'es', 'en', 'title_es', (val) => setFormData(p => ({ ...p, titleEn: val })))}
+                      className="text-[10px] uppercase font-black tracking-widest flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity"
+                      style={{ color: T.primary }}
+                    >
+                      {translatingFields['title_es'] ? <Loader2 size={12} className="animate-spin" /> : <Languages size={12} />}
+                      Traducir a EN
+                    </button>
+                  </label>
+                  <input
+                    placeholder="Ej. Sopa de calabaza"
+                    className="w-full h-12 rounded-xl px-4 outline-none transition-all font-bold"
+                    style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.text }}
+                    value={formData.title}
+                    onChange={(e) => setFormData(p => ({ ...p, title: e.target.value }))}
+                    required
+                  />
                 </div>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="space-y-2">
-                      <label className="text-[11px] font-black uppercase tracking-widest flex items-center gap-2" style={{ color: T.text }}>
-                        <Clock size={12} style={{ color: T.primary }} /> Tiempo de preparación
-                      </label>
-                      <input
-                        type="number"
-                        className="w-full h-12 rounded-xl px-4 outline-none transition-all font-bold"
-                        style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.text }}
-                        value={formData.prepTimeMinutes}
-                        onChange={(e) => setFormData({ ...formData, prepTimeMinutes: parseInt(e.target.value) || 0 })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[11px] font-black uppercase tracking-widest flex items-center gap-2" style={{ color: T.text }}>
-                        <Clock size={12} style={{ color: T.primary }} /> Tiempo de cocción
-                      </label>
-                      <input
-                        type="number"
-                        className="w-full h-12 rounded-xl px-4 outline-none transition-all font-bold"
-                        style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.text }}
-                        value={formData.cookTimeMinutes}
-                        onChange={(e) => setFormData({ ...formData, cookTimeMinutes: parseInt(e.target.value) || 0 })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[11px] font-black uppercase tracking-widest flex items-center gap-2" style={{ color: T.text }}>
-                        <Users size={12} style={{ color: T.primary }} /> Raciones
-                      </label>
-                      <input
-                        type="number"
-                        className="w-full h-12 rounded-xl px-4 outline-none transition-all font-bold"
-                        style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.text }}
-                        value={formData.servings || 1}
-                        onChange={(e) => setFormData({ ...formData, servings: parseInt(e.target.value) || 1 })}
-                      />
-                    </div>
-                  </div>
+
+                <div className="space-y-2 relative">
+                  <label className="text-[11px] font-black uppercase tracking-widest flex items-center justify-between" style={{ color: T.text }}>
+                    <span className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: T.primary }} />
+                      Título (EN)
+                    </span>
+                    <button
+                      type="button"
+                      disabled={translatingFields['title_en']}
+                      onClick={() => handleTranslateField(formData.titleEn, 'en', 'es', 'title_en', (val) => setFormData(p => ({ ...p, title: val })))}
+                      className="text-[10px] uppercase font-black tracking-widest flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity"
+                      style={{ color: T.primary }}
+                    >
+                      {translatingFields['title_en'] ? <Loader2 size={12} className="animate-spin" /> : <Languages size={12} />}
+                      Traducir a ES
+                    </button>
+                  </label>
+                  <input
+                    placeholder="e.g. Pumpkin soup"
+                    className="w-full h-12 rounded-xl px-4 outline-none transition-all font-bold"
+                    style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.text }}
+                    value={formData.titleEn}
+                    onChange={(e) => setFormData(p => ({ ...p, titleEn: e.target.value }))}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black uppercase tracking-widest flex items-center gap-2" style={{ color: T.text }}>
+                    <Clock size={12} style={{ color: T.primary }} /> Tiempo de preparación (min)
+                  </label>
+                  <input
+                    type="number"
+                    className="w-full h-12 rounded-xl px-4 outline-none transition-all font-bold"
+                    style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.text }}
+                    value={formData.prepTimeMinutes}
+                    onChange={(e) => setFormData({ ...formData, prepTimeMinutes: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black uppercase tracking-widest flex items-center gap-2" style={{ color: T.text }}>
+                    <Clock size={12} style={{ color: T.primary }} /> Tiempo de cocción (min)
+                  </label>
+                  <input
+                    type="number"
+                    className="w-full h-12 rounded-xl px-4 outline-none transition-all font-bold"
+                    style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.text }}
+                    value={formData.cookTimeMinutes}
+                    onChange={(e) => setFormData({ ...formData, cookTimeMinutes: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black uppercase tracking-widest flex items-center gap-2" style={{ color: T.text }}>
+                    <Users size={12} style={{ color: T.primary }} /> Raciones
+                  </label>
+                  <input
+                    type="number"
+                    className="w-full h-12 rounded-xl px-4 outline-none transition-all font-bold"
+                    style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}`, color: T.text }}
+                    value={formData.servings || 1}
+                    onChange={(e) => setFormData({ ...formData, servings: parseInt(e.target.value) || 1 })}
+                  />
                 </div>
               </div>
             </section>
@@ -250,41 +266,21 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     key={idx}
-                    className="flex gap-4 items-end p-4 rounded-2xl group"
+                    className="flex flex-col md:flex-row gap-4 items-center p-4 rounded-2xl group relative"
                     style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}` }}
                   >
-                    <div className="flex flex-col gap-1">
+                    {/* Reorder and Delete Controls */}
+                    <div className="flex md:flex-col gap-2 shrink-0">
                       <button type="button" onClick={() => moveIngredient(idx, 'up')} className="disabled:opacity-30 transition-colors" style={{ color: T.muted }} disabled={idx === 0}><ChevronUp size={16} /></button>
                       <button type="button" onClick={() => moveIngredient(idx, 'down')} className="disabled:opacity-30 transition-colors" style={{ color: T.muted }} disabled={idx === formData.ingredients.length - 1}><ChevronDown size={16} /></button>
                     </div>
-                    <div className="flex-1 space-y-2">
-                      <label className="text-[10px] font-black uppercase opacity-60" style={{ color: T.muted }}>{t('recipes.form.ingredient_label')}</label>
+
+                    {/* Numeric Qty */}
+                    <div className="w-full md:w-20 space-y-1">
+                      <label className="text-[9px] font-black uppercase opacity-60" style={{ color: T.muted }}>Cantidad</label>
                       <input
-                        placeholder={t('recipes.form.name_placeholder')}
-                        className="w-full h-10 rounded-lg px-3 outline-none font-medium transition-all"
-                        style={{ backgroundColor: T.surface, border: `1px solid ${T.outline}`, color: T.text }}
-                        value={typeof ing.name === 'object' && ing.name !== null ? (activeLang === 'es' ? ing.name.es : ing.name.en) : ing.name || ''}
-                        onChange={(e) => {
-                          const newIngs = [...formData.ingredients];
-                          const currentName = newIngs[idx].name;
-                          const nameObj = typeof currentName === 'object' && currentName !== null
-                            ? { ...currentName }
-                            : { es: currentName || '', en: currentName || '' };
-                          if (activeLang === 'es') {
-                            nameObj.es = e.target.value;
-                          } else {
-                            nameObj.en = e.target.value;
-                          }
-                          newIngs[idx].name = nameObj;
-                          setFormData({ ...formData, ingredients: newIngs });
-                        }}
-                      />
-                    </div>
-                    <div className="w-24 space-y-2">
-                      <label className="text-[10px] font-black uppercase opacity-60" style={{ color: T.muted }}>{t('recipes.form.amount_label')}</label>
-                      <input
-                        placeholder="0"
-                        className="w-full h-10 rounded-lg px-3 outline-none font-medium transition-all"
+                        placeholder="e.g. 150"
+                        className="w-full h-10 rounded-lg px-2 outline-none font-bold text-center transition-all text-xs"
                         style={{ backgroundColor: T.surface, border: `1px solid ${T.outline}`, color: T.text }}
                         value={ing.amount}
                         onChange={(e) => {
@@ -294,36 +290,123 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
                         }}
                       />
                     </div>
-                    <div className="w-24 space-y-2">
-                      <label className="text-[10px] font-black uppercase opacity-60" style={{ color: T.muted }}>{t('recipes.form.unit_label')}</label>
+
+                    {/* Unit ES */}
+                    <div className="w-full md:w-28 space-y-1">
+                      <label className="text-[9px] font-black uppercase opacity-60" style={{ color: T.muted }}>Unidad (ES)</label>
                       <input
-                        placeholder={t('recipes.form.unit_placeholder')}
-                        className="w-full h-10 rounded-lg px-3 outline-none font-medium transition-all"
+                        placeholder="g, ml, taza"
+                        className="w-full h-10 rounded-lg px-3 outline-none font-bold transition-all text-xs"
                         style={{ backgroundColor: T.surface, border: `1px solid ${T.outline}`, color: T.text }}
-                        value={typeof ing.unit === 'object' && ing.unit !== null ? (activeLang === 'es' ? ing.unit.es : ing.unit.en) : ing.unit || ''}
+                        value={ing.unit?.es || ''}
                         onChange={(e) => {
                           const newIngs = [...formData.ingredients];
-                          const currentUnit = newIngs[idx].unit;
-                          const unitObj = typeof currentUnit === 'object' && currentUnit !== null
-                            ? { ...currentUnit }
-                            : { es: currentUnit || '', en: currentUnit || '' };
-                          if (activeLang === 'es') {
-                            unitObj.es = e.target.value;
-                          } else {
-                            unitObj.en = e.target.value;
-                          }
-                          newIngs[idx].unit = unitObj;
+                          newIngs[idx].unit = {
+                            es: e.target.value,
+                            en: newIngs[idx].unit?.en || ''
+                          };
                           setFormData({ ...formData, ingredients: newIngs });
                         }}
                       />
                     </div>
+
+                    {/* Unit EN */}
+                    <div className="w-full md:w-28 space-y-1">
+                      <label className="text-[9px] font-black uppercase opacity-60" style={{ color: T.muted }}>Unidad (EN)</label>
+                      <input
+                        placeholder="g, ml, cup"
+                        className="w-full h-10 rounded-lg px-3 outline-none font-bold transition-all text-xs"
+                        style={{ backgroundColor: T.surface, border: `1px solid ${T.outline}`, color: T.text }}
+                        value={ing.unit?.en || ''}
+                        onChange={(e) => {
+                          const newIngs = [...formData.ingredients];
+                          newIngs[idx].unit = {
+                            es: newIngs[idx].unit?.es || '',
+                            en: e.target.value
+                          };
+                          setFormData({ ...formData, ingredients: newIngs });
+                        }}
+                      />
+                    </div>
+
+                    {/* Ingredient Name (ES) */}
+                    <div className="flex-1 w-full space-y-1 relative">
+                      <label className="text-[9px] font-black uppercase opacity-60 flex items-center justify-between" style={{ color: T.muted }}>
+                        <span>Ingrediente (ES)</span>
+                        <button
+                          type="button"
+                          disabled={translatingFields[`ing-${idx}-es`]}
+                          onClick={() => handleTranslateField(ing.name?.es || '', 'es', 'en', `ing-${idx}-es`, (val) => {
+                            const newIngs = [...formData.ingredients];
+                            newIngs[idx].name = { es: newIngs[idx].name?.es || '', en: val };
+                            setFormData({ ...formData, ingredients: newIngs });
+                          })}
+                          className="opacity-60 hover:opacity-100 transition-opacity flex items-center gap-0.5 text-[8px] font-black uppercase"
+                          style={{ color: T.primary }}
+                        >
+                          {translatingFields[`ing-${idx}-es`] ? <Loader2 size={8} className="animate-spin" /> : <Languages size={8} />}
+                          Traducir a EN
+                        </button>
+                      </label>
+                      <input
+                        placeholder="Ej. Cebolla morada"
+                        className="w-full h-10 rounded-lg px-3 outline-none font-bold transition-all text-xs"
+                        style={{ backgroundColor: T.surface, border: `1px solid ${T.outline}`, color: T.text }}
+                        value={ing.name?.es || ''}
+                        onChange={(e) => {
+                          const newIngs = [...formData.ingredients];
+                          newIngs[idx].name = {
+                            es: e.target.value,
+                            en: newIngs[idx].name?.en || ''
+                          };
+                          setFormData({ ...formData, ingredients: newIngs });
+                        }}
+                      />
+                    </div>
+
+                    {/* Ingredient Name (EN) */}
+                    <div className="flex-1 w-full space-y-1 relative">
+                      <label className="text-[9px] font-black uppercase opacity-60 flex items-center justify-between" style={{ color: T.muted }}>
+                        <span>Ingredient (EN)</span>
+                        <button
+                          type="button"
+                          disabled={translatingFields[`ing-${idx}-en`]}
+                          onClick={() => handleTranslateField(ing.name?.en || '', 'en', 'es', `ing-${idx}-en`, (val) => {
+                            const newIngs = [...formData.ingredients];
+                            newIngs[idx].name = { es: val, en: newIngs[idx].name?.en || '' };
+                            setFormData({ ...formData, ingredients: newIngs });
+                          })}
+                          className="opacity-60 hover:opacity-100 transition-opacity flex items-center gap-0.5 text-[8px] font-black uppercase"
+                          style={{ color: T.primary }}
+                        >
+                          {translatingFields[`ing-${idx}-en`] ? <Loader2 size={8} className="animate-spin" /> : <Languages size={8} />}
+                          Traducir a ES
+                        </button>
+                      </label>
+                      <input
+                        placeholder="e.g. Red onion"
+                        className="w-full h-10 rounded-lg px-3 outline-none font-bold transition-all text-xs"
+                        style={{ backgroundColor: T.surface, border: `1px solid ${T.outline}`, color: T.text }}
+                        value={ing.name?.en || ''}
+                        onChange={(e) => {
+                          const newIngs = [...formData.ingredients];
+                          newIngs[idx].name = {
+                            es: newIngs[idx].name?.es || '',
+                            en: e.target.value
+                          };
+                          setFormData({ ...formData, ingredients: newIngs });
+                        }}
+                      />
+                    </div>
+
+                    {/* Delete button */}
                     <button
                       type="button"
                       onClick={() => setFormData(prev => ({ ...prev, ingredients: prev.ingredients.filter((_, i) => i !== idx) }))}
-                      className="p-3 rounded-xl transition-all"
+                      className="p-2 rounded-xl transition-all self-center md:self-end md:mb-1 shrink-0"
                       style={{ color: T.danger }}
                     >
-                      <X size={20} />
+                      <X size={18} />
                     </button>
                   </motion.div>
                 ))}
@@ -423,11 +506,11 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
-                      className="flex gap-4 items-start p-4 rounded-3xl group"
+                      className="flex flex-col md:flex-row gap-4 items-start p-4 rounded-3xl group"
                       style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}` }}
                     >
-                      <div className="flex flex-col gap-2 mt-1">
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-black shrink-0" style={{ backgroundColor: T.primary, color: T.dark }}>
+                      <div className="flex flex-col gap-2 mt-1 shrink-0">
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-black" style={{ backgroundColor: T.primary, color: T.dark }}>
                           {idx + 1}
                         </div>
                         <div className="flex flex-col gap-1 items-center">
@@ -437,8 +520,6 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
                              disabled={idx === 0}
                              className="p-1 rounded transition-colors disabled:opacity-0"
                              style={{ color: T.muted }}
-                             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = T.surface}
-                             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                            >
                              <ChevronUp size={14} className="opacity-40" />
                            </button>
@@ -448,24 +529,80 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
                              disabled={idx === formData.instructions.length - 1}
                              className="p-1 rounded transition-colors disabled:opacity-0"
                              style={{ color: T.muted }}
-                             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = T.surface}
-                             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                            >
                              <ChevronDown size={14} className="opacity-40" />
                            </button>
                         </div>
                       </div>
-                      <textarea
-                        className="flex-1 rounded-2xl px-6 py-4 text-sm font-medium outline-none transition-all min-h-[100px] resize-none"
-                        style={{ backgroundColor: T.surface, border: `1px solid ${T.outline}`, color: T.text }}
-                        placeholder={t('recipes.form.step_placeholder', { index: idx + 1 })}
-                        value={step}
-                        onChange={(e) => {
-                          const newSteps = [...formData.instructions];
-                          newSteps[idx] = e.target.value;
-                          setFormData({ ...formData, instructions: newSteps });
-                        }}
-                      />
+
+                      {/* Side-by-side steps textareas */}
+                      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                        {/* Step ES */}
+                        <div className="space-y-1 relative">
+                          <label className="text-[10px] font-black uppercase opacity-60 flex items-center justify-between" style={{ color: T.muted }}>
+                            <span>Instrucción (ES)</span>
+                            <button
+                              type="button"
+                              disabled={translatingFields[`step-${idx}-es`]}
+                              onClick={() => handleTranslateField(step.es || '', 'es', 'en', `step-${idx}-es`, (val) => {
+                                const newSteps = [...formData.instructions];
+                                newSteps[idx] = { ...newSteps[idx], en: val };
+                                setFormData({ ...formData, instructions: newSteps });
+                              })}
+                              className="opacity-60 hover:opacity-100 transition-opacity flex items-center gap-0.5 text-[8px] font-black uppercase"
+                              style={{ color: T.primary }}
+                            >
+                              {translatingFields[`step-${idx}-es`] ? <Loader2 size={8} className="animate-spin" /> : <Languages size={8} />}
+                              Traducir a EN
+                            </button>
+                          </label>
+                          <textarea
+                            className="w-full rounded-xl px-4 py-3 text-xs font-bold outline-none transition-all min-h-[90px] resize-none"
+                            style={{ backgroundColor: T.surface, border: `1px solid ${T.outline}`, color: T.text }}
+                            placeholder={`Paso ${idx + 1} en español`}
+                            value={step.es || ''}
+                            onChange={(e) => {
+                              const newSteps = [...formData.instructions];
+                              newSteps[idx] = { ...newSteps[idx], es: e.target.value };
+                              setFormData({ ...formData, instructions: newSteps });
+                            }}
+                          />
+                        </div>
+
+                        {/* Step EN */}
+                        <div className="space-y-1 relative">
+                          <label className="text-[10px] font-black uppercase opacity-60 flex items-center justify-between" style={{ color: T.muted }}>
+                            <span>Instruction (EN)</span>
+                            <button
+                              type="button"
+                              disabled={translatingFields[`step-${idx}-en`]}
+                              onClick={() => handleTranslateField(step.en || '', 'en', 'es', `step-${idx}-en`, (val) => {
+                                const newSteps = [...formData.instructions];
+                                newSteps[idx] = { ...newSteps[idx], es: val };
+                                setFormData({ ...formData, instructions: newSteps });
+                              })}
+                              className="opacity-60 hover:opacity-100 transition-opacity flex items-center gap-0.5 text-[8px] font-black uppercase"
+                              style={{ color: T.primary }}
+                            >
+                              {translatingFields[`step-${idx}-en`] ? <Loader2 size={8} className="animate-spin" /> : <Languages size={8} />}
+                              Traducir a ES
+                            </button>
+                          </label>
+                          <textarea
+                            className="w-full rounded-xl px-4 py-3 text-xs font-bold outline-none transition-all min-h-[90px] resize-none"
+                            style={{ backgroundColor: T.surface, border: `1px solid ${T.outline}`, color: T.text }}
+                            placeholder={`Step ${idx + 1} in English`}
+                            value={step.en || ''}
+                            onChange={(e) => {
+                              const newSteps = [...formData.instructions];
+                              newSteps[idx] = { ...newSteps[idx], en: e.target.value };
+                              setFormData({ ...formData, instructions: newSteps });
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Delete button */}
                       <button
                         type="button"
                         onClick={() => {
@@ -474,9 +611,9 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
                             instructions: prev.instructions.filter((_, i) => i !== idx)
                           }));
                         }}
-                        className="p-3 rounded-xl transition-all self-start" style={{ color: T.danger }}
+                        className="p-3 rounded-xl transition-all self-start shrink-0" style={{ color: T.danger }}
                       >
-                        <Trash2 size={20} />
+                        <Trash2 size={18} />
                       </button>
                     </motion.div>
                   ))}
@@ -614,10 +751,10 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
         </div>
       </div>
 
-      <div className="mt-10 pt-8 flex flex-col md:flex-row justify-end gap-4" style={{ borderTop: `1px solid ${T.outline}` }}>
+      <div className="mt-8 pt-6 flex flex-col md:flex-row justify-end gap-3" style={{ borderTop: `1px solid ${T.outline}` }}>
         <button
           type="button"
-          className="w-full md:w-auto px-10 h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all"
+          className="w-full md:w-auto px-6 h-10 rounded-xl font-black uppercase tracking-widest text-[9px] transition-all"
           style={{ backgroundColor: T.surfaceHi, color: T.text, border: `1px solid ${T.outline}` }}
           onClick={onClose}
         >
@@ -626,16 +763,16 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
         <button
           form="recipe-form"
           type="submit"
-          className="w-full md:w-auto px-12 h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 transition-all disabled:opacity-50"
+          className="w-full md:w-auto px-8 h-10 rounded-xl font-black uppercase tracking-widest text-[9px] flex items-center justify-center gap-2 transition-all disabled:opacity-50"
           style={{ backgroundColor: T.primary, color: T.dark }}
           disabled={createMutation.isPending || updateMutation.isPending}
         >
           {createMutation.isPending || updateMutation.isPending ? (
-            <Loader2 className="animate-spin" size={24} />
+            <Loader2 className="animate-spin" size={16} />
           ) : (
             <>
               <span>{editingRecipe ? t('recipes.form.save_edit') : t('recipes.form.save_create')}</span>
-              <ArrowRight size={18} />
+              <ArrowRight size={14} />
             </>
           )}
         </button>

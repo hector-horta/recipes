@@ -48,6 +48,12 @@ export const tagSchema = z.object({
   en: z.string().trim().min(1, "English tag is required")
 });
 
+export const translateSchema = z.object({
+  text: z.string().min(1, "El texto es requerido"),
+  from: z.enum(['es', 'en']).default('es'),
+  to: z.enum(['es', 'en']).default('en')
+});
+
 export const adminRecipeSchema = z.object({
   title_es: z.string().trim().min(2, "El título en español es requerido"),
   title_en: z.string().trim().min(2, "English title is required"),
