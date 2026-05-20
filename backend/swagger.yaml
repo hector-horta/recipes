@@ -891,6 +891,115 @@ paths:
       responses:
         '200':
           description: Tag deleted
+  /admin/translate:
+    post:
+      tags:
+        - Admin
+      summary: Translate text between Spanish and English using NVIDIA NIM (Llama 4)
+      description: |
+        Synchronous translation endpoint. Used by the admin recipe editor for per-field
+        translation of titles, ingredients, and steps. Response is immediate (~1-2s).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+                - from
+                - to
+              properties:
+                text:
+                  type: string
+                  description: The text to translate
+                  example: "Picar el ajo finamente"
+                from:
+                  type: string
+                  enum: [es, en]
+                  description: Source language
+                  example: es
+                to:
+                  type: string
+                  enum: [es, en]
+                  description: Target language
+                  example: en
+      responses:
+        '200':
+          description: Translation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  translatedText:
+                    type: string
+                    example: "Finely chop the garlic"
+        '400':
+          description: Missing required fields (text, from, to)
+        '500':
+          description: Translation service error
+  /jobs:
+    get:
+      tags:
+        - Jobs
+      summary: List recent AI jobs (dashboard overview)
+      description: |
+        Returns counts and details of recent waiting, active, completed, and failed AI jobs.
+        Restricted to super_admin role.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Dashboard of recent AI jobs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  counts:
+                    type: object
+                    properties:
+                      waiting:
+                        type: integer
+                      active:
+                        type: integer
+                      completed:
+                        type: integer
+                      failed:
+                        type: integer
+                  jobs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Job'
+  /jobs/{id}:
+    get:
+      tags:
+        - Jobs
+      summary: Get status of a specific AI job
+      description: |
+        Poll this endpoint to check the progress and result of an enqueued AI job
+        (e.g., image generation). Status values: waiting, active, completed, failed, delayed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: The BullMQ job ID returned when the job was enqueued
+      responses:
+        '200':
+          description: Job status and result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        '404':
+          description: Job not found
   /nutri/recipes:
     get:
       tags:
@@ -1576,4 +1685,49 @@ components:
         updated_at:
           type: string
           format: date-time
+    Job:
+      type: object
+      description: Represents an AI job processed by the BullMQ worker
+      properties:
+        id:
+          type: string
+          description: Unique BullMQ job identifier
+          example: "42"
+        name:
+          type: string
+          description: Job type name
+          enum: [generate-image, ingest-image, ingest-images, ingest-text, ingest-audio]
+          example: generate-image
+        status:
+          type: string
+          description: Current job state
+          enum: [waiting, active, completed, failed, delayed, unknown]
+          example: completed
+        progress:
+          type: integer
+          description: Job progress percentage (0-100)
+          example: 100
+        result:
+          type: object
+          nullable: true
+          description: Job result (only present when completed)
+          properties:
+            recipeId:
+              type: string
+              format: uuid
+            imageUrl:
+              type: string
+            filename:
+              type: string
+        failedReason:
+          type: string
+          nullable: true
+          description: Error message (only present when failed)
+        timestamp:
+          type: integer
+          description: Unix timestamp when the job was created
+        finishedOn:
+          type: integer
+          nullable: true
+          description: Unix timestamp when the job finished
 

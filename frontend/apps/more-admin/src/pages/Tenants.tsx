@@ -112,8 +112,16 @@ export const Tenants: React.FC = () => {
     mutationFn: (data: { name: string; slug: string }) => api.post('/admin/organizations', data),
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['organizations'] });
-      setIsModalOpen(false);
+      setEditingOrg({
+        id: data.id,
+        name: data.name,
+        slug: data.slug,
+        status: 'active',
+        createdAt: data.createdAt || new Date().toISOString(),
+        userCount: 0
+      });
       setNewTenant({ name: '', slug: '' });
+      setActiveTab('users');
       toast.success(t('tenants.create_success'));
       logger.info('ADMIN_ORG_CREATE', { organizationId: data.id, name: data.name });
     },
@@ -543,37 +551,46 @@ export const Tenants: React.FC = () => {
           setParseError(null);
         }}
         title={editingOrg ? t('tenants.modal.update_title') : t('tenants.modal.create_title')}
-        maxWidth={editingOrg ? 'max-w-4xl' : 'max-w-md'}
+        maxWidth="max-w-4xl"
       >
-        {/* Navigation Tabs (Only when editing an existing tenant) */}
-        {editingOrg && (
-          <div className="flex gap-2 border-b pb-4 mb-6" style={{ borderColor: T.outline }}>
-            {(['info', 'users', 'bulk'] as const).map((tab) => (
+        {/* Navigation Tabs */}
+        <div className="flex gap-2 border-b pb-4 mb-6" style={{ borderColor: T.outline }}>
+          {(['info', 'users', 'bulk'] as const).map((tab) => {
+            const isDisabled = !editingOrg && tab !== 'info';
+            return (
               <button
                 key={tab}
                 type="button"
+                disabled={isDisabled}
                 onClick={() => {
+                  if (isDisabled) return;
                   setActiveTab(tab);
                   setFile(null);
                   setParsedUsers([]);
                   setParseError(null);
                 }}
-                className="px-5 py-2.5 rounded-xl font-bold text-sm transition-all"
+                className="px-5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-1.5"
                 style={
                   activeTab === tab
                     ? { backgroundColor: T.primary, color: T.dark }
+                    : isDisabled
+                    ? { color: 'rgba(255, 255, 255, 0.2)', cursor: 'not-allowed' }
                     : { color: T.muted }
                 }
+                title={isDisabled ? "Inscribir tenant primero para habilitar" : undefined}
               >
-                {t(`tenants.modal.tab_${tab}`)}
+                <span>{t(`tenants.modal.tab_${tab}`)}</span>
+                {isDisabled && (
+                  <span className="text-[10px] opacity-65">🔒</span>
+                )}
               </button>
-            ))}
-          </div>
-        )}
+            );
+          })}
+        </div>
 
         {/* Tab Content Panels */}
         {activeTab === 'info' || !editingOrg ? (
-          <form onSubmit={handleSubmit} className="p-2 space-y-6">
+          <form onSubmit={handleSubmit} className="p-2 space-y-6 max-w-xl mx-auto">
 
             {/* Name field */}
             <div className="space-y-3">

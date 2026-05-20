@@ -105,6 +105,7 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 │   │   ├── redis.js              # Redis client + connectRedis()
 │   │   ├── cors.js               # CORS config (localhost, local network, credentials)
 │   │   ├── medical.js            # INTOLERANCE_CATALOG + MEDICAL_TRIGGERS (fuente de verdad unificada)
+│   │   ├── bullmq.js             # BullMQ/IORedis connection factory + queue/job type constants
 │   │   └── vault.js              # HCP Vault OAuth2 client
 │   ├── models/
 │   │   ├── User.js
@@ -127,13 +128,16 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 │   │   ├── recipes.js            # /api/recipes/*
 │   │   ├── ingest.js             # /api/ingest/* (Telegram Bot ingestion)
 │   │   ├── suggestions.js        # /api/suggestions/*
-│   │   ├── admin.js              # /admin/*
+│   │   ├── admin.js              # /api/admin/* (Super Admin panel)
 │   │   ├── nutri.js              # /api/nutri/* (Health Professional BFF)
-│   │   └── plans.js              # /api/plans/* (Patient Plans)
+│   │   ├── plans.js              # /api/plans/* (Patient Plans)
+│   │   ├── shop.js               # /api/shop/* (Shopping lists)
+│   │   └── jobs.js               # /api/jobs/* (AI job status polling)
 │   ├── services/
 │   │   ├── ActivityLogger.js     # Telemetría + alertas Telegram (fire-and-forget)
 │   │   ├── RecipeProvider.js     # Búsqueda en DB + caché Redis + filtrado por intolerancias
-│   │   ├── NvidiaNIM.js          # OCR (Llama 4), estructurar recetas, generar imágenes (SDXL)
+│   │   ├── NvidiaNIM.js          # OCR (Llama 4), estructurar recetas, traducción AI, generar imágenes
+│   │   ├── GeminiService.js      # Generación de imágenes con Google Gemini (Imagen 4.0)
 │   │   ├── GroqWhisper.js        # Transcripción de audio
 │   │   ├── IEmailService.js      # Facade de correos (Dev/Resend)
 │   │   ├── AdminStatsService.js   # Servicio para cálculo de estadísticas de administración
@@ -141,10 +145,18 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 │   │   ├── AdminRecipeService.js  # Servicio para CRUD y gestión de recetas globales
 │   │   ├── AdminTagService.js     # Servicio para CRUD y gestión de etiquetas globales
 │   │   ├── NutriRecipeService.js  # Gestión de recetas específicas de clínica
+│   │   ├── IngredientConsolidatorService.js # Consolidación de ingredientes para listas de compras
+│   │   ├── PDFGeneratorService.js # Generación de PDFs (planes nutricionales, recetas)
 │   │   └── DietPlanService.js     # Gestión de planes nutricionales y asignaciones
+│   ├── queues/
+│   │   └── aiQueue.js            # BullMQ Queue singleton (Express enqueues AI jobs here)
+│   ├── worker.js                 # ⚡ Standalone AI worker process (node worker.js)
 │   ├── utils/
 │   │   ├── tagTranslations.js    # TAG_TRANSLATIONS map, normalizeTag(), normalizeTags()
 │   │   ├── ingestSanitizer.js    # sanitizeStructuredRecipe() — mapea output LLM a ENUMs/tipos DB
+│   │   ├── asyncHandler.js       # Wrapper para rutas async en Express 5
+│   │   ├── retry.js              # withRetry() — reintentos con exponential backoff para APIs externas
+│   │   ├── urlValidator.js       # validateExternalUrl() — SSRF protection para URLs externas
 │   │   ├── regenerateAllImages.js
 │   │   ├── regenerateSpecificImages.js
 │   │   └── migrateToTenant.js    # Script de migración multi-tenant (ver docs/MigrationGuideToMultitenant.md)
@@ -378,8 +390,13 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 | `/api/auth` | `routes/auth.js` | Mixto |
 | `/api/favorites` | `routes/favorites.js` | authenticateToken |
 | `/api/ingest` | `routes/ingest.js` | Mixto |
-| `/admin` | `routes/admin.js` | Mixto |
+| `/api/admin` | `routes/admin.js` | optionalAuthenticateToken + super_admin |
 | `/api/suggestions` | `routes/suggestions.js` | Público |
+| `/api/recipes` | `routes/recipes.js` | optionalAuthenticateToken |
+| `/api/nutri` | `routes/nutri.js` | authenticateToken |
+| `/api/plans` | `routes/plans.js` | authenticateToken |
+| `/api/shop` | `routes/shop.js` | authenticateToken |
+| `/api/jobs` | `routes/jobs.js` | optionalAuthenticateToken + admin/super_admin |
 
 ### Endpoints Inline en `server.js`
 
@@ -436,6 +453,14 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 | POST | `/tags` | Admin (`super_admin`) | `{ key, es, en }` | Tag creado y limpia caché de TagService/RecipeProvider |
 | PUT | `/tags/:id` | Admin (`super_admin`) | `{ key, es, en }` | Tag actualizado y limpia caché de TagService/RecipeProvider |
 | DELETE | `/tags/:id` | Admin (`super_admin`) | — | Tag eliminado y limpia caché de TagService/RecipeProvider |
+| POST | `/translate` | Admin (`super_admin`, `admin`) | `{ text, from: 'es'\|'en', to: 'es'\|'en' }` | Traduce texto entre ES↔EN usando NVIDIA NIM (Llama 4). Respuesta síncrona |
+
+### Jobs Routes (`/api/jobs/*`)
+
+| Method | Path | Auth | Body | Response |
+|---|---|---|---|---|
+| GET | `/:id` | Admin (`admin`, `super_admin`) | — | Estado del job AI: `{ id, name, status, progress, result, failedReason }` |
+| GET | `/` | Admin (`super_admin`) | — | Dashboard de jobs recientes: waiting, active, completed, failed |
 
 ### Ingestion Routes (`/api/ingest/*`)
 
@@ -573,6 +598,55 @@ if (redisClient.isReady) {
 }
 ```
 > Redis es opcional — siempre verificar `redisClient.isReady` antes de usarlo. Si Redis no está disponible, la app debe funcionar sin caché.
+
+#### Cola de Trabajos AI (BullMQ)
+Las operaciones AI pesadas (generación de imágenes, ingest OCR) se desacoplan del event loop de Express mediante una cola BullMQ procesada por un worker standalone (`node worker.js`).
+
+**Arquitectura:**
+```
+┌──────────────────────┐         ┌─────────────────┐
+│   Express Server     │         │   AI Worker      │
+│   (server.js)        │ ──────► │   (worker.js)    │
+│                      │  Redis  │                  │
+│  CRUD, Auth, etc.    │  Queue  │  Gemini (imgs)   │
+│  /api/jobs (status)  │ ◄────── │  NVIDIA NIM      │
+└──────────────────────┘         └─────────────────┘
+```
+
+**Encolar un job desde una ruta:**
+```javascript
+import { getAiQueue } from '../queues/aiQueue.js';
+import { JOB_TYPES } from '../config/bullmq.js';
+
+const queue = getAiQueue();
+const job = await queue.add(JOB_TYPES.GENERATE_IMAGE, {
+  recipeId: recipe.id,
+  title: recipe.title_en,
+  feedback: 'Make it warmer tones',
+  details: recipe.toJSON(),
+});
+
+res.status(202).json({ jobId: job.id });
+```
+
+**Consultar estado desde el frontend:**
+```typescript
+const status = await api.get(`/jobs/${jobId}`);
+// { id, name, status: 'completed', progress: 100, result: { imageUrl: '...' } }
+```
+
+**Tipos de job disponibles** (definidos en `config/bullmq.js`):
+| Constante | Valor | Descripción |
+|---|---|---|
+| `JOB_TYPES.GENERATE_IMAGE` | `generate-image` | Genera imagen de receta con Gemini Imagen 4.0 |
+| `JOB_TYPES.INGEST_IMAGE` | `ingest-image` | OCR + estructura desde una imagen |
+| `JOB_TYPES.INGEST_IMAGES` | `ingest-images` | OCR + estructura desde dos imágenes |
+| `JOB_TYPES.INGEST_TEXT` | `ingest-text` | Estructura receta desde texto libre |
+| `JOB_TYPES.INGEST_AUDIO` | `ingest-audio` | Transcribe audio y estructura receta |
+
+> **Nota**: La traducción (`POST /api/admin/translate`) se mantiene **síncrona** porque es una operación rápida (~1-2s) y el usuario necesita el resultado inmediato en el campo de edición. Solo las operaciones pesadas (>5s) deben encolarse.
+
+> **Regla**: Si agregas un nuevo tipo de job AI, debes: (1) agregar la constante en `config/bullmq.js`, (2) agregar el handler en `worker.js`, y (3) documentar el tipo aquí.
 
 #### Telemetría y Logging
 ```javascript
@@ -751,7 +825,7 @@ Permite corregir fallos en la generación original mediante un feedback loop que
 ```typescript
 const refreshImageMutation = useMutation({
   mutationFn: ({ id, issue }: { id: string; issue: string }) => 
-    api.post(`/api/ingest/${id}/refresh-image`, { issue }),
+    api.post(`/ingest/${id}/refresh-image`, { issue }),
   onSuccess: (data) => {
     queryClient.invalidateQueries({ queryKey: ['global-recipes'] });
     setFormData(prev => ({ ...prev, imageUrl: data.recipe.image_url }));
@@ -1132,6 +1206,25 @@ docker compose exec backend npx sequelize-cli db:migrate:undo
 # 🐳 Limpiar todo (detener + borrar volúmenes)
 # ADVERTENCIA: Esto borrará la base de datos si no usas volúmenes externos.
 docker compose down -v
+```
+
+### ⚡ AI Worker (BullMQ)
+
+El worker AI es un proceso Node.js separado que consume la cola de jobs pesados. **Debe ejecutarse en paralelo al servidor Express.**
+
+```bash
+# Desarrollo (auto-restart con --watch)
+cd backend
+npm run worker:dev
+
+# Producción
+npm run worker
+
+# En Docker Compose, agregar como segundo servicio apuntando al mismo image:
+#   ai-worker:
+#     build: ./backend
+#     command: node worker.js
+#     depends_on: [redis, postgres]
 ```
 
 ### Bash / zsh (Linux / macOS)

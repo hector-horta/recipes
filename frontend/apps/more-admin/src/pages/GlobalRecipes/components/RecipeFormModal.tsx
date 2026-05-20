@@ -73,7 +73,7 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
     }
     setTranslatingFields(prev => ({ ...prev, [fieldKey]: true }));
     try {
-      const data = await api.post<{ translation: string }>('/api/admin/translate', {
+      const data = await api.post<{ translation: string }>('/admin/translate', {
         text,
         from,
         to
