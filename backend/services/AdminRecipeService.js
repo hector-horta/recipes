@@ -16,7 +16,9 @@ export class AdminRecipeService {
         where: { organization_id: null },
         order: [['created_at', 'DESC']],
         limit,
-        offset: parsedOffset
+        offset: parsedOffset,
+        distinct: true,
+        col: 'Recipe.id'
       });
       return { recipes: rows, total: count };
     } else {
