@@ -76,7 +76,7 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
   const addIngredient = () => {
     setFormData(prev => ({
       ...prev,
-      ingredients: [...prev.ingredients, { name: '', amount: '', unit: '' }]
+      ingredients: [...prev.ingredients, { name: { es: '', en: '' }, amount: '', unit: { es: '', en: '' } }]
     }));
   };
 
@@ -263,10 +263,19 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
                         placeholder={t('recipes.form.name_placeholder')}
                         className="w-full h-10 rounded-lg px-3 outline-none font-medium transition-all"
                         style={{ backgroundColor: T.surface, border: `1px solid ${T.outline}`, color: T.text }}
-                        value={ing.name}
+                        value={typeof ing.name === 'object' && ing.name !== null ? (activeLang === 'es' ? ing.name.es : ing.name.en) : ing.name || ''}
                         onChange={(e) => {
                           const newIngs = [...formData.ingredients];
-                          newIngs[idx].name = e.target.value;
+                          const currentName = newIngs[idx].name;
+                          const nameObj = typeof currentName === 'object' && currentName !== null
+                            ? { ...currentName }
+                            : { es: currentName || '', en: currentName || '' };
+                          if (activeLang === 'es') {
+                            nameObj.es = e.target.value;
+                          } else {
+                            nameObj.en = e.target.value;
+                          }
+                          newIngs[idx].name = nameObj;
                           setFormData({ ...formData, ingredients: newIngs });
                         }}
                       />
@@ -291,10 +300,19 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
                         placeholder={t('recipes.form.unit_placeholder')}
                         className="w-full h-10 rounded-lg px-3 outline-none font-medium transition-all"
                         style={{ backgroundColor: T.surface, border: `1px solid ${T.outline}`, color: T.text }}
-                        value={ing.unit}
+                        value={typeof ing.unit === 'object' && ing.unit !== null ? (activeLang === 'es' ? ing.unit.es : ing.unit.en) : ing.unit || ''}
                         onChange={(e) => {
                           const newIngs = [...formData.ingredients];
-                          newIngs[idx].unit = e.target.value;
+                          const currentUnit = newIngs[idx].unit;
+                          const unitObj = typeof currentUnit === 'object' && currentUnit !== null
+                            ? { ...currentUnit }
+                            : { es: currentUnit || '', en: currentUnit || '' };
+                          if (activeLang === 'es') {
+                            unitObj.es = e.target.value;
+                          } else {
+                            unitObj.en = e.target.value;
+                          }
+                          newIngs[idx].unit = unitObj;
                           setFormData({ ...formData, ingredients: newIngs });
                         }}
                       />
@@ -596,10 +614,10 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
         </div>
       </div>
 
-      <div className="mt-10 pt-8 flex flex-col md:flex-row gap-4" style={{ borderTop: `1px solid ${T.outline}` }}>
+      <div className="mt-10 pt-8 flex flex-col md:flex-row justify-end gap-4" style={{ borderTop: `1px solid ${T.outline}` }}>
         <button
           type="button"
-          className="px-10 h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all"
+          className="w-full md:w-auto px-10 h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all"
           style={{ backgroundColor: T.surfaceHi, color: T.text, border: `1px solid ${T.outline}` }}
           onClick={onClose}
         >
@@ -608,7 +626,7 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
         <button
           form="recipe-form"
           type="submit"
-          className="flex-1 h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 transition-all disabled:opacity-50"
+          className="w-full md:w-auto px-12 h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 transition-all disabled:opacity-50"
           style={{ backgroundColor: T.primary, color: T.dark }}
           disabled={createMutation.isPending || updateMutation.isPending}
         >

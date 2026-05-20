@@ -32,7 +32,11 @@ export const useRecipeMutations = ({
         difficulty: data.difficulty,
         status: data.status,
         sibo_risk_level: data.safetyLevel,
-        ingredients: data.ingredients,
+        ingredients: data.ingredients.map((ing: any) => ({
+          name: ing.name,
+          quantity: ing.amount,
+          unit: ing.unit
+        })),
         steps: data.instructions,
         tags: data.tags,
         image_url: data.imageUrl
@@ -62,7 +66,11 @@ export const useRecipeMutations = ({
         difficulty: data.difficulty,
         status: data.status,
         sibo_risk_level: data.safetyLevel,
-        ingredients: data.ingredients,
+        ingredients: data.ingredients.map((ing: any) => ({
+          name: ing.name,
+          quantity: ing.amount,
+          unit: ing.unit
+        })),
         steps: data.instructions,
         tags: data.tags,
         image_url: data.imageUrl

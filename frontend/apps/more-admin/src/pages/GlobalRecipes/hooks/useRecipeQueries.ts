@@ -12,7 +12,15 @@ const mapRawToRecipe = (raw: any): Recipe => ({
   difficulty: raw.difficulty || 'medium',
   status: raw.status || 'draft',
   safetyLevel: raw.sibo_risk_level || 'safe',
-  ingredients: raw.ingredients || [],
+  ingredients: (raw.ingredients || []).map((ing: any) => ({
+    name: typeof ing.name === 'object' && ing.name !== null
+      ? { es: ing.name.es || '', en: ing.name.en || '' }
+      : { es: ing.name || '', en: ing.name || '' },
+    amount: ing.quantity || '',
+    unit: typeof ing.unit === 'object' && ing.unit !== null
+      ? { es: ing.unit.es || '', en: ing.unit.en || '' }
+      : { es: ing.unit || '', en: ing.unit || '' }
+  })),
   instructions: Array.isArray(raw.steps)
     ? raw.steps.map((s: any) => typeof s === 'string' ? s : (s.instruction?.es || s.instruction || ''))
     : [],

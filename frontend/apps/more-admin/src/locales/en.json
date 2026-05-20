@@ -242,7 +242,7 @@
       "style_guide_slug": "The Slug is permanent after creation to maintain SEO.",
       "style_guide_ingredients": "Describe ingredients precisely for better AI results.",
       "style_guide_sibo": "The SIBO Risk is vital for user food safety.",
-      "save_edit": "Consolidate Recipe",
+      "save_edit": "Save Changes",
       "save_create": "Publish to Catalog"
     },
     "ai": {
