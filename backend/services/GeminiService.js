@@ -51,11 +51,11 @@ class GeminiService {
         technicalContext = `Featuring ingredients like ${topIngredients}.`;
       }
 
-      const basePrompt = `A professional, high-end commercial photo of ${recipeTitle}`;
+      const basePrompt = `A professional, high-end commercial photo of ${recipeTitle}. There must be absolutely no text, no letters, no words, and no writing rendered anywhere in the image (especially not on any mug, glass, cup, plate, or surface). All tableware, cups, glasses, and containers must be completely clean and blank without any printed labels or typography.`;
       const styleEnhancers = `ultra-realistic food photography, Michelin star plating, ${dishStyle}, high resolution 8k, cinematic lighting, macro lens, shallow depth of field, vibrant natural colors, clean elegant background`;
-      const qualityConstraints = "no text, no watermarks, no blurry edges, no low resolution, no artificial colors, no distorted objects, no messy background";
+      const qualityConstraints = "strictly no text, no letters, no words, no writing, no labels, no typography, no watermarks, no blurry edges, no low resolution, no artificial colors, no distorted objects, no messy background";
       
-      let finalPrompt = `${basePrompt}. ${technicalContext} Style: ${styleEnhancers}. Constraints: ${qualityConstraints}.`;
+      let finalPrompt = `${basePrompt} ${technicalContext} Style: ${styleEnhancers}. Constraints: ${qualityConstraints}.`;
 
       if (feedback) {
         finalPrompt += ` IMPORTANT: Apply this feedback to the visual style: ${feedback}`;
