@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { RecipeProvider } from '../services/RecipeProvider.js';
 import { Recipe } from '../models/Recipe.js';
 import { redisClient } from '../config/redis.js';
@@ -9,7 +9,8 @@ vi.mock('../config/redis.js', () => ({
     get: vi.fn(),
     setEx: vi.fn(),
     keys: vi.fn(),
-    del: vi.fn()
+    del: vi.fn(),
+    scanIterator: vi.fn()
   }
 }));
 
@@ -439,6 +440,78 @@ describe('RecipeProvider', () => {
       });
       expect(result.safetyLevel).toBe('review');
       expect(result.ingredients[0].isBorderlineSafe).toBe(true);
+    });
+  });
+
+  describe('clearCache', () => {
+    beforeEach(() => {
+      redisClient.isReady = true;
+      redisClient.del.mockClear();
+    });
+
+    afterEach(() => {
+      redisClient.isReady = false;
+    });
+
+    it('should delete keys in batches when keys exist', async () => {
+      const mockKeys = Array.from({ length: 105 }, (_, i) => `recipes:test:${i}`);
+      redisClient.scanIterator = vi.fn().mockImplementation(() => {
+        return {
+          async *[Symbol.asyncIterator]() {
+            for (const key of mockKeys) {
+              yield key;
+            }
+          }
+        };
+      });
+
+      redisClient.del.mockResolvedValue(1);
+
+      await RecipeProvider.clearCache(true); // force = true
+
+      expect(redisClient.scanIterator).toHaveBeenCalledWith({
+        MATCH: 'recipes:*',
+        COUNT: 100
+      });
+      expect(redisClient.del).toHaveBeenCalledTimes(2);
+      expect(redisClient.del.mock.calls[0][0]).toHaveLength(100);
+      expect(redisClient.del.mock.calls[1][0]).toHaveLength(5);
+    });
+
+    it('should respect cooldown when force is false', async () => {
+      redisClient.scanIterator = vi.fn().mockImplementation(() => {
+        return {
+          async *[Symbol.asyncIterator]() {
+            yield 'recipes:test:1';
+          }
+        };
+      });
+
+      await RecipeProvider.clearCache(true);
+      expect(redisClient.scanIterator).toHaveBeenCalledTimes(1);
+
+      redisClient.scanIterator.mockClear();
+
+      await RecipeProvider.clearCache(false);
+      expect(redisClient.scanIterator).not.toHaveBeenCalled();
+    });
+
+    it('should ignore cooldown when force is true', async () => {
+      redisClient.scanIterator = vi.fn().mockImplementation(() => {
+        return {
+          async *[Symbol.asyncIterator]() {
+            yield 'recipes:test:1';
+          }
+        };
+      });
+
+      await RecipeProvider.clearCache(true);
+      expect(redisClient.scanIterator).toHaveBeenCalledTimes(1);
+
+      redisClient.scanIterator.mockClear();
+
+      await RecipeProvider.clearCache(true);
+      expect(redisClient.scanIterator).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -10,6 +10,27 @@ import crypto from 'crypto';
 
 const CACHE_TTL_SECONDS = 3600; // 1 hour
 
+// Helper to normalize text (remove accents and lowercase)
+const normalize = (text) => 
+  (text || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+// Global cache for compiled trigger regexes
+const triggerRegexCache = new Map();
+
+function getTriggerRegex(triggerText) {
+  if (!triggerRegexCache.has(triggerText)) {
+    const normalizedTrigger = normalize(triggerText);
+    const escapedTrigger = normalizedTrigger.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
+    const regex = new RegExp(`(?:^|\\s)${escapedTrigger}(?:s|es)?(?:\\s|$|[.,;])`, 'i');
+    triggerRegexCache.set(triggerText, regex);
+  }
+  return triggerRegexCache.get(triggerText);
+}
+
+// Global state for cache invalidation rate-limiting
+let lastCacheInvalidation = 0;
+const CACHE_INVALIDATION_COOLDOWN_MS = 2000; // 2 seconds
+
 export class RecipeProvider {
   static async getRecipes(params, userProfile) {
     let { query, number = 10, offset = 0 } = params;
@@ -223,9 +244,7 @@ export class RecipeProvider {
     const userSeverities = profile.severities || {};
     const hasSibo = userIntolerances.some(i => i.toLowerCase() === 'sibo');
     
-    // Función para normalizar texto (quitar acentos)
-    const normalize = (text) => 
-      (text || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
 
     // 2. Determinar safetyLevel dinámicamente
     let safetyLevel = 'safe';
@@ -263,12 +282,9 @@ export class RecipeProvider {
     let foundMaxSeverity = null; // 'low' or 'high'
     const matchedAllergenIds = new Set();
 
-    // Preparar regexps por adelantado
+    // Preparar regexps por adelantado usando cache compilado
     const triggerRegexes = activeTriggers.map(trigger => {
-      const normalizedTrigger = normalize(trigger.text);
-      const escapedTrigger = normalizedTrigger.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
-      const regex = new RegExp(`(?:^|\\s)${escapedTrigger}(?:s|es)?(?:\\s|$|[.,;])`, 'i');
-      return { trigger, regex };
+      return { trigger, regex: getTriggerRegex(trigger.text) };
     });
 
     const ingredients = (recipe.ingredients || []).map(i => {
@@ -407,14 +423,41 @@ export class RecipeProvider {
     };
   }
 
-  static async clearCache() {
+  static async clearCache(force = true) {
     try {
-      if (redisClient.isReady) {
-        const keys = await redisClient.keys('recipes:*');
-        if (keys.length > 0) {
-          await redisClient.del(keys);
-          ActivityLogger.info('Invalidated recipe cache', { keysCount: keys.length });
+      if (!redisClient.isReady) return;
+
+      const now = Date.now();
+      const timeSinceLast = now - lastCacheInvalidation;
+      if (!force && timeSinceLast < CACHE_INVALIDATION_COOLDOWN_MS) {
+        ActivityLogger.info('Cache invalidation skipped (cooldown)', { timeSinceLast });
+        return;
+      }
+
+      let batch = [];
+      let totalDeleted = 0;
+
+      for await (const key of redisClient.scanIterator({
+        MATCH: 'recipes:*',
+        COUNT: 100
+      })) {
+        batch.push(key);
+        if (batch.length >= 100) {
+          await redisClient.del(batch);
+          totalDeleted += batch.length;
+          batch = [];
         }
+      }
+
+      if (batch.length > 0) {
+        await redisClient.del(batch);
+        totalDeleted += batch.length;
+      }
+
+      lastCacheInvalidation = Date.now();
+
+      if (totalDeleted > 0) {
+        ActivityLogger.info('Invalidated recipe cache', { keysCount: totalDeleted });
       }
     } catch (err) {
       ActivityLogger.warn('Error invalidating cache', { error: err.message });
