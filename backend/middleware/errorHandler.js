@@ -21,7 +21,15 @@ export const errorHandler = (err, req, res, next) => {
   } else if (err.name === 'ZodError') {
     status = 400;
     code = 'VALIDATION_ERROR';
-    details = err.errors;
+    const issues = err.issues || err.errors || [];
+    if (config.NODE_ENV === 'production') {
+      details = issues.map(e => ({
+        field: e.path.join('.'),
+        message: e.message
+      }));
+    } else {
+      details = issues;
+    }
   } else if (err.message === 'Not allowed by CORS') {
     status = 403;
     code = 'CORS_FORBIDDEN';

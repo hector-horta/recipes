@@ -174,7 +174,11 @@ router.post('/image', asyncHandler(async (req, res) => {
   // ── Telemetría de ingesta ───────────────────────────────────────────
   ActivityLogger.log('INGEST_SUCCESS', {
     source_type: 'ocr_image',
-    title_es: recipeData.title_es
+    title_es: recipeData.title_es,
+    adminKeyFingerprint: req.adminKeyFingerprint
+  }, {
+    userId: req.user?.id || null,
+    ip: req.ip
   });
   // ───────────────────────────────────────────────────────────────────
 
@@ -267,7 +271,11 @@ router.post('/images', asyncHandler(async (req, res) => {
   // ── Telemetría de ingesta ───────────────────────────────────────────
   ActivityLogger.log('INGEST_SUCCESS', {
     source_type: 'ocr_image_dual',
-    title_es: recipeData.title_es
+    title_es: recipeData.title_es,
+    adminKeyFingerprint: req.adminKeyFingerprint
+  }, {
+    userId: req.user?.id || null,
+    ip: req.ip
   });
   // ───────────────────────────────────────────────────────────────────
 
@@ -351,7 +359,11 @@ router.post('/text', asyncHandler(async (req, res) => {
   // ── Telemetría de ingesta ───────────────────────────────────────────
   ActivityLogger.log('INGEST_SUCCESS', {
     source_type: sourceType || 'manual',
-    title_es: recipeData.title_es
+    title_es: recipeData.title_es,
+    adminKeyFingerprint: req.adminKeyFingerprint
+  }, {
+    userId: req.user?.id || null,
+    ip: req.ip
   });
   // ───────────────────────────────────────────────────────────────────
 
@@ -397,6 +409,16 @@ router.post('/transcribe', asyncHandler(async (req, res) => {
   if (!transcribedText.trim()) {
     return res.status(400).json({ error: 'No text could be transcribed from audio.' });
   }
+
+  ActivityLogger.log('ADMIN_ACTION', {
+    action: 'transcribe',
+    audioUrl,
+    language,
+    adminKeyFingerprint: req.adminKeyFingerprint
+  }, {
+    userId: req.user?.id || null,
+    ip: req.ip
+  });
 
   res.status(200).json({ transcribedText });
 }));
@@ -471,6 +493,15 @@ router.post('/voice', asyncHandler(async (req, res) => {
   };
 
   if (!saveToDb) {
+    ActivityLogger.log('INGEST_SUCCESS', {
+      source_type: 'audio',
+      title_es: recipeData.title_es,
+      saveToDb: false,
+      adminKeyFingerprint: req.adminKeyFingerprint
+    }, {
+      userId: req.user?.id || null,
+      ip: req.ip
+    });
     return res.status(200).json({
       status: 'processed',
       recipe: recipeData,
@@ -486,6 +517,16 @@ router.post('/voice', asyncHandler(async (req, res) => {
   const recipe = await Recipe.create(recipeData);
 
   await RecipeProvider.clearCache();
+
+  ActivityLogger.log('INGEST_SUCCESS', {
+    source_type: 'audio',
+    title_es: recipeData.title_es,
+    saveToDb: true,
+    adminKeyFingerprint: req.adminKeyFingerprint
+  }, {
+    userId: req.user?.id || null,
+    ip: req.ip
+  });
 
   res.status(200).json({
     status: 'processed',
@@ -512,6 +553,7 @@ router.post('/:slug/:action', asyncHandler(async (req, res) => {
       recipe.status = 'published';
       await recipe.save();
       await RecipeProvider.clearCache();
+      ActivityLogger.log('ADMIN_ACTION', { action: 'publish', recipeId: recipe.id, slug: recipe.slug, adminKeyFingerprint: req.adminKeyFingerprint }, { userId: req.user?.id || null, ip: req.ip });
       return res.json({ status: 'published', recipe });
 
     case 'post':
@@ -520,14 +562,17 @@ router.post('/:slug/:action', asyncHandler(async (req, res) => {
       recipe.status = 'published';
       await recipe.save();
       await RecipeProvider.clearCache();
+      ActivityLogger.log('ADMIN_ACTION', { action: 'post', recipeId: recipe.id, slug: recipe.slug, adminKeyFingerprint: req.adminKeyFingerprint }, { userId: req.user?.id || null, ip: req.ip });
       return res.json({ status: 'posted', recipe });
 
     case 'csv':
+      ActivityLogger.log('ADMIN_ACTION', { action: 'csv', recipeId: recipe.id, slug: recipe.slug, adminKeyFingerprint: req.adminKeyFingerprint }, { userId: req.user?.id || null, ip: req.ip });
       res.setHeader('Content-Type', 'text/csv');
       res.attachment(`${slug}.csv`);
       return res.send(buildCSVRow(recipe.toJSON()));
 
     case 'curl':
+      ActivityLogger.log('ADMIN_ACTION', { action: 'curl', recipeId: recipe.id, slug: recipe.slug, adminKeyFingerprint: req.adminKeyFingerprint }, { userId: req.user?.id || null, ip: req.ip });
       return res.json({ 
         command: buildCurlCommand(recipe.toJSON()) 
       });
@@ -559,6 +604,7 @@ router.post('/:slug/:action', asyncHandler(async (req, res) => {
         await recipe.save();
         
         await RecipeProvider.clearCache();
+        ActivityLogger.log('ADMIN_ACTION', { action: 'refresh-image', recipeId: recipe.id, slug: recipe.slug, adminKeyFingerprint: req.adminKeyFingerprint }, { userId: req.user?.id || null, ip: req.ip });
         
         return res.json({ 
           status: 'image_refreshed', 
@@ -633,11 +679,13 @@ router.post('/save', asyncHandler(async (req, res) => {
     Object.assign(existing, finalData);
     await existing.save();
     await RecipeProvider.clearCache();
+    ActivityLogger.log('ADMIN_ACTION', { action: 'save-update', recipeId: existing.id, slug: existing.slug, adminKeyFingerprint: req.adminKeyFingerprint }, { userId: req.user?.id || null, ip: req.ip });
     return res.json({ status: 'updated', recipe: existing });
   }
 
   const recipe = await Recipe.create(finalData);
   await RecipeProvider.clearCache();
+  ActivityLogger.log('ADMIN_ACTION', { action: 'save-create', recipeId: recipe.id, slug: recipe.slug, adminKeyFingerprint: req.adminKeyFingerprint }, { userId: req.user?.id || null, ip: req.ip });
   return res.status(201).json({ status: 'created', recipe });
 }));
 

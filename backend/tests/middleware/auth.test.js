@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { authenticateToken, optionalAuthenticateToken, checkRole } from '../../middleware/auth.js';
+import { authenticateToken, optionalAuthenticateToken, checkRole, requireAdminKey } from '../../middleware/auth.js';
 import jwt from 'jsonwebtoken';
 
 vi.mock('jsonwebtoken');
@@ -110,12 +110,38 @@ describe('Auth Middleware', () => {
       expect(res.status).toHaveBeenCalledWith(403);
     });
 
-    it('should allow access via valid x-admin-key bypass', () => {
+    it('should allow access via valid x-admin-key bypass and set adminKeyFingerprint', () => {
       req.headers['x-admin-key'] = 'test-admin-key';
       
       const middleware = checkRole(['user']);
       middleware(req, res, next);
       expect(next).toHaveBeenCalled();
+      expect(req.adminKeyFingerprint).toBeDefined();
+      expect(req.adminKeyFingerprint).toBe('944650a7'); // sha256 of 'test-admin-key' slice 0-8
+    });
+  });
+
+  describe('requireAdminKey', () => {
+    it('should allow access and set adminKeyFingerprint with valid admin key', () => {
+      req.headers['x-admin-key'] = 'test-admin-key';
+      
+      requireAdminKey(req, res, next);
+      expect(next).toHaveBeenCalled();
+      expect(req.adminKeyFingerprint).toBe('944650a7');
+    });
+
+    it('should return 401 if admin key is invalid', () => {
+      req.headers['x-admin-key'] = 'wrong-admin-key';
+      
+      requireAdminKey(req, res, next);
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    it('should return 401 if admin key is missing', () => {
+      requireAdminKey(req, res, next);
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(next).not.toHaveBeenCalled();
     });
   });
 });

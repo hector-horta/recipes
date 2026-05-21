@@ -4,8 +4,16 @@ export const recipeQuerySchema = z.object({
   query: z.string().trim().max(100, "La búsqueda es demasiado larga (max 100 caracteres).").optional(),
   excludeIngredients: z.string().trim().max(500, "La lista de ingredientes a excluir es demasiado larga.").optional(),
   diet: z.string().trim().max(50, "El campo de dieta es demasiado largo.").optional(),
-  number: z.string().regex(/^\d+$/, "El número de recetas debe ser un entero válido.").optional(),
-  offset: z.string().regex(/^\d+$/, "El offset debe ser un entero válido.").optional(),
+  number: z.string()
+    .regex(/^\d+$/, "El número de recetas debe ser un entero válido.")
+    .transform(val => parseInt(val, 10))
+    .refine(val => val >= 1 && val <= 50, "El número de recetas debe estar entre 1 y 50.")
+    .optional(),
+  offset: z.string()
+    .regex(/^\d+$/, "El offset debe ser un entero válido.")
+    .transform(val => parseInt(val, 10))
+    .refine(val => val >= 0 && val <= 1000000, "El offset debe estar entre 0 y 1.000.000.")
+    .optional(),
   sort: z.string().trim().max(50).optional(),
   refreshKey: z.string().optional(),
   includeUnsafe: z.string().optional()

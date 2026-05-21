@@ -77,6 +77,7 @@ export const requireAdminKey = (req, res, next) => {
     const bufExpected = Buffer.from(expected);
 
     if (bufKey.length === bufExpected.length && crypto.timingSafeEqual(bufKey, bufExpected)) {
+      req.adminKeyFingerprint = crypto.createHash('sha256').update(key).digest('hex').slice(0, 8);
       return next();
     }
   } catch (e) {
@@ -100,6 +101,7 @@ export const checkRole = (allowedRoles) => {
         const bufKey = Buffer.from(adminKey);
         const bufExpected = Buffer.from(config.ADMIN_API_KEY);
         if (bufKey.length === bufExpected.length && crypto.timingSafeEqual(bufKey, bufExpected)) {
+          req.adminKeyFingerprint = crypto.createHash('sha256').update(adminKey).digest('hex').slice(0, 8);
           return next();
         }
       } catch (e) {}

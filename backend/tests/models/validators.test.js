@@ -64,13 +64,37 @@ describe('validators', () => {
       expect(result.error.issues[0].message).toContain('entero válido');
     });
 
-    it('should accept valid number', () => {
+    it('should reject number out of bounds', () => {
+      const tooLow = { number: '0' };
+      const tooHigh = { number: '51' };
+
+      const resultLow = recipeQuerySchema.safeParse(tooLow);
+      expect(resultLow.success).toBe(false);
+      expect(resultLow.error.issues[0].message).toContain('entre 1 y 50');
+
+      const resultHigh = recipeQuerySchema.safeParse(tooHigh);
+      expect(resultHigh.success).toBe(false);
+      expect(resultHigh.error.issues[0].message).toContain('entre 1 y 50');
+    });
+
+    it('should reject offset out of bounds', () => {
+      const tooHigh = { offset: '1000001' };
+
+      const resultHigh = recipeQuerySchema.safeParse(tooHigh);
+      expect(resultHigh.success).toBe(false);
+      expect(resultHigh.error.issues[0].message).toContain('entre 0 y 1.000.000');
+    });
+
+    it('should accept valid number and transform it to integer', () => {
       const validNumber = {
         number: '25'
       };
 
       const result = recipeQuerySchema.safeParse(validNumber);
       expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.number).toBe(25);
+      }
     });
 
     it('should reject invalid sort format', () => {
