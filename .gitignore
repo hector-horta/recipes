@@ -40,7 +40,9 @@ backend/scratch/
 
 # Frontend build files
 frontend/dist/
-
+frontend/apps/*/dist/
+frontend/packages/*/dist/
+.eslintcache
 # Turborepo
 .turbo/
 

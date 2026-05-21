@@ -76,6 +76,57 @@ describe('RecipeProvider', () => {
       const callArgs = Recipe.findAll.mock.calls[0][0];
       expect(callArgs.limit).toBe(5);
     });
+
+    it('should call count with distinct options for correct pagination count', async () => {
+      Recipe.findAll.mockResolvedValue([]);
+      Recipe.count.mockResolvedValue(12);
+
+      const result = await RecipeProvider.getRecipes({ query: '' });
+
+      expect(Recipe.count).toHaveBeenCalledWith(expect.objectContaining({
+        distinct: true,
+        col: 'Recipe.id'
+      }));
+      expect(result.total).toBe(12);
+    });
+
+    it('should slice results in-memory with offset and limit when hasFilters is true', async () => {
+      const mockRecipes = Array.from({ length: 5 }, (_, idx) => ({
+        id: String(idx + 1),
+        title_es: `Recipe ${idx + 1}`,
+        title_en: `Recipe ${idx + 1}`,
+        image_url: '',
+        prep_time_minutes: 30,
+        sibo_risk_level: 'safe',
+        ingredients: [],
+        steps: [],
+        tags: [],
+        toJSON() {
+          return {
+            id: String(idx + 1),
+            title_es: `Recipe ${idx + 1}`,
+            title_en: `Recipe ${idx + 1}`,
+            image_url: '',
+            prep_time_minutes: 30,
+            sibo_risk_level: 'safe',
+            ingredients: [],
+            steps: [],
+            tags: []
+          };
+        }
+      }));
+
+      Recipe.findAll.mockResolvedValue(mockRecipes);
+
+      const result = await RecipeProvider.getRecipes(
+        { query: '', offset: 2, number: 2 },
+        { intolerances: ['egg'] }
+      );
+
+      expect(result.recipes).toHaveLength(2);
+      expect(result.recipes[0].id).toBe('3');
+      expect(result.recipes[1].id).toBe('4');
+    });
   });
 
   describe('normalizeRecipe', () => {

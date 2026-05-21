@@ -139,7 +139,11 @@ export class RecipeProvider {
     const order = query ? [['created_at', 'DESC']] : [['created_at', 'DESC']];
 
     // Get total count for pagination
-    const totalCount = await Recipe.count({ where: whereClause });
+    const totalCount = await Recipe.count({
+      where: whereClause,
+      distinct: true,
+      col: 'Recipe.id'
+    });
 
     // Buscamos candidatos con offset para paginación server-side
     const recipes = await Recipe.findAll({
@@ -184,8 +188,12 @@ export class RecipeProvider {
       }
     }
 
-    // Aplicar límite final después del filtrado
-    results = results.slice(0, requestedLimit);
+    // Aplicar offset y límite final después del filtrado
+    if (hasFilters) {
+      results = results.slice(parsedOffset, parsedOffset + requestedLimit);
+    } else {
+      results = results.slice(0, requestedLimit);
+    }
 
     // Strip internal metadata before sending to client
     results = results.map(({ _matchedAllergens, ...rest }) => rest);
