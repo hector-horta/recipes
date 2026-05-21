@@ -552,6 +552,12 @@ const where = {
 - **`authenticateToken`**: Valida el JWT de la cookie. Rechaza con 401/403. Setea `req.user`.
 - **`optionalAuthenticateToken`**: Intenta validar si existe cookie. Si no, continúa sin `req.user`.
 - **`requireAdminKey`**: Middleware para rutas críticas (ingesta, admin). Verifica el header `X-Admin-Key` contra `config.ADMIN_API_KEY`.
+- **Separación de Secretos JWT**: Wati utiliza tres secretos criptográficos independientes para firmar y verificar tokens:
+  1. `JWT_SECRET`: Utilizado para los tokens de sesión del usuario (autenticación estándar).
+  2. `JWT_VERIFY_SECRET`: Utilizado para los links de verificación de correo electrónico.
+  3. `JWT_RESET_SECRET`: Utilizado para los links de restablecimiento de contraseña.
+  - *En desarrollo/pruebas*: Si no se configuran `JWT_VERIFY_SECRET` y `JWT_RESET_SECRET`, estas variables heredan el valor de `JWT_SECRET` por simplicidad.
+  - *En producción (`NODE_ENV=production`)*: Los tres secretos son obligatorios y deben ser estrictamente diferentes entre sí. Si alguno falta o coincide con otro, la aplicación lanzará un error de validación de Zod y no iniciará.
 
 #### Modelo Sequelize (Nuevo)
 ```javascript
