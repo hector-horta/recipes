@@ -437,15 +437,18 @@ export class RecipeProvider {
       let batch = [];
       let totalDeleted = 0;
 
-      for await (const key of redisClient.scanIterator({
+      for await (const result of redisClient.scanIterator({
         MATCH: 'recipes:*',
         COUNT: 100
       })) {
-        batch.push(key);
-        if (batch.length >= 100) {
-          await redisClient.del(batch);
-          totalDeleted += batch.length;
-          batch = [];
+        const keys = Array.isArray(result) ? result : [result];
+        for (const key of keys) {
+          batch.push(key);
+          if (batch.length >= 100) {
+            await redisClient.del(batch);
+            totalDeleted += batch.length;
+            batch = [];
+          }
         }
       }
 
