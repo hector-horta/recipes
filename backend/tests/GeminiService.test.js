@@ -66,12 +66,32 @@ describe('GeminiService', () => {
       
       // Verify prompt construction and config
       expect(genAIInstance.models.generateImages).toHaveBeenCalledWith(expect.objectContaining({
-        prompt: expect.stringContaining('Tasty Cake'),
+        prompt: expect.stringContaining('tasty cake'),
         config: expect.objectContaining({
           numberOfImages: 1,
           aspectRatio: "1:1"
         })
       }));
+    });
+
+    it('should clean the recipe title of exclusion and diet terms', async () => {
+      const mockResponse = {
+        generatedImages: [{
+          image: { imageBytes: Buffer.from('image').toString('base64') }
+        }]
+      };
+
+      const genAIInstance = new GoogleGenAI();
+      genAIInstance.models.generateImages.mockResolvedValue(mockResponse);
+
+      await geminiService.generateRecipeImage('Hot Chocolate without milk');
+
+      expect(genAIInstance.models.generateImages).toHaveBeenCalledWith(expect.objectContaining({
+        prompt: expect.stringContaining('hot chocolate'),
+      }));
+      // Should not contain "without milk"
+      const promptArgument = genAIInstance.models.generateImages.mock.calls[0][0].prompt;
+      expect(promptArgument).not.toContain('without milk');
     });
 
     it('should include ingredients in prompt when details are provided', async () => {

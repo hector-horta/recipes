@@ -42,7 +42,8 @@ class GeminiService {
     }
 
     try {
-      const dishStyle = this._getDishSpecificStyle(recipeTitle);
+      const cleanTitle = this._cleanTitleForImageGeneration(recipeTitle);
+      const dishStyle = this._getDishSpecificStyle(cleanTitle);
       
       // Technical context from ingredients/details
       let technicalContext = "";
@@ -51,9 +52,9 @@ class GeminiService {
         technicalContext = `Featuring ingredients like ${topIngredients}.`;
       }
 
-      const basePrompt = `A professional, high-end commercial photo of ${recipeTitle}. There must be absolutely no text, no letters, no words, and no writing rendered anywhere in the image (especially not on any mug, glass, cup, plate, or surface). All tableware, cups, glasses, and containers must be completely clean and blank without any printed labels or typography.`;
+      const basePrompt = `A high-end restaurant culinary photograph of a freshly prepared ${cleanTitle}. This is a pure food photograph of the actual prepared dish, not a graphic design, logo, poster, advertisement, or cover card. The tableware, plates, cups, mugs, bowls, background walls, and tables must be completely blank, plain, and solid-color, with no designs, no logos, no labels, and no writing. Every surface is smooth, clean, and unmarked.`;
       const styleEnhancers = `ultra-realistic food photography, Michelin star plating, ${dishStyle}, high resolution 8k, cinematic lighting, macro lens, shallow depth of field, vibrant natural colors, clean elegant background`;
-      const qualityConstraints = "strictly no text, no letters, no words, no writing, no labels, no typography, no watermarks, no blurry edges, no low resolution, no artificial colors, no distorted objects, no messy background";
+      const qualityConstraints = "strictly no text, no letters, no words, no writing, no labels, no typography, no banner, no overlay text, no watermarks, no blurry edges, no low resolution, no artificial colors, no distorted objects, no messy background";
       
       let finalPrompt = `${basePrompt} ${technicalContext} Style: ${styleEnhancers}. Constraints: ${qualityConstraints}.`;
 
@@ -61,7 +62,7 @@ class GeminiService {
         finalPrompt += ` IMPORTANT: Apply this feedback to the visual style: ${feedback}`;
       }
 
-      ActivityLogger.info(`🎨 Generating image for "${recipeTitle}"`, { 
+      ActivityLogger.info(`🎨 Generating image for "${recipeTitle}" (cleaned: "${cleanTitle}")`, { 
         style: dishStyle,
         hasFeedback: !!feedback,
         hasDetails: !!technicalContext
@@ -103,11 +104,33 @@ class GeminiService {
   }
 
   /**
+   * Cleans recipe titles to remove words that may trigger text generation.
+   * Specifically targets food exclusion terms (e.g. "without milk", "sin gluten", etc.)
+   * which force the model to render labels to explain the exclusion.
+   * @private
+   */
+  _cleanTitleForImageGeneration(title) {
+    if (!title || typeof title !== 'string') return '';
+    let t = title.toLowerCase().trim();
+    // Remove common food restriction/exclusion phrases that might trigger text/label rendering
+    t = t.replace(/\b(without|sin|no|free of|libre de)\s+.+$/i, '');
+    t = t.replace(/\b(gluten|lactose|dairy|sugar|fat|carb|sodium|salt|milk)\s*-\s*free\b/gi, '');
+    t = t.replace(/\b(gluten|lactose|dairy|sugar|fat|carb|sodium|salt|milk)free\b/gi, '');
+    t = t.replace(/\b(vegan|vegetarian|keto|paleo|halal|kosher|low-fat|low-carb|diet)\b/gi, '');
+    // Clean up extra spaces
+    t = t.replace(/\s+/g, ' ').trim();
+    return t;
+  }
+
+  /**
    * Determines the specific visual style based on the dish title.
    * @private
    */
   _getDishSpecificStyle(title) {
     const t = title.toLowerCase();
+    if (t.includes('chocolate') || t.includes('coffee') || t.includes('cafe') || t.includes('tea') || t.includes('té') || t.includes('cocoa')) {
+      return "elegant ceramic mug or clear glass mug, steam rising softly, cozy warm lighting, professional food styling, clean composition";
+    }
     if (t.includes('soup') || t.includes('sopa') || t.includes('stew') || t.includes('crema') || t.includes('potaje')) {
       return "steam rising softly, rustic ceramic bowl, garnish on top, warm cozy atmosphere, side of artisan bread";
     }
