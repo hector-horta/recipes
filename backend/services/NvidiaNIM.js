@@ -66,6 +66,33 @@ export async function extractTextFromImage(imageUrl, apiKey) {
   return text;
 }
 
+export async function extractTextFromBase64(base64, mimeType, apiKey) {
+  const text = await nvidiaChatRequest({
+    model: 'meta/llama-4-maverick-17b-128e-instruct',
+    messages: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: 'Extract ALL text from this recipe image. Return ONLY the raw text with ingredient lists, measurements, cooking steps, and any other recipe information. Do not add commentary. Maintain the original structure.'
+          },
+          {
+            type: 'image_url',
+            image_url: {
+              url: `data:${mimeType};base64,${base64}`
+            }
+          }
+        ]
+      }
+    ],
+    max_tokens: 4096,
+    temperature: 0.1
+  }, apiKey);
+
+  return text;
+}
+
 export async function extractTextFromTwoImages(imageUrl1, imageUrl2, apiKey) {
   const img1 = await downloadImageAsBase64(imageUrl1);
   const img2 = await downloadImageAsBase64(imageUrl2);

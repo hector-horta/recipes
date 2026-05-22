@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { Recipe } from '../models/Recipe.js';
-import { extractTextFromImage, extractTextFromTwoImages, analyzeAndStructureRecipe, generateRecipeImage } from '../services/NvidiaNIM.js';
+import { extractTextFromImage, extractTextFromBase64, extractTextFromTwoImages, analyzeAndStructureRecipe, generateRecipeImage } from '../services/NvidiaNIM.js';
 import { transcribeAudio } from '../services/GroqWhisper.js';
 import { saveIngestLog } from '../middleware/recoveryLogger.js';
 import { RecipeProvider } from '../services/RecipeProvider.js';
@@ -24,7 +24,9 @@ import { requireAdminKey, checkRole, optionalAuthenticateToken } from '../middle
 import { asyncHandler } from '../utils/asyncHandler.js';
 
 const ingestImageSchema = z.object({
-  imageUrl: z.string().url('URL de imagen inválida'),
+  imageUrl: z.string().url('URL de imagen inválida').optional(),
+  imageBase64: z.string().optional(),
+  mimeType: z.string().optional(),
   generateImage: z.boolean().optional().default(true),
   saveToDb: z.boolean().optional().default(true)
 });
@@ -104,10 +106,17 @@ router.post('/image', asyncHandler(async (req, res) => {
     error.errors = parseResult.error.errors;
     throw error;
   }
-  const { imageUrl, generateImage, saveToDb } = parseResult.data;
+  const { imageUrl, imageBase64, mimeType, generateImage, saveToDb } = parseResult.data;
   const apiKey = getApiKey();
 
-  const rawText = await extractTextFromImage(imageUrl, apiKey);
+  let rawText = '';
+  if (imageBase64) {
+    rawText = await extractTextFromBase64(imageBase64, mimeType || 'image/png', apiKey);
+  } else if (imageUrl) {
+    rawText = await extractTextFromImage(imageUrl, apiKey);
+  } else {
+    return res.status(400).json({ error: 'Debe proporcionar imageUrl o imageBase64.' });
+  }
 
   if (!rawText.trim()) {
     return res.status(400).json({ error: 'No text could be extracted from the image.' });

@@ -17,7 +17,8 @@ import {
   Info,
   ChevronUp,
   ChevronDown,
-  Languages
+  Languages,
+  Upload
 } from 'lucide-react';
 import { Modal } from '../../../components/Modal';
 import type { Recipe, RecipeFormData, Tag } from '../types';
@@ -59,6 +60,200 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
   const { t } = useTranslation();
 
   const [translatingFields, setTranslatingFields] = React.useState<Record<string, boolean>>({});
+  const [isDragging, setIsDragging] = React.useState(false);
+  const [isProcessing, setIsProcessing] = React.useState(false);
+  const [processingStep, setProcessingStep] = React.useState('');
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const result = reader.result as string;
+        const base64 = result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = error => reject(error);
+    });
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      await processImageFile(files[0]);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      await processImageFile(files[0]);
+    }
+  };
+
+  const triggerFileSelect = () => {
+    fileInputRef.current?.click();
+  };
+
+  const processImageFile = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Por favor, selecciona un archivo de imagen válido.');
+      return;
+    }
+
+    setIsProcessing(true);
+    setProcessingStep('Extrayendo texto de la receta (OCR)...');
+
+    const progressInterval = setInterval(() => {
+      setProcessingStep(prev => {
+        if (prev.includes('OCR')) {
+          return 'Estructurando ingredientes y pasos con IA...';
+        } else if (prev.includes('IA')) {
+          return 'Traduciendo receta y generando ilustración...';
+        } else if (prev.includes('ilustración')) {
+          return 'Finalizando receta...';
+        }
+        return prev;
+      });
+    }, 3000);
+
+    try {
+      const imageBase64 = await fileToBase64(file);
+      const mimeType = file.type;
+
+      interface IngestImageResponse {
+        status: string;
+        recipe: any;
+        rawText: string;
+        saveToDb: boolean;
+      }
+
+      const data = await api.post<IngestImageResponse>('/ingest/image', {
+        imageBase64,
+        mimeType,
+        saveToDb: false,
+        generateImage: true
+      });
+
+      if (data && data.recipe) {
+        const recipe = data.recipe;
+
+        // Map ingredients defensively
+        const mappedIngredients = (recipe.ingredients || []).map((ing: any) => ({
+          name: typeof ing.name === 'object' ? {
+            es: ing.name?.es || '',
+            en: ing.name?.en || ''
+          } : {
+            es: ing.name || '',
+            en: ing.name || ''
+          },
+          amount: String(ing.quantity || ing.amount || ''),
+          unit: typeof ing.unit === 'object' ? {
+            es: ing.unit?.es || '',
+            en: ing.unit?.en || ''
+          } : {
+            es: ing.unit || '',
+            en: ing.unit || ''
+          }
+        }));
+
+        // Map instructions/steps defensively
+        const mappedInstructions = (recipe.steps || recipe.instructions || []).map((step: any) => {
+          let esVal = '';
+          let enVal = '';
+          if (step.instruction) {
+            if (typeof step.instruction === 'object') {
+              esVal = step.instruction.es || '';
+              enVal = step.instruction.en || esVal;
+            } else {
+              esVal = step.instruction;
+              enVal = step.instruction;
+            }
+          } else {
+            esVal = step.es || '';
+            enVal = step.en || esVal;
+          }
+
+          return {
+            es: esVal,
+            en: enVal,
+            type: step.type || 'active',
+            durationMinutes: step.durationMinutes || step.duration_minutes || 0
+          };
+        });
+
+        // Map tags
+        const mappedTags: string[] = [];
+        if (Array.isArray(recipe.tags)) {
+          recipe.tags.forEach((t: any) => {
+            if (typeof t === 'string') {
+              const match = tags?.find(avail => 
+                avail.key.toLowerCase() === t.toLowerCase() || 
+                avail.es.toLowerCase() === t.toLowerCase() || 
+                avail.en.toLowerCase() === t.toLowerCase()
+              );
+              if (match) {
+                mappedTags.push(match.key);
+              } else {
+                mappedTags.push(t);
+              }
+            } else if (t && typeof t === 'object') {
+              const esVal = (t.es || '').toLowerCase();
+              const enVal = (t.en || '').toLowerCase();
+              const match = tags?.find(avail => 
+                avail.es.toLowerCase() === esVal || 
+                avail.en.toLowerCase() === enVal || 
+                avail.key.toLowerCase() === esVal ||
+                avail.key.toLowerCase() === enVal
+              );
+              if (match) {
+                mappedTags.push(match.key);
+              }
+            }
+          });
+        }
+
+        setFormData({
+          title: recipe.title_es || (recipe.title && recipe.title.es) || '',
+          titleEn: recipe.title_en || (recipe.title && recipe.title.en) || '',
+          prepTimeMinutes: recipe.prep_time_minutes || recipe.prepTimeMinutes || 0,
+          cookTimeMinutes: recipe.cook_time_minutes || recipe.cookTimeMinutes || 0,
+          servings: recipe.servings || 1,
+          difficulty: recipe.difficulty || 'medium',
+          status: 'draft',
+          safetyLevel: recipe.sibo_risk_level || recipe.siboRiskLevel || recipe.safetyLevel || 'safe',
+          ingredients: mappedIngredients,
+          instructions: mappedInstructions,
+          tags: mappedTags,
+          imageUrl: recipe.image_url || recipe.imageUrl || ''
+        });
+
+        toast.success('¡Receta importada y procesada con éxito!');
+      } else {
+        throw new Error('No se recibió la receta procesada');
+      }
+    } catch (error: any) {
+      console.error('OCR import error:', error);
+      toast.error(error?.message || 'Error al procesar la imagen de la receta');
+    } finally {
+      clearInterval(progressInterval);
+      setIsProcessing(false);
+      setProcessingStep('');
+    }
+  };
 
   const handleTranslateField = async (
     text: string,
@@ -146,6 +341,57 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
         <div className="lg:col-span-8 space-y-8 pr-6 pb-6">
           <form onSubmit={handleSubmit} id="recipe-form" className="space-y-10">
             
+            {!editingRecipe && (
+              <section className="space-y-4">
+                <div className="flex items-center gap-2 font-black uppercase tracking-[0.2em] text-xs" style={{ color: T.muted }}>
+                  <div className="w-8 h-[2px]" style={{ backgroundColor: T.outline }} />
+                  Importar desde imagen
+                </div>
+                
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleFileChange} 
+                  accept="image/*" 
+                  className="hidden" 
+                />
+                
+                {isProcessing ? (
+                  <div 
+                    className="w-full py-12 rounded-[2rem] border border-dashed flex flex-col items-center justify-center p-6 text-center backdrop-blur-md relative overflow-hidden transition-all duration-300"
+                    style={{ backgroundColor: T.surfaceHi, borderColor: T.primary, color: T.text }}
+                  >
+                    <Loader2 size={36} className="animate-spin mb-4" style={{ color: T.primary }} />
+                    <p className="text-sm font-black uppercase tracking-widest leading-tight">Procesando receta con IA</p>
+                    <p className="text-xs font-bold mt-2 opacity-80" style={{ color: T.primary }}>{processingStep}</p>
+                    <p className="text-[10px] opacity-60 mt-3 max-w-sm">Esto puede tardar unos segundos mientras leemos el texto, estructuramos los ingredientes y generamos la ilustración.</p>
+                  </div>
+                ) : (
+                  <div
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onClick={triggerFileSelect}
+                    className="w-full py-10 rounded-[2rem] border border-dashed flex flex-col items-center justify-center p-6 text-center cursor-pointer transition-all duration-300 relative group overflow-hidden"
+                    style={{ 
+                      backgroundColor: isDragging ? T.primary05 : T.surfaceHi, 
+                      borderColor: isDragging ? T.primary : T.outline, 
+                      color: T.text 
+                    }}
+                  >
+                    <div className="absolute -top-12 -right-12 w-24 h-24 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ backgroundColor: T.primary12 }} />
+                    
+                    <Upload size={32} strokeWidth={1.5} className="mb-3 transition-transform group-hover:-translate-y-1 duration-300" style={{ color: T.primary }} />
+                    <p className="text-xs font-black uppercase tracking-widest leading-tight">Arrastra la imagen de una receta aquí</p>
+                    <p className="text-[10px] font-bold mt-1.5 opacity-60">o haz clic para explorar tus archivos locales</p>
+                    <div className="mt-4 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5" style={{ backgroundColor: T.surface, border: `1px solid ${T.outline}`, color: T.muted }}>
+                      <Sparkles size={10} style={{ color: T.primary }} /> OCR + Autotraducción + Ilustración IA
+                    </div>
+                  </div>
+                )}
+              </section>
+            )}
+
             <section className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 font-black uppercase tracking-[0.2em] text-xs" style={{ color: T.muted }}>
