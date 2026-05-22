@@ -129,6 +129,39 @@ export async function extractTextFromTwoImages(imageUrl1, imageUrl2, apiKey) {
   return text;
 }
 
+export async function extractTextFromTwoBase64(base64_1, mimeType1, base64_2, mimeType2, apiKey) {
+  const text = await nvidiaChatRequest({
+    model: 'meta/llama-4-maverick-17b-128e-instruct',
+    messages: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: 'These are two pages/parts of the same recipe. Each image contains a portion of the recipe — somewhere between the two images the text transitions from ingredients to preparation steps.\n\nExtract ALL text from BOTH images and combine them into a single continuous recipe text. Identify where the ingredients section ends and the preparation/cooking steps begin. Return ONLY the raw extracted text. Do not add commentary. Maintain the original structure.'
+          },
+          {
+            type: 'image_url',
+            image_url: {
+              url: `data:${mimeType1};base64,${base64_1}`
+            }
+          },
+          {
+            type: 'image_url',
+            image_url: {
+              url: `data:${mimeType2};base64,${base64_2}`
+            }
+          }
+        ]
+      }
+    ],
+    max_tokens: 4096,
+    temperature: 0.1
+  }, apiKey);
+
+  return text;
+}
+
 export async function analyzeAndStructureRecipe(rawText, apiKey) {
   const systemPrompt = `You are a professional recipe structuring engine. Your task is to analyze raw recipe text and return a STRICT JSON object with the following schema. NO markdown, NO explanation, ONLY valid JSON.
 

@@ -63,7 +63,19 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
   const [isDragging, setIsDragging] = React.useState(false);
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [processingStep, setProcessingStep] = React.useState('');
+  const [droppedFiles, setDroppedFiles] = React.useState<{ file: File; preview: string }[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const droppedFilesRef = React.useRef<{ file: File; preview: string }[]>([]);
+
+  React.useEffect(() => {
+    droppedFilesRef.current = droppedFiles;
+  }, [droppedFiles]);
+
+  React.useEffect(() => {
+    return () => {
+      droppedFilesRef.current.forEach(f => URL.revokeObjectURL(f.preview));
+    };
+  }, []);
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -78,6 +90,35 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
     });
   };
 
+  const addFiles = (files: FileList | File[]) => {
+    const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+    if (imageFiles.length === 0) {
+      toast.error('Por favor, selecciona archivos de imagen válidos.');
+      return;
+    }
+
+    setDroppedFiles(prev => {
+      const combined = [...prev];
+      for (const file of imageFiles) {
+        if (combined.length >= 2) break;
+        combined.push({ file, preview: URL.createObjectURL(file) });
+      }
+      if (combined.length > 2) {
+        toast.error('Máximo 2 imágenes por receta.');
+        return combined.slice(0, 2);
+      }
+      return combined;
+    });
+  };
+
+  const removeFile = (index: number) => {
+    setDroppedFiles(prev => {
+      const removed = prev[index];
+      if (removed) URL.revokeObjectURL(removed.preview);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -87,32 +128,29 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
     setIsDragging(false);
   };
 
-  const handleDrop = async (e: React.DragEvent) => {
+  const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    
-    const files = e.dataTransfer.files;
-    if (files && files.length > 0) {
-      await processImageFile(files[0]);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      addFiles(e.dataTransfer.files);
     }
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      await processImageFile(files[0]);
+      addFiles(files);
     }
+    // Reset input so the same file can be re-selected
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const triggerFileSelect = () => {
     fileInputRef.current?.click();
   };
 
-  const processImageFile = async (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      toast.error('Por favor, selecciona un archivo de imagen válido.');
-      return;
-    }
+  const processDroppedImages = async () => {
+    if (droppedFiles.length === 0) return;
 
     setIsProcessing(true);
     setProcessingStep('Extrayendo texto de la receta (OCR)...');
@@ -131,9 +169,6 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
     }, 3000);
 
     try {
-      const imageBase64 = await fileToBase64(file);
-      const mimeType = file.type;
-
       interface IngestImageResponse {
         status: string;
         recipe: any;
@@ -141,12 +176,33 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
         saveToDb: boolean;
       }
 
-      const data = await api.post<IngestImageResponse>('/ingest/image', {
-        imageBase64,
-        mimeType,
-        saveToDb: false,
-        generateImage: true
-      });
+      let data: IngestImageResponse;
+
+      if (droppedFiles.length === 2) {
+        // Dual image — use /ingest/images
+        const [b64_1, b64_2] = await Promise.all([
+          fileToBase64(droppedFiles[0].file),
+          fileToBase64(droppedFiles[1].file)
+        ]);
+
+        data = await api.post<IngestImageResponse>('/ingest/images', {
+          imageBase64_1: b64_1,
+          mimeType1: droppedFiles[0].file.type,
+          imageBase64_2: b64_2,
+          mimeType2: droppedFiles[1].file.type,
+          saveToDb: false,
+          generateImage: true
+        });
+      } else {
+        // Single image — use /ingest/image
+        const imageBase64 = await fileToBase64(droppedFiles[0].file);
+        data = await api.post<IngestImageResponse>('/ingest/image', {
+          imageBase64,
+          mimeType: droppedFiles[0].file.type,
+          saveToDb: false,
+          generateImage: true
+        });
+      }
 
       if (data && data.recipe) {
         const recipe = data.recipe;
@@ -241,12 +297,15 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
           imageUrl: recipe.image_url || recipe.imageUrl || ''
         });
 
+        // Clear dropped files after successful processing
+        droppedFiles.forEach(f => URL.revokeObjectURL(f.preview));
+        setDroppedFiles([]);
+
         toast.success('¡Receta importada y procesada con éxito!');
       } else {
         throw new Error('No se recibió la receta procesada');
       }
     } catch (error: any) {
-      console.error('OCR import error:', error);
       toast.error(error?.message || 'Error al procesar la imagen de la receta');
     } finally {
       clearInterval(progressInterval);
@@ -353,6 +412,7 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
                   ref={fileInputRef} 
                   onChange={handleFileChange} 
                   accept="image/*" 
+                  multiple
                   className="hidden" 
                 />
                 
@@ -362,9 +422,66 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
                     style={{ backgroundColor: T.surfaceHi, borderColor: T.primary, color: T.text }}
                   >
                     <Loader2 size={36} className="animate-spin mb-4" style={{ color: T.primary }} />
-                    <p className="text-sm font-black uppercase tracking-widest leading-tight">Procesando receta con IA</p>
+                    <p className="text-sm font-black uppercase tracking-widest leading-tight">Procesando {droppedFiles.length > 1 ? `${droppedFiles.length} imágenes` : 'receta'} con IA</p>
                     <p className="text-xs font-bold mt-2 opacity-80" style={{ color: T.primary }}>{processingStep}</p>
                     <p className="text-[10px] opacity-60 mt-3 max-w-sm">Esto puede tardar unos segundos mientras leemos el texto, estructuramos los ingredientes y generamos la ilustración.</p>
+                  </div>
+                ) : droppedFiles.length > 0 ? (
+                  <div className="space-y-4">
+                    {/* Previews */}
+                    <div className={`grid gap-4 ${droppedFiles.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                      {droppedFiles.map((df, idx) => (
+                        <div 
+                          key={idx}
+                          className="relative rounded-2xl overflow-hidden group"
+                          style={{ backgroundColor: T.surfaceHi, border: `1px solid ${T.outline}` }}
+                        >
+                          <img 
+                            src={df.preview} 
+                            alt={`Imagen ${idx + 1}`} 
+                            className="w-full h-48 object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeFile(idx)}
+                            className="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md transition-all opacity-0 group-hover:opacity-100"
+                            style={{ backgroundColor: T.dark80, color: T.danger }}
+                          >
+                            <X size={16} />
+                          </button>
+                          <div 
+                            className="absolute bottom-2 left-2 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider backdrop-blur-md"
+                            style={{ backgroundColor: T.dark80, color: T.white }}
+                          >
+                            {droppedFiles.length === 2 ? (idx === 0 ? 'Foto 1' : 'Foto 2') : 'Foto de receta'}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Add second photo + Process button */}
+                    <div className="flex gap-3">
+                      {droppedFiles.length < 2 && (
+                        <button
+                          type="button"
+                          onClick={triggerFileSelect}
+                          className="flex-1 py-3 rounded-xl border border-dashed font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all hover:opacity-80"
+                          style={{ borderColor: T.outline, color: T.muted }}
+                        >
+                          <Plus size={14} /> Agregar 2ª foto (opcional)
+                        </button>
+                      )}
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.95 }}
+                        type="button"
+                        onClick={processDroppedImages}
+                        className="flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all"
+                        style={{ backgroundColor: T.primary, color: T.dark }}
+                      >
+                        <Sparkles size={14} /> Procesar con IA {droppedFiles.length === 2 ? '(2 fotos)' : ''}
+                      </motion.button>
+                    </div>
                   </div>
                 ) : (
                   <div
@@ -382,7 +499,7 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
                     <div className="absolute -top-12 -right-12 w-24 h-24 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ backgroundColor: T.primary12 }} />
                     
                     <Upload size={32} strokeWidth={1.5} className="mb-3 transition-transform group-hover:-translate-y-1 duration-300" style={{ color: T.primary }} />
-                    <p className="text-xs font-black uppercase tracking-widest leading-tight">Arrastra la imagen de una receta aquí</p>
+                    <p className="text-xs font-black uppercase tracking-widest leading-tight">Arrastra hasta 2 fotos de una receta aquí</p>
                     <p className="text-[10px] font-bold mt-1.5 opacity-60">o haz clic para explorar tus archivos locales</p>
                     <div className="mt-4 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5" style={{ backgroundColor: T.surface, border: `1px solid ${T.outline}`, color: T.muted }}>
                       <Sparkles size={10} style={{ color: T.primary }} /> OCR + Autotraducción + Ilustración IA

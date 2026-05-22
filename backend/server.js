@@ -50,7 +50,7 @@ const globalLimiter = rateLimit({
 
 app.use('/api/', globalLimiter);
 app.use(cors(corsOptions));
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '20mb' }));
 
 app.use('/public/recipes', express.static(path.join(__dirname, 'public', 'recipes')));
 

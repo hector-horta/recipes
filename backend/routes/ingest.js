@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { Recipe } from '../models/Recipe.js';
-import { extractTextFromImage, extractTextFromBase64, extractTextFromTwoImages, analyzeAndStructureRecipe, generateRecipeImage } from '../services/NvidiaNIM.js';
+import { extractTextFromImage, extractTextFromBase64, extractTextFromTwoImages, extractTextFromTwoBase64, analyzeAndStructureRecipe, generateRecipeImage } from '../services/NvidiaNIM.js';
 import { transcribeAudio } from '../services/GroqWhisper.js';
 import { saveIngestLog } from '../middleware/recoveryLogger.js';
 import { RecipeProvider } from '../services/RecipeProvider.js';
@@ -32,11 +32,19 @@ const ingestImageSchema = z.object({
 });
 
 const ingestImagesSchema = z.object({
-  imageUrl1: z.string().url('URL de imagen 1 inválida'),
-  imageUrl2: z.string().url('URL de imagen 2 inválida'),
+  imageUrl1: z.string().url('URL de imagen 1 inválida').optional(),
+  imageUrl2: z.string().url('URL de imagen 2 inválida').optional(),
+  imageBase64_1: z.string().optional(),
+  mimeType1: z.string().optional(),
+  imageBase64_2: z.string().optional(),
+  mimeType2: z.string().optional(),
   generateImage: z.boolean().optional().default(true),
   saveToDb: z.boolean().optional().default(true)
-});
+}).refine(data => {
+  const hasUrls = data.imageUrl1 && data.imageUrl2;
+  const hasBase64 = data.imageBase64_1 && data.imageBase64_2;
+  return hasUrls || hasBase64;
+}, { message: 'Debe proporcionar ambas URLs o ambos base64 de las imágenes.' });
 
 const ingestTextSchema = z.object({
   text: z.string().min(10, 'El texto debe ser más largo'),
@@ -208,11 +216,17 @@ router.post('/images', asyncHandler(async (req, res) => {
     error.errors = parseResult.error.errors;
     throw error;
   }
-  const { imageUrl1, imageUrl2, generateImage, saveToDb } = parseResult.data;
+  const { imageUrl1, imageUrl2, imageBase64_1, mimeType1, imageBase64_2, mimeType2, generateImage, saveToDb } = parseResult.data;
   const apiKey = getApiKey();
 
-  ActivityLogger.info('Processing dual images for dual ingest', { imageUrl1, imageUrl2 });
-  const rawText = await extractTextFromTwoImages(imageUrl1, imageUrl2, apiKey);
+  let rawText = '';
+  if (imageBase64_1 && imageBase64_2) {
+    ActivityLogger.info('Processing dual images from base64 for dual ingest');
+    rawText = await extractTextFromTwoBase64(imageBase64_1, mimeType1 || 'image/png', imageBase64_2, mimeType2 || 'image/png', apiKey);
+  } else if (imageUrl1 && imageUrl2) {
+    ActivityLogger.info('Processing dual images from URLs for dual ingest', { imageUrl1, imageUrl2 });
+    rawText = await extractTextFromTwoImages(imageUrl1, imageUrl2, apiKey);
+  }
 
   if (!rawText.trim()) {
     return res.status(400).json({ error: 'No text could be extracted from the images.' });
