@@ -51,4 +51,10 @@ docs/todo/
 
 #scratch
 frontend/apps/more-admin/scratch/
+
+#other
 /.abacusai/config.json
+
+dump.sql
+nginx/certs_new/server.crt
+nginx/certs_new/server.key
