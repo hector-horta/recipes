@@ -56,7 +56,6 @@ app.use('/public/recipes', express.static(path.join(__dirname, 'public', 'recipe
 
 // Initialize external services
 await connectDB();
-await sequelize.sync();
 connectRedis();
 
 app.use('/api/auth', authRoutes);
