@@ -38,6 +38,8 @@ Antes de ejecutar cualquier comando en la terminal, debes verificar el sistema o
    No uses placeholders de diseño o texto. Genera assets, mocks o datos descriptivos completos.
 6. **Pure JS Dependencies (Bcrypt)**:
    Se prohíbe el uso de la librería nativa `bcrypt` (C++). Para evitar crashes de compilación nativa en Docker/Nube, usa **`bcryptjs`** de forma estricta en toda lógica de autenticación o cifrado.
+7. **Aislamiento de Aplicaciones Frontend (Frontend Isolation)**:
+   Si el contexto de tu tarea está delimitado a una aplicación frontend específica (ej: `more-admin`), tienes prohibido realizar modificaciones en el código de otras aplicaciones (ej: `wati`). La única excepción permitida es cuando se deba promover un componente a la biblioteca compartida (`packages/ui-kit`) por necesidad de reutilización limpia.
 
 ---
 
