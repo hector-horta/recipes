@@ -22,6 +22,7 @@ frontend/coverage
 .env.test.local
 .env.production.local
 .vscode
+ssh_pid.txt
 
 
 npm-debug.log*
