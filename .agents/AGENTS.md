@@ -64,6 +64,18 @@ Antes de ejecutar cualquier comando en la terminal, debes verificar el sistema o
 
 ---
 
+## 📏 Límites de Tamaño y Modularidad (Single Responsibility Principle)
+
+Para combatir el antipatrón de archivos gigantescos (*God Files*) y garantizar la mantenibilidad del codebase, se establecen los siguientes límites de líneas de código (LOC) máximos por archivo:
+
+1. **Componentes React (`.tsx`)**: Máximo **200 líneas**. Si un componente supera este límite, debes dividirlo en subcomponentes más pequeños o extraer su lógica a Hooks personalizados.
+2. **Hooks personalizados y Utilidades (`.ts` / `.js`)**: Máximo **150 líneas**. Deben tener una única responsabilidad clara.
+3. **Rutas y Controladores del Backend (`.js`)**: Máximo **150 líneas**. Las rutas deben limitarse a validar la entrada con Zod, delegar la lógica al servicio correspondiente y retornar la respuesta. No agregues lógica de negocio extensa directamente en las rutas.
+4. **Servicios y Modelos del Backend (`.js`)**: Máximo **300 líneas**. Si la lógica de un servicio se vuelve muy compleja, divídelo en sub-servicios especializados.
+5. **Refactorización Obligatoria**: Si vas a modificar un archivo existente y tus cambios provocarán que supere los límites definidos, **tienes la obligación de refactorizar y modularizar el archivo primero** antes de implementar la funcionalidad requerida.
+
+---
+
 ## 📝 Checklist de Verificación para Commits
 
 Antes de dar por terminado tu trabajo en un feature, debes pasar esta checklist:
