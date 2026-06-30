@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wati</title>
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="apple-touch-icon" href="/favicon.png" />
+  <meta name="theme-color" content="#1B4332" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self'; 
+      connect-src 'self' ws: wss: http://backend:5001 https://api.wati.health https://obs.wati.health https://analytics.wati.health https://cloudflareinsights.com; 
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://obs.wati.health https://analytics.wati.health https://static.cloudflareinsights.com; 
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+      font-src 'self' data: https://fonts.gstatic.com;
+      img-src 'self' data: blob: https:;
+      object-src 'none';
+    ">
+
+  <script>
+    (function () {
+      var websiteId = '66223814-b2c2-4abd-b891-efff3f78d794';
+      var scriptUrl = 'https://obs.wati.health/script.js';
+      if (websiteId && !websiteId.startsWith('__UMAMI_') && scriptUrl && !scriptUrl.startsWith('__UMAMI_')) {
+        var script = document.createElement('script');
+        script.async = true;
+        script.src = scriptUrl;
+        script.setAttribute('data-website-id', websiteId);
+        document.head.appendChild(script);
+      }
+    })();
+  </script>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
+</html>

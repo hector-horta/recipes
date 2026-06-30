@@ -1,0 +1,17 @@
+node_modules
+**/node_modules
+.pnpm-store
+**/.pnpm-store
+dist
+**/dist
+build
+**/build
+.git
+.github
+.vscode
+.env
+.env.*
+*.log
+backend/ingest_logs
+postgres-init
+terraform

@@ -3,6 +3,8 @@ export default {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
+    // Scan @wati/ui-kit components for Tailwind classes
+    "./packages/ui-kit/src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
@@ -18,6 +20,15 @@ export default {
           text: 'var(--brand-text)',
           'text-muted': 'var(--brand-text-muted)',
         },
+        // @wati/ui-kit semantic tokens — mapped to Wati brand palette
+        'ui-primary':       'var(--brand-sage)',
+        'ui-primary-hover': 'var(--brand-teal)',
+        'ui-surface':       'var(--brand-cream)',
+        'ui-foreground':    'var(--brand-forest)',
+        'ui-muted':         'var(--brand-text-muted)',
+        'ui-border':        'rgba(130, 160, 130, 0.2)',
+        'ui-accent':        'var(--brand-mint)',
+        'ui-accent-hover':  'var(--brand-teal)',
       },
       backgroundColor: {
         'organic': 'var(--brand-cream)',

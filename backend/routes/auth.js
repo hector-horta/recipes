@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
 import { User } from '../models/User.js';
+import { UserOrganization } from '../models/UserOrganization.js';
 import { Profile } from '../models/Profile.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { config } from '../config/env.js';
@@ -81,7 +82,12 @@ router.post('/register', asyncHandler(async (req, res) => {
   IEmailService.sendVerificationEmail(newUser.email, newUser.display_name, verifyLink)
     .catch(err => ActivityLogger.error('Registration verification email failed', err));
 
-  const token = jwt.sign({ id: newUser.id, email: newUser.email }, JWT_SECRET, { 
+  const token = jwt.sign({ 
+    id: newUser.id, 
+    email: newUser.email,
+    role: newUser.role,
+    organization_id: newUser.organization_id
+  }, JWT_SECRET, { 
     expiresIn: '7d',
     algorithm: 'HS256' 
   });
@@ -136,7 +142,15 @@ router.post('/login', loginLimiter, asyncHandler(async (req, res) => {
     throw error;
   }
 
-  const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { 
+  const userOrg = await UserOrganization.findOne({ where: { user_id: user.id } });
+  const organization_id = userOrg ? userOrg.organization_id : null;
+
+  const token = jwt.sign({ 
+    id: user.id, 
+    email: user.email,
+    role: user.role,
+    organization_id
+  }, JWT_SECRET, { 
     expiresIn: '7d',
     algorithm: 'HS256'
   });
@@ -158,6 +172,8 @@ router.post('/login', loginLimiter, asyncHandler(async (req, res) => {
       id: user.id,
       email: user.email,
       displayName: user.display_name,
+      role: user.role,
+      organization_id,
       is_verified: user.is_verified,
       ...(userWithProfile.profile ? userWithProfile.profile.get({ plain: true }) : {})
     }
@@ -314,7 +330,7 @@ router.post('/logout', (req, res) => {
 // GET /api/auth/me
 router.get('/me', authenticateToken, asyncHandler(async (req, res) => {
   const user = await User.findByPk(req.user.id, {
-    attributes: ['id', 'email', 'display_name', 'is_active', 'is_verified', 'createdAt', 'updatedAt'],
+    attributes: ['id', 'email', 'display_name', 'role', 'is_active', 'is_verified', 'createdAt', 'updatedAt'],
     include: [{ model: Profile, as: 'profile' }]
   });
 
@@ -324,10 +340,15 @@ router.get('/me', authenticateToken, asyncHandler(async (req, res) => {
     throw error;
   }
 
+  const userOrg = await UserOrganization.findOne({ where: { user_id: user.id } });
+  const organization_id = userOrg ? userOrg.organization_id : null;
+
   res.json({
     id: user.id,
     email: user.email,
     displayName: user.display_name,
+    role: user.role,
+    organization_id,
     is_verified: user.is_verified,
     ...(user.profile ? user.profile.get({ plain: true }) : {}),
     createdAt: user.createdAt,

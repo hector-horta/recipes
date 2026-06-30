@@ -26,7 +26,36 @@ Al desarrollar en este repositorio:
 4. Si un feature no requiere persistencia, saltar el paso de Database.
 5. Todo texto visible al usuario debe soportar **i18n** (español e inglés).
 6. **Mantener esta guía actualizada**: Al finalizar un feature nuevo o la corrección de un bug, **actualizar este archivo** si el cambio afectó la estructura de carpetas, esquemas de DB, endpoints, patrones, convenciones, componentes reutilizables, tipos TypeScript, eventos de analytics, o cualquier otra sección documentada aquí. Esta guía es la fuente de verdad — si no se actualiza, el próximo agente trabajará con información obsoleta.
-7. **Scratch scripts**: Los scripts en `backend/scratch/` son efímeros, para verificar funcionalidad durante desarrollo sin desplegar todo el sitio. **Deben eliminarse antes de hacer commit.** La carpeta está en `.gitignore` y no debe entrar al repositorio.
+7. **Scratch scripts (OBLIGATORIO - MUST ABSOLUTO)**: Cualquier script desechable o archivo temporal creado para realizar pruebas manuales o de integración **DEBE** ubicarse exclusivamente dentro de la carpeta `backend/scratch/`. Este comportamiento es un **MUST** absoluto. Está estrictamente prohibido dejar estos archivos en la raíz del proyecto o en otras carpetas públicas/código fuente. Además, estos scripts son efímeros y **deben eliminarse obligatoriamente** antes de realizar commits. La carpeta `backend/scratch/` está configurada en `.gitignore` para evitar fugas al repositorio.
+
+---
+
+## 🚀 Inicio Rápido (Quick Start)
+
+Para levantar el entorno de desarrollo por primera vez:
+
+1. **Clonar y Configurar**:
+   ```bash
+   git clone [repo]
+   cp .env.example .env  # Configura tus llaves de API (NVIDIA, GROQ, etc.)
+   ```
+
+2. **Levantar Infraestructura**:
+   ```bash
+   docker compose up -d --build
+   ```
+
+3. **Preparar Base de Datos**:
+   ```bash
+   docker compose exec backend npx sequelize-cli db:migrate
+   docker compose exec backend npx sequelize-cli db:seed:all
+   ```
+
+4. **Verificar**:
+   - Wati UI: `http://localhost:5173`
+   - More Admin: `http://localhost:5174`
+   - API Status: `http://localhost:5001/api/status`
+   - Logs: `http://localhost:8080` (Dozzle)
 
 ---
 
@@ -46,7 +75,14 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 6. **Resiliencia Frontend**: Usa reintentos (`retry`) en hooks de búsqueda y gestión de estados de error amigables para el usuario.
 7. **Auth Rule**: Wati usa **Hybrid Auth**. Los usuarios se autentican con contraseña, pero las funcionalidades core (como agregar a favoritos) están **soft-gated** y requieren validación de correo vía un link JWT.
 8. **External Integrations Rule**: Todos los servicios de terceros (como Resend) DEBEN estar abstraídos detrás de una **IEmailService Facade**. La lógica de negocio nunca debe interactuar directamente con SDKs externos.
-
+9. **Multi-tenancy Isolation**: Toda nueva funcionalidad que maneje datos de usuario o contenido (recetas, planes, etc.) DEBE filtrar por `organization_id`. El `organization_id` se extrae automáticamente del JWT y está disponible en `req.user.organizationId` (o `req.user.organization_id`). Para migrar datos antiguos, consultar la [Guía de Migración](file:///docs/MigrationGuideToMultitenant.md).
+10. **Frontend Independence**: Cada frontend (`wati`, `more-admin`) corre en su propio contenedor Docker y es independiente. Comparten lógica a través de `packages/` pero mantienen sus propios ciclos de despliegue y configuraciones de i18n.
+11. **Admin Content Management**: El panel `more-admin` es el responsable de gestionar el catálogo global (`organization_id = NULL`). Toda nueva funcionalidad de gestión debe incluir soporte para **bulk actions** (acciones en masa) y feedback visual inmediato vía toasts.
+12. **Content Resilience (Images)**: Para mitigar errores de generación por AI, se debe proveer un mecanismo de "Refresh/Regenerate Image" que permita al admin forzar una nueva generación especificando el problema (ej: "texto en la imagen").
+13. **Tag Consistency**: Los tags son globales. Al crear/editar contenido, se deben usar los `keys` del catálogo de tags para asegurar la integridad de las traducciones en todas las apps. **Prohibido hardcodear strings de tags en las recetas.**
+14. **XSS Sanitization**: Todo contenido HTML proveniente de fuentes externas (AI, OCR, Scrapers) DEBE ser sanitizado en el frontend usando `DOMPurify` con una whitelist estricta antes de renderizarse.
+15. **Telemetry First**: Ninguna feature está completa sin su correspondiente evento de analytics (Umami) y logs estructurados (ActivityLogger).
+16. **Pure JS Dependencies (Bcrypt)**: Para evitar fallos y crashes de compilación nativa en entornos de contenedores Docker o despliegues en la nube, se prohíbe el uso de `bcrypt` (librería nativa de C++). En su lugar, se debe utilizar **`bcryptjs`** (implementación pura de JavaScript). Toda nueva funcionalidad de autenticación o encriptación de contraseñas debe importar y utilizar `bcryptjs` de forma estricta.
 ---
 
 ## 📁 Estructura Completa del Proyecto
@@ -69,15 +105,19 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 │   │   ├── redis.js              # Redis client + connectRedis()
 │   │   ├── cors.js               # CORS config (localhost, local network, credentials)
 │   │   ├── medical.js            # INTOLERANCE_CATALOG + MEDICAL_TRIGGERS (fuente de verdad unificada)
+│   │   ├── bullmq.js             # BullMQ/IORedis connection factory + queue/job type constants
 │   │   └── vault.js              # HCP Vault OAuth2 client
 │   ├── models/
 │   │   ├── User.js
 │   │   ├── Profile.js            # Asociaciones: User.hasOne(Profile), Profile.belongsTo(User)
 │   │   ├── FavoriteRecipe.js     # Asociaciones: User.hasMany(FavoriteRecipe)
-│   │   ├── Recipe.js
+│   │   ├── Organization.js       # Entidad de inquilino (tenant)
+│   │   ├── UserOrganization.js   # Tabla intermedia de membresía y roles
+│   │   ├── Recipe.js             # Filtrado por organization_id
 │   │   ├── SearchLog.js
 │   │   ├── ActivityLog.js
-│   │   └── validators.js         # Schemas Zod (recipeQuerySchema)
+│   │   ├── NutritionalPlan.js    # Plan alimentario asignado a pacientes
+│   │   └── validators.js         # Schemas Zod (recipeQuerySchema, adminRecipeSchema, addOrgUserSchema, bulkOrgUsersSchema, organizationUpdateSchema, registerSchema, loginSchema, etc.)
 │   ├── middleware/
 │   │   ├── auth.js               # authenticateToken, optionalAuthenticateToken
 │   │   ├── validate.js           # validateQuery(zodSchema) → req.validatedQuery
@@ -88,94 +128,88 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 │   │   ├── recipes.js            # /api/recipes/*
 │   │   ├── ingest.js             # /api/ingest/* (Telegram Bot ingestion)
 │   │   ├── suggestions.js        # /api/suggestions/*
-│   │   └── admin.js              # /admin/*
+│   │   ├── admin.js              # /api/admin/* (Super Admin panel)
+│   │   ├── nutri.js              # /api/nutri/* (Health Professional BFF)
+│   │   ├── plans.js              # /api/plans/* (Patient Plans)
+│   │   ├── shop.js               # /api/shop/* (Shopping lists)
+│   │   └── jobs.js               # /api/jobs/* (AI job status polling)
 │   ├── services/
 │   │   ├── ActivityLogger.js     # Telemetría + alertas Telegram (fire-and-forget)
 │   │   ├── RecipeProvider.js     # Búsqueda en DB + caché Redis + filtrado por intolerancias
-│   │   ├── NvidiaNIM.js          # OCR (Llama 4), estructurar recetas, generar imágenes (SDXL)
+│   │   ├── NvidiaNIM.js          # OCR (Llama 4), estructurar recetas, traducción AI, generar imágenes
+│   │   ├── GeminiService.js      # Generación de imágenes con Google Gemini (Imagen 4.0)
 │   │   ├── GroqWhisper.js        # Transcripción de audio
-│   │   └── IEmailService.js      # Facade de correos (Dev/Resend)
+│   │   ├── IEmailService.js      # Facade de correos (Dev/Resend)
+│   │   ├── AdminStatsService.js   # Servicio para cálculo de estadísticas de administración
+│   │   ├── OrganizationService.js # Servicio para gestión de inquilinos y membresías de usuarios
+│   │   ├── AdminRecipeService.js  # Servicio para CRUD y gestión de recetas globales
+│   │   ├── AdminTagService.js     # Servicio para CRUD y gestión de etiquetas globales
+│   │   ├── NutriRecipeService.js  # Gestión de recetas específicas de clínica
+│   │   ├── IngredientConsolidatorService.js # Consolidación de ingredientes para listas de compras
+│   │   ├── PDFGeneratorService.js # Generación de PDFs (planes nutricionales, recetas)
+│   │   └── DietPlanService.js     # Gestión de planes nutricionales y asignaciones
+│   ├── queues/
+│   │   └── aiQueue.js            # BullMQ Queue singleton (Express enqueues AI jobs here)
+│   ├── worker.js                 # ⚡ Standalone AI worker process (node worker.js)
 │   ├── utils/
 │   │   ├── tagTranslations.js    # TAG_TRANSLATIONS map, normalizeTag(), normalizeTags()
 │   │   ├── ingestSanitizer.js    # sanitizeStructuredRecipe() — mapea output LLM a ENUMs/tipos DB
+│   │   ├── asyncHandler.js       # Wrapper para rutas async en Express 5
+│   │   ├── retry.js              # withRetry() — reintentos con exponential backoff para APIs externas
+│   │   ├── urlValidator.js       # validateExternalUrl() — SSRF protection para URLs externas
 │   │   ├── regenerateAllImages.js
-│   │   └── regenerateSpecificImages.js
+│   │   ├── regenerateSpecificImages.js
+│   │   └── migrateToTenant.js    # Script de migración multi-tenant (ver docs/MigrationGuideToMultitenant.md)
 │   ├── migrations/               # Sequelize CLI migrations (.cjs)
 │   ├── seeders/
-│   ├── tests/
+│   ├── tests/                    # Tests unitarios e integración del backend (*.test.js)
+│   │   ├── AdminStatsService.test.js
+│   │   ├── OrganizationService.test.js
+│   │   ├── NutriRecipeService.test.js
+│   │   └── DietPlanService.test.js
 │   ├── scratch/                  # ⚠️ Scripts temporales de debug — NO COMMITEAR (en .gitignore)
 │   ├── public/recipes/           # Imágenes estáticas de recetas (servido por Express)
 │   └── ingest_logs/              # Recovery logs de ingesta (JSON)
 │
 ├── frontend/
-│   ├── index.html                # SPA entry (Umami script tag aquí)
-│   ├── package.json              # type: "module" (ESM)
-│   ├── vite.config.ts            # Proxy: /api → backend:5001, /public → backend:5001
-│   ├── vitest.config.ts          # Test: environment: 'happy-dom', setup: src/test/setup.ts
-│   ├── tailwind.config.js        # Colores brand-* mapeados a CSS variables
-│   ├── postcss.config.js
-│   ├── pre-start.js              # Validación pre-build
-│   └── src/
-│       ├── main.tsx              # ReactDOM root: Providers → AuthProvider → App
-│       ├── App.tsx               # Router manual: RecipePage ↔ RecipeDetailPage + Modals
-│       ├── AuthContext.tsx        # AuthProvider, useAuth(), UserProfile interface
-│       ├── config.ts              # INFRAESTRUCTURA DE CONFIGURACIÓN CENTRALIZADA (API_URL, etc)
-│       ├── lib/
-│       │   └── api.ts            # Centralized API client (fetch wrapper)
-│       ├── i18n.ts               # i18next config (es/en, localStorage: wati_language)
-│       ├── index.css             # CSS variables + Tailwind utilities (glassmorphism, etc.)
-│       ├── api/
-│       │   ├── PrivacyProxy.ts   # SecureAPI.fetchSafeRecipes(), InputSanitizer.clean()
-│       │   ├── MedicalRegistry.ts# MedicalRegistry.syncTriggers(), .getLatestTriggers()
-│       │   └── SecurityScrubber.ts# SecurityScrubber.initialize(), .analyze(recipe, profile)
-│       ├── security/
-│       │   └── SecureVault.ts    # AES-256 encrypt/decrypt perfil médico en localStorage
-│       ├── types/
-│       │   └── recipe.ts         # Recipe, Ingredient, Tag interfaces
-│       ├── db/
-│       │   └── db.ts             # Dexie (IndexedDB): WatiDB — tablas: cachedRecipes, searchCache, medicalMetadata, cachedImages
-│       ├── lib/
-│       │   └── queryClient.ts    # React Query client (staleTime: 5min, gcTime: 30min)
-│       ├── hooks/
-│       │   ├── useWatiSearch.ts  # Búsqueda principal con debounce y React Query
-│       │   ├── useFavorites.ts   # CRUD favoritos con optimistic updates
-│       │   ├── useMergedDisplayRecipes.ts # Merge favoritos + recetas con paginación
-│       │   ├── useSearchFeedback.ts      # Sugerir al chef (POST /api/suggestions)
-│       │   ├── useDebounce.ts    # Debounce genérico
-│       │   └── useCachedImage.ts # Lazy load imágenes desde IndexedDB cache
-│       ├── components/
-│       │   ├── Providers.tsx     # QueryClientProvider wrapper
-│       │   ├── LoginModal.tsx    # Modal de login/register
-│       │   ├── OnboardingModal.tsx# Configuración médica post-registro
-│       │   ├── RecipeCard.tsx    # Tarjeta de receta individual
-│       │   ├── LanguageSelector.tsx
-│       │   ├── WatiLogo.tsx      # SVG Logo
-│       │   ├── WatiFavicon.tsx   # SVG Favicon
-│       │   ├── auth/
-│       │   │   └── AuthGuard.tsx # HOC: renderiza children solo si user autenticado
-│       │   ├── recipe/
-│       │   │   ├── TopNav.tsx    # Navbar superior (hamburguesa mobile)
-│       │   │   ├── PageHeader.tsx# Header con búsqueda, refresh, indicadores
-│       │   │   ├── PageLayout.tsx# Layout wrapper
-│       │   │   ├── RecipeGrid.tsx# Grid de RecipeCards con skeletons
-│       │   │   ├── SearchFeedback.tsx # UI cuando búsqueda no tiene resultados
-│       │   │   └── Pagination.tsx# Paginación para favoritos
-│       │   └── ui/
-│       │       ├── Badge.tsx     # Componente Badge reutilizable
-│       │       ├── Button.tsx    # Componente Button reutilizable
-│       │       └── Input.tsx     # Componente Input reutilizable
-│       ├── pages/
-│       │   ├── RecipePage.tsx    # Vista principal: grid de recetas
-│       │   ├── RecipeDetailPage.tsx # Vista detalle de receta
-│       │   ├── LoginPage.tsx     # Página de login (alternativa al modal)
-│       │   └── OnboardingPage.tsx# Página de onboarding (alternativa al modal)
-│       ├── utils/
-│       │   └── imageCache.ts    # cacheImage(), getCachedImage(), cacheRecipeImages()
-│       ├── locales/
-│       │   ├── en.json          # Traducciones inglés
-│       │   └── es.json          # Traducciones español
-│       └── test/
-│           └── setup.ts         # Import @testing-library/jest-dom
+│   ├── package.json              # Entorno de tests + dependencias compartidas
+│   ├── tsconfig.json             # Configuración TS (incluye tests)
+│   ├── vitest.config.ts          # Runner de tests centralizado
+│   ├── pnpm-workspace.yaml       # Definición de sub-workspace
+│   ├── apps/
+│   │   ├── wati/                 # Aplicación principal (B2C)
+│   │   │   ├── src/              # Lógica, páginas y componentes de Wati
+│   │   │   │   ├── AuthContext.tsx
+│   │   │   │   ├── ToastContext.tsx
+│   │   │   │   ├── App.tsx
+│   │   │   │   ├── main.tsx
+│   │   │   │   ├── api/          # PrivacyProxy, MedicalRegistry, SecurityScrubber
+│   │   │   │   ├── hooks/        # useWatiSearch, useFavorites, etc.
+│   │   │   │   ├── components/   # RecipeCard, LoginModal, etc.
+│   │   │   │   └── test/
+│   │   │   │       └── setup.ts  # Setup global de Vitest
+│   │   │   └── package.json
+│   │   └── more-admin/           # Panel de administración (B2B/Gestión)
+│   │       ├── src/
+│   │       │   ├── pages/        # GlobalRecipes.tsx (Gestión de contenido)
+│   │       │   ├── locales/      # i18n para admin
+│   │       │   └── components/
+│   │       ├── package.json
+│   │       └── Dockerfile        # Container independiente
+│   ├── packages/
+│   │   ├── ui-kit/               # Biblioteca de UI (@wati/ui-kit)
+│   │   │   ├── src/
+│   │   │   │   ├── Badge.tsx
+│   │   │   │   ├── Button.tsx
+│   │   │   │   └── Input.tsx
+│   │   │   └── package.json
+│   │   ├── api-client/           # Cliente de API compartido (@wati/api-client)
+│   │   └── types/                # Tipos compartidos (@wati/types)
+│   └── tests/                    # Estructura de tests espejada
+│       ├── apps/
+│       │   └── wati/             # Tests de la aplicación Wati
+│       └── packages/
+│           └── ui-kit/           # Tests de la biblioteca UI
 │
 ├── telegram-bot/                 # Bot de ingesta de recetas
 │   ├── src/
@@ -206,10 +240,27 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 | `display_name` | STRING | NOT NULL |
 | `is_active` | BOOLEAN | NOT NULL, default: true |
 | `is_verified` | BOOLEAN | NOT NULL, default: false |
+| `role` | ENUM | 'user', 'admin', 'super_admin' |
 | `accepted_terms_at` | DATE | NOT NULL |
 | `data_exported_at` | DATE | nullable |
 | `created_at` | DATE | auto |
 | `updated_at` | DATE | auto |
+
+### `organizations`
+| Column | Type | Constraints |
+|---|---|---|
+| `id` | UUID | PK |
+| `name` | STRING | NOT NULL, UNIQUE |
+| `slug` | STRING | NOT NULL, UNIQUE |
+| `is_active` | BOOLEAN | default: true |
+| `settings` | JSONB | default: {} |
+
+### `user_organizations`
+| Column | Type | Constraints |
+|---|---|---|
+| `user_id` | UUID | PK, FK → users(id) |
+| `organization_id` | UUID | PK, FK → organizations(id) |
+| `role` | STRING | default: 'user' |
 
 ### `profiles`
 | Column | Type | Constraints |
@@ -249,6 +300,7 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 | `source_reference` | STRING | nullable |
 | `status` | ENUM('draft','published','archived') | default: 'draft' |
 | `created_by` | UUID | nullable, FK → users(id) |
+| `organization_id` | UUID | nullable, FK → organizations(id) |
 
 **Formato de `ingredients` (JSONB array)**:
 ```json
@@ -299,7 +351,7 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 
 > **Nota**: `timestamps: false` — no tiene created_at/updated_at.
 
-### `tags` (Diccionario de traducciones)
+### `tags` (Diccionario de traducciones — Activo Global)
 | Column | Type | Constraints |
 |---|---|---|
 | `id` | UUID | PK |
@@ -310,6 +362,7 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 | `updated_at` | DATE | auto |
 
 > **Nota**: Se utiliza como diccionario centralizado para `normalizeTags()`. Las recetas aún guardan tags desnormalizados en JSONB por performance de lectura.
+> **⚠️ Tags son un activo GLOBAL** — no tienen `organization_id`. Son compartidos por todas las apps del ecosistema (Wati, Nutri, etc.).
 
 ### `activity_logs`
 | Column | Type | Constraints |
@@ -337,8 +390,13 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 | `/api/auth` | `routes/auth.js` | Mixto |
 | `/api/favorites` | `routes/favorites.js` | authenticateToken |
 | `/api/ingest` | `routes/ingest.js` | Mixto |
-| `/admin` | `routes/admin.js` | Mixto |
+| `/api/admin` | `routes/admin.js` | optionalAuthenticateToken + super_admin |
 | `/api/suggestions` | `routes/suggestions.js` | Público |
+| `/api/recipes` | `routes/recipes.js` | optionalAuthenticateToken |
+| `/api/nutri` | `routes/nutri.js` | authenticateToken |
+| `/api/plans` | `routes/plans.js` | authenticateToken |
+| `/api/shop` | `routes/shop.js` | authenticateToken |
+| `/api/jobs` | `routes/jobs.js` | optionalAuthenticateToken + admin/super_admin |
 
 ### Endpoints Inline en `server.js`
 
@@ -373,6 +431,42 @@ Para combatir la deuda técnica y mantener el codebase profesional:
 |---|---|---|---|---|
 | POST | `/` | Público | `{ term, userId? }` | `{ message, searchLog }` |
 | GET | `/stats` | Público | — | `{ totalFailed, totalSuggested, conversionRate, recentFailedTerms }` |
+
+### Admin Routes (`/admin/*`)
+
+| Method | Path | Auth | Body | Response |
+|---|---|---|---|---|
+| GET | `/stats` | Admin (`super_admin`) | — | Agregados de rendimiento, uptime de NVIDIA y estadísticas de uso |
+| GET | `/organizations` | Admin (`super_admin`) | — | Lista de todas las organizaciones con contador de usuarios |
+| POST | `/organizations` | Admin (`super_admin`) | `{ name, slug }` | Objeto de la organización creada |
+| GET | `/organizations/:id` | Admin (`super_admin`) | — | Detalle de la organización e información de sus usuarios asociados |
+| PUT | `/organizations/:id` | Admin (`super_admin`) | `{ name, slug, is_active }` | Organización actualizada y limpia caché de recetas |
+| DELETE | `/organizations/:id` | Admin (`super_admin`) | — | Alterna el estado activo/suspendido de la organización y limpia caché |
+| POST | `/organizations/:id/users` | Admin (`super_admin`) | `{ displayName, email, role }` | Asocia o crea un nuevo usuario y lo añade a la organización |
+| POST | `/organizations/:id/users/bulk` | Admin (`super_admin`) | `{ users: [{ displayName, email, role }] }` | Procesa masivamente usuarios en transacción y los añade a la org |
+| DELETE | `/organizations/:id/users/:userId` | Admin (`super_admin`) | — | Desasocia un usuario de la organización sin eliminar su cuenta |
+| GET | `/recipes` | Admin (`super_admin`) | — | Recetas globales, con soporte de paginación (`number` y `offset`) |
+| POST | `/recipes` | Admin (`super_admin`) | `{ title_es, title_en, prep_time_minutes, ... }` | `Recipe` creada y limpia caché de RecipeProvider |
+| PUT | `/recipes/:id` | Admin (`super_admin`) | `{ title_es, title_en, prep_time_minutes, ... }` | `Recipe` actualizada y limpia caché de RecipeProvider |
+| DELETE | `/recipes/:id` | Admin (`super_admin`) | — | Receta eliminada y limpia caché de RecipeProvider |
+| GET | `/tags` | Admin (`super_admin`) | — | Lista el diccionario global de etiquetas |
+| POST | `/tags` | Admin (`super_admin`) | `{ key, es, en }` | Tag creado y limpia caché de TagService/RecipeProvider |
+| PUT | `/tags/:id` | Admin (`super_admin`) | `{ key, es, en }` | Tag actualizado y limpia caché de TagService/RecipeProvider |
+| DELETE | `/tags/:id` | Admin (`super_admin`) | — | Tag eliminado y limpia caché de TagService/RecipeProvider |
+| POST | `/translate` | Admin (`super_admin`, `admin`) | `{ text, from: 'es'\|'en', to: 'es'\|'en' }` | Traduce texto entre ES↔EN usando NVIDIA NIM (Llama 4). Respuesta síncrona |
+
+### Jobs Routes (`/api/jobs/*`)
+
+| Method | Path | Auth | Body | Response |
+|---|---|---|---|---|
+| GET | `/:id` | Admin (`admin`, `super_admin`) | — | Estado del job AI: `{ id, name, status, progress, result, failedReason }` |
+| GET | `/` | Admin (`super_admin`) | — | Dashboard de jobs recientes: waiting, active, completed, failed |
+
+### Ingestion Routes (`/api/ingest/*`)
+
+| Method | Path | Auth | Body | Response |
+|---|---|---|---|---|
+| POST | `/:slugOrId/:action` | Mixto | `{ issue? }` | Depende de la acción (por ejemplo, para `refresh-image` retorna la receta con la nueva imagen; acepta tanto slug como id UUID en la URL) |
 
 ---
 
@@ -429,11 +523,41 @@ router.get('/', validateQuery(miSchema), (req, res) => {
 });
 ```
 
+#### Aislamiento Multi-inquilino (Multi-tenancy)
+Toda consulta a datos de organización debe filtrar por `organization_id`. Sin embargo, las **recetas de Wati son globales** (`organization_id = NULL`) y deben estar siempre disponibles.
+
+```javascript
+// Para datos estrictamente privados de una org (ej: planes de Nutri)
+router.get('/', authenticateToken, async (req, res) => {
+  const items = await MyModel.findAll({
+    where: { organization_id: req.user.organization_id }
+  });
+  res.json(items);
+});
+
+// Para recetas: incluir siempre las globales de Wati (NULL) + las de la org
+import { Op } from 'sequelize';
+const orgId = req.user?.organization_id ?? null;
+const where = {
+  organization_id: orgId
+    ? { [Op.or]: [orgId, null] }  // Org propia + globales Wati
+    : null                         // Solo globales (usuario Wati sin org)
+};
+```
+
+> **Regla**: Nunca filtrar recetas exclusivamente por `organization_id` sin incluir `NULL`. Eso ocultaría el catálogo global de Wati a usuarios de otras plataformas.
+
 #### Autenticación y Sesión
 - **HttpOnly Cookies**: Wati usa JWT persistidos en cookies `HttpOnly` (Lax, Secure en producción). Esto protege contra robo de sesión vía XSS.
 - **`authenticateToken`**: Valida el JWT de la cookie. Rechaza con 401/403. Setea `req.user`.
 - **`optionalAuthenticateToken`**: Intenta validar si existe cookie. Si no, continúa sin `req.user`.
 - **`requireAdminKey`**: Middleware para rutas críticas (ingesta, admin). Verifica el header `X-Admin-Key` contra `config.ADMIN_API_KEY`.
+- **Separación de Secretos JWT**: Wati utiliza tres secretos criptográficos independientes para firmar y verificar tokens:
+  1. `JWT_SECRET`: Utilizado para los tokens de sesión del usuario (autenticación estándar).
+  2. `JWT_VERIFY_SECRET`: Utilizado para los links de verificación de correo electrónico.
+  3. `JWT_RESET_SECRET`: Utilizado para los links de restablecimiento de contraseña.
+  - *En desarrollo/pruebas*: Si no se configuran `JWT_VERIFY_SECRET` y `JWT_RESET_SECRET`, estas variables heredan el valor de `JWT_SECRET` por simplicidad.
+  - *En producción (`NODE_ENV=production`)*: Los tres secretos son obligatorios y deben ser estrictamente diferentes entre sí. Si alguno falta o coincide con otro, la aplicación lanzará un error de validación de Zod y no iniciará.
 
 #### Modelo Sequelize (Nuevo)
 ```javascript
@@ -480,6 +604,55 @@ if (redisClient.isReady) {
 }
 ```
 > Redis es opcional — siempre verificar `redisClient.isReady` antes de usarlo. Si Redis no está disponible, la app debe funcionar sin caché.
+
+#### Cola de Trabajos AI (BullMQ)
+Las operaciones AI pesadas (generación de imágenes, ingest OCR) se desacoplan del event loop de Express mediante una cola BullMQ procesada por un worker standalone (`node worker.js`).
+
+**Arquitectura:**
+```
+┌──────────────────────┐         ┌─────────────────┐
+│   Express Server     │         │   AI Worker      │
+│   (server.js)        │ ──────► │   (worker.js)    │
+│                      │  Redis  │                  │
+│  CRUD, Auth, etc.    │  Queue  │  Gemini (imgs)   │
+│  /api/jobs (status)  │ ◄────── │  NVIDIA NIM      │
+└──────────────────────┘         └─────────────────┘
+```
+
+**Encolar un job desde una ruta:**
+```javascript
+import { getAiQueue } from '../queues/aiQueue.js';
+import { JOB_TYPES } from '../config/bullmq.js';
+
+const queue = getAiQueue();
+const job = await queue.add(JOB_TYPES.GENERATE_IMAGE, {
+  recipeId: recipe.id,
+  title: recipe.title_en,
+  feedback: 'Make it warmer tones',
+  details: recipe.toJSON(),
+});
+
+res.status(202).json({ jobId: job.id });
+```
+
+**Consultar estado desde el frontend:**
+```typescript
+const status = await api.get(`/jobs/${jobId}`);
+// { id, name, status: 'completed', progress: 100, result: { imageUrl: '...' } }
+```
+
+**Tipos de job disponibles** (definidos en `config/bullmq.js`):
+| Constante | Valor | Descripción |
+|---|---|---|
+| `JOB_TYPES.GENERATE_IMAGE` | `generate-image` | Genera imagen de receta con Gemini Imagen 4.0 |
+| `JOB_TYPES.INGEST_IMAGE` | `ingest-image` | OCR + estructura desde una imagen |
+| `JOB_TYPES.INGEST_IMAGES` | `ingest-images` | OCR + estructura desde dos imágenes |
+| `JOB_TYPES.INGEST_TEXT` | `ingest-text` | Estructura receta desde texto libre |
+| `JOB_TYPES.INGEST_AUDIO` | `ingest-audio` | Transcribe audio y estructura receta |
+
+> **Nota**: La traducción (`POST /api/admin/translate`) se mantiene **síncrona** porque es una operación rápida (~1-2s) y el usuario necesita el resultado inmediato en el campo de edición. Solo las operaciones pesadas (>5s) deben encolarse.
+
+> **Regla**: Si agregas un nuevo tipo de job AI, debes: (1) agregar la constante en `config/bullmq.js`, (2) agregar el handler en `worker.js`, y (3) documentar el tipo aquí.
 
 #### Telemetría y Logging
 ```javascript
@@ -622,6 +795,8 @@ interface UserProfile {
   daily_calories: number;
   severities: Record<string, 'mild' | 'moderate' | 'severe' | 'anaphylactic'>;
   conditions: string[];
+  organizationId: string | null; // null para usuarios Wati (sin organización asignada)
+  role: 'user' | 'admin' | 'super_admin'; // super_admin: acceso cross-organización
   onboardingComplete: boolean;
   language?: string;
   savedRecipes?: any[];
@@ -630,6 +805,46 @@ interface UserProfile {
 }
 ```
 > Acceso via `const { user, login, register, logout, updateUserProfile } = useAuth();`
+>
+> **Nota sobre roles**: Un usuario puede ser `user` en Wati y `admin` en otra app del ecosistema simultáneamente. El `role` en `UserProfile` refleja el rol global del usuario. `super_admin` es reservado para el panel de administración del ecosistema.
+
+#### Administración de Contenido (more-admin)
+
+El panel de administración utiliza patrones avanzados para la gestión eficiente de grandes catálogos:
+
+1. **Mutaciones en Bloque (Bulk Operations)**:
+Para optimizar el tráfico, las acciones sobre múltiples elementos deben usar `Promise.all` con mutaciones individuales o endpoints de bulk si existen en el backend.
+```typescript
+const bulkDeleteMutation = useMutation({
+  mutationFn: (ids: string[]) => 
+    Promise.all(ids.map(id => api.delete(`/admin/recipes/${id}`))),
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['global-recipes'] });
+    setSelectedIds([]);
+    toast.success(t('recipes.bulk_delete_success'));
+  }
+});
+```
+
+2. **Regeneración de Imágenes AI**:
+Permite corregir fallos en la generación original mediante un feedback loop que envía el problema detectado al backend:
+```typescript
+const refreshImageMutation = useMutation({
+  mutationFn: ({ id, issue }: { id: string; issue: string }) => 
+    api.post(`/ingest/${id}/refresh-image`, { issue }),
+  onSuccess: (data) => {
+    queryClient.invalidateQueries({ queryKey: ['global-recipes'] });
+    setFormData(prev => ({ ...prev, imageUrl: data.recipe.image_url }));
+    toast.success(t('recipes.regenerate_success'));
+  }
+});
+```
+
+3. **Gestión de Tags Globales**:
+Los tags se seleccionan por `key` y se filtran dinámicamente. La UI debe mostrar la traducción según el idioma activo (`t('tags.items.${key}')`) pero persistir el `key` único.
+
+4. **Filtros Persistentes**:
+El modo de vista (`grid` vs `table`) y filtros de búsqueda deben persistirse en `localStorage` o `URLSearchParams` para mantener el contexto tras recargas.
 
 #### 🛡️ SPA Auth Hardening (Password Managers)
 Para evitar crashes en extensiones como **Bitwarden** o **LastPass** durante la navegación rápida post-auth, sigue este patrón en los formularios de login/register:
@@ -708,13 +923,18 @@ interface Tag { es: string; en: string; }
 #### Internacionalización (i18n)
 - Archivos: `locales/en.json`, `locales/es.json`
 - Agregar toda cadena visible al usuario en **ambos** archivos.
-- Usar en componentes:
+- **Patrón para Recetas (Dynamic Titles)**:
+  En el admin y visualización de contenido, se debe usar el idioma activo para elegir qué campo de la base de datos mostrar:
+  ```typescript
+  const title = activeLang === 'es' ? recipe.title_es : (recipe.title_en || recipe.title_es);
+  ```
+- **Traducciones UI**: Usar en componentes:
 ```typescript
 import { useTranslation } from 'react-i18next';
 const { t } = useTranslation();
-// Uso: t('seccion.clave')
+// Uso: t('recipes.ui.minutes_suffix')
 ```
-- El idioma se persiste en `localStorage` bajo la clave `wati_language`.
+- El idioma se persiste en `localStorage` bajo la clave `wati_language` (Wati) o se gestiona vía estado en `more-admin`.
 
 #### Componentes Reutilizables (ui/)
 | Componente | Props principales | Uso |
@@ -726,8 +946,14 @@ const { t } = useTranslation();
 
 #### Estilos y Design System
 
-**CSS Variables** (definidas en `index.css`):
+El ecosistema de aplicaciones utiliza una base compartida de componentes pero con sistemas de diseño diferenciados por aplicación para reflejar sus identidades únicas.
+
+##### Wati (Harmony Palette)
+Diseñado para una experiencia de usuario centrada en la salud y la nutrición, utilizando tonos orgánicos y relajantes.
+
+**CSS Variables** (`wati/src/index.css`):
 ```css
+/* Harmony Palette */
 --brand-sage: #82A082;
 --brand-forest: #1B4332;
 --brand-mint: #74C69D;
@@ -738,25 +964,92 @@ const { t } = useTranslation();
 --brand-text: #1B2621;
 --brand-text-muted: #57635E;
 
+--surface-light: #FFFFFF;
+--surface-organic: #F9FBF9;
+--surface-dark: #1A2421;
+
 --success: #2D6A4F;
 --warning: #FFB703;
 --danger: #D62828;
-
---glass-bg: rgba(26, 36, 33, 0.85);
---glass-border: rgba(255, 255, 255, 0.1);
 ```
 
-**Tailwind Custom Tokens** (`tailwind.config.js`):
-Todas las brand colors están como `brand-sage`, `brand-forest`, `brand-mint`, `brand-teal`, `brand-cream`, `brand-peach`, `brand-celeste`, `brand-text`, `brand-text-muted`.
+**Tailwind Tokens**: `brand-sage`, `brand-forest`, `brand-mint`, `brand-teal`, `brand-cream`, `brand-peach`, `brand-celeste`.
+
+---
+
+##### MORE (Industrial Precision)
+Diseñado para el entorno de administración técnica, con un enfoque en la precisión, densidad de datos y control.
+
+**CSS Variables** (`more-admin/src/index.css`):
+```css
+/* Industrial Precision Palette - STITCH SYNC */
+--brand-primary: #00FFC2;
+--brand-secondary: #1C2024;
+--brand-tertiary: #101417;
+--brand-neutral: #83958C;
+
+--brand-text: #E0E2E8;
+--brand-text-muted: #B9CBC1;
+
+--surface-light: #272A2E;
+--surface-organic: #1C2024;
+--surface-dark: #101417;
+--surface-lowest: #0B0F12;
+
+--success: #00FFC2;
+--warning: #FFB703;
+--danger: #F87171;
+
+--outline: #3A4A43;
+--outline-strong: #83958C;
+```
+
+**Tailwind Tokens**: `brand-primary`, `brand-secondary`, `brand-tertiary`, `brand-neutral`, `brand-text`, `brand-text-muted`.
+
+---
+
+#### Utilidades Compartidas
 
 **Utility Classes Custom**:
-- `.glass-organic` — glassmorphism con blur
-- `.bg-organic-gradient` — gradiente sage → teal
+- `.glass-organic` — glassmorphism con blur (usa variables de cada app)
+- `.bg-organic-gradient` — gradiente principal de la app
 - `.hover-lift` — hover: lift + shadow
 - `.animate-fade-in` — fadeIn keyframe
-- `.text-glow-sage` — text-shadow verde suave
+- `.text-glow-sage` — text-shadow suave (enfocado en Wati)
+- `.text-glow-mint` — text-shadow neon (enfocado en MORE)
 
 **Iconos**: `lucide-react` — importar iconos individuales: `import { Search, Heart } from 'lucide-react';`
+
+**Animaciones (Framer Motion)**:
+Wati y More-Admin utilizan `framer-motion` para una experiencia premium y fluida:
+- **Staggered Children**: Usar variantes para animar listas de elementos de forma secuencial.
+- **AnimatePresence**: Obligatorio para transiciones de salida (modales, elementos eliminados de listas).
+- **Layout Animations**: Usar el prop `layout` en elementos que cambian de tamaño o posición para transiciones suaves y automáticas.
+
+```tsx
+const containerVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: { staggerChildren: 0.05 }
+  }
+};
+
+<motion.div variants={containerVariants} initial="hidden" animate="visible">
+  <AnimatePresence mode="wait">
+    {isOpen && (
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+      >
+        {content}
+      </motion.div>
+    )}
+  </AnimatePresence>
+</motion.div>
+```
 
 ---
 
@@ -808,6 +1101,23 @@ logger.error('Error al cargar datos', error, { originalQuery: q });
 | Evento (action) | Cuándo | Metadata |
 |---|---|---|
 | `SEARCH` | Búsqueda con intolerancias activas | `{ query, filteredByIntolerances, resultsAfterFilter }` |
+
+### Monitoreo de Logs (Dozzle)
+El ecosistema incluye **Dozzle** para visualizar logs de contenedores en tiempo real sin usar la terminal.
+- **Acceso**: `http://localhost:8080`
+- **Uso**: Útil para debugear la comunicación entre `more-admin`, `backend` y el `telegram-bot` simultáneamente.
+- **Seguridad**: Requiere autenticación definida en `users.yml`.
+
+### Analytics (Umami)
+Se utiliza Umami para el trackeo de eventos de usuario sin cookies invasivas.
+- **Acceso Panel**: `http://localhost:3000` (o `https://analytics.localhost` si está configurado el proxy).
+- **Credenciales Default**: `admin` / `umami`.
+- **Setup**: El `WEBSITE_ID` debe estar configurado en el `.env` y en el `index.html` del frontend.
+- **Base de Datos**: Umami utiliza su propia base de datos `umami_db` dentro del mismo contenedor de PostgreSQL.
+
+### Infraestructura Local (Resumen)
+- **Redis**: Se utiliza como caché de segundo nivel para recetas procesadas y resultados de búsqueda. Si Redis falla, el sistema degrada automáticamente a consultas directas a la base de datos (resiliencia pasiva).
+- **Dozzle**: Permite monitoreo multi-contenedor. Especialmente útil para depurar el flujo: `Telegram Bot -> Backend -> More Admin`.
 
 ---
 
@@ -866,30 +1176,61 @@ describe('MiComponente', () => {
 
 ---
 
-## 🐳 Comandos de Desarrollo
+### 🔌 Servicios y Puertos (Localhost)
 
-> ⚠️ **Los comandos Docker (`docker compose ...`) son cross-platform.** Los comandos de shell (filtrado, encadenamiento) varían según el OS. Ver tabla en la sección de instrucciones para agentes.
+| Servicio | Puerto | Descripción |
+|---|---|---|
+| **Nginx** | `80/443` | Reverse Proxy principal (Entry point) |
+| **Frontend (Wati)** | `5173` | App B2C (React + Vite) |
+| **More Admin** | `5174` | Portal de administración B2B |
+| **Backend** | `5001` | API principal (Express 5) |
+| **PostgreSQL** | `5432` | Base de datos principal |
+| **Redis** | `6379` | Caché de recetas y sesiones |
+| **Umami** | `3000` | Panel de Analytics |
+| **Dozzle** | `8080` | Visor de logs en tiempo real |
 
-### Docker (cross-platform)
+### 🛠️ Comandos de Desarrollo (Docker)
+
+> ⚠️ **Los comandos Docker son cross-platform.** Sin embargo, asegúrate de estar en la raíz del proyecto.
+
 ```bash
-# Levantar todo el entorno
+# 🚀 Levantar todo el entorno (Recomendado)
 docker compose up -d --build
 
-# Ejecutar migraciones
+# 🔄 Reiniciar un servicio específico (ej: backend)
+docker compose restart backend
+
+# 📝 Ver logs en tiempo real (vía terminal)
+docker compose logs -f [servicio]
+
+# 🗄️ Database: Correr migraciones
 docker compose exec backend npx sequelize-cli db:migrate
 
-# Revertir última migración
+# 🗄️ Database: Revertir última migración
 docker compose exec backend npx sequelize-cli db:migrate:undo
 
-# Generar nueva migración
-docker compose exec backend npx sequelize-cli migration:generate --name descripcion-del-cambio
+# 🐳 Limpiar todo (detener + borrar volúmenes)
+# ADVERTENCIA: Esto borrará la base de datos si no usas volúmenes externos.
+docker compose down -v
+```
 
-# Ver logs (filtrar por servicio)
-docker compose logs -f backend
-docker compose logs -f frontend
+### ⚡ AI Worker (BullMQ)
 
-# Consultar DB
-docker compose exec postgres psql -U wati_user -d wati_db -c "SELECT ..."
+El worker AI es un proceso Node.js separado que consume la cola de jobs pesados. **Debe ejecutarse en paralelo al servidor Express.**
+
+```bash
+# Desarrollo (auto-restart con --watch)
+cd backend
+npm run worker:dev
+
+# Producción
+npm run worker
+
+# En Docker Compose, agregar como segundo servicio apuntando al mismo image:
+#   ai-worker:
+#     build: ./backend
+#     command: node worker.js
+#     depends_on: [redis, postgres]
 ```
 
 ### Bash / zsh (Linux / macOS)

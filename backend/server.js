@@ -17,9 +17,14 @@ import ingestRoutes from './routes/ingest.js';
 import adminRoutes from './routes/admin.js';
 import suggestionRoutes from './routes/suggestions.js';
 import recipeRoutes from './routes/recipes.js';
+import nutriRoutes from './routes/nutri.js';
+import planRoutes from './routes/plans.js';
+import shopRoutes from './routes/shop.js';
+import jobRoutes from './routes/jobs.js';
 import { connectDB, sequelize } from './config/database.js';
 import { connectRedis } from './config/redis.js';
 import { ActivityLogger } from './services/ActivityLogger.js';
+import { optionalAuthenticateToken, checkRole } from './middleware/auth.js';
 
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -45,21 +50,24 @@ const globalLimiter = rateLimit({
 
 app.use('/api/', globalLimiter);
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use(express.json({ limit: '20mb' }));
 
 app.use('/public/recipes', express.static(path.join(__dirname, 'public', 'recipes')));
 
 // Initialize external services
 await connectDB();
-await sequelize.sync();
 connectRedis();
 
 app.use('/api/auth', authRoutes);
 app.use('/api/favorites', favoritesRoutes);
 app.use('/api/ingest', ingestRoutes);
-app.use('/admin', adminRoutes);
+app.use('/api/admin', optionalAuthenticateToken, checkRole(['super_admin']), adminRoutes);
 app.use('/api/suggestions', suggestionRoutes);
 app.use('/api/recipes', recipeRoutes);
+app.use('/api/nutri', nutriRoutes);
+app.use('/api/plans', planRoutes);
+app.use('/api/shop', shopRoutes);
+app.use('/api/jobs', jobRoutes);
 
 // Swagger API Documentation
 const swaggerDocument = yamljs.load(path.join(__dirname, 'swagger.yaml'));

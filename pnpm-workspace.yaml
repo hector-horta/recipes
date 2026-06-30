@@ -1,0 +1,6 @@
+packages:
+  - "backend"
+  - "frontend"
+  - "frontend/apps/*"
+  - "frontend/packages/*"
+  - "telegram-bot"

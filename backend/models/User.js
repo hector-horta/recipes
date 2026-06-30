@@ -1,5 +1,7 @@
 import { DataTypes } from 'sequelize';
 import { sequelize } from '../config/database.js';
+import { Organization } from './Organization.js';
+import { UserOrganization } from './UserOrganization.js';
 
 export const User = sequelize.define('User', {
   id: {
@@ -41,9 +43,29 @@ export const User = sequelize.define('User', {
   data_exported_at: {
     type: DataTypes.DATE,
     allowNull: true
+  },
+  role: {
+    type: DataTypes.ENUM('user', 'admin', 'super_admin', 'health_professional'),
+    defaultValue: 'user',
+    allowNull: false
   }
 }, {
   tableName: 'users',
   timestamps: true,
   underscored: true
+});
+
+// Many-to-Many association via UserOrganization
+User.belongsToMany(Organization, { 
+  through: UserOrganization, 
+  foreignKey: 'user_id', 
+  otherKey: 'organization_id',
+  as: 'organizations' 
+});
+
+Organization.belongsToMany(User, { 
+  through: UserOrganization, 
+  foreignKey: 'organization_id', 
+  otherKey: 'user_id',
+  as: 'users' 
 });

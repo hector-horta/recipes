@@ -3,8 +3,10 @@ import { SearchLog } from '../models/SearchLog.js';
 import { ActivityLogger } from '../services/ActivityLogger.js';
 import { User } from '../models/User.js';
 import rateLimit from 'express-rate-limit';
-import { requireAdminKey } from '../middleware/auth.js';
+import { checkRole, optionalAuthenticateToken } from '../middleware/auth.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { config } from '../config/env.js';
+import { z } from 'zod';
 
 const router = Router();
 
@@ -13,8 +15,6 @@ const suggestionLimiter = rateLimit({
   max: 3, // Limit each IP to 3 suggestions per hour
   message: { error: 'Demasiadas sugerencias. Intenta de nuevo más tarde.' }
 });
-
-import { config } from '../config/env.js';
 
 const TELEGRAM_USER_ID = config.TELEGRAM_USER_ID;
 const TELEGRAM_BOT_TOKEN = config.TELEGRAM_BOT_TOKEN;
@@ -72,8 +72,7 @@ async function sendTelegramSuggestion(term, userId) {
   }
 }
 
-import { z } from 'zod';
-import { optionalAuthenticateToken } from '../middleware/auth.js';
+
 
 const suggestionSchema = z.object({
   term: z.string().trim().min(2, 'term is required (min 2 characters)'),
@@ -123,7 +122,7 @@ router.post('/', optionalAuthenticateToken, suggestionLimiter, asyncHandler(asyn
   });
 }));
 
-router.get('/stats', requireAdminKey, asyncHandler(async (req, res) => {
+router.get('/stats', optionalAuthenticateToken, checkRole(['admin', 'super_admin']), asyncHandler(async (req, res) => {
   const { Op } = await import('sequelize');
   const totalFailed = await SearchLog.count({ where: { status: 'failed' } });
   const totalSuggested = await SearchLog.count({ where: { status: 'suggested' } });

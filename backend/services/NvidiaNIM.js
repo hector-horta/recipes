@@ -66,6 +66,33 @@ export async function extractTextFromImage(imageUrl, apiKey) {
   return text;
 }
 
+export async function extractTextFromBase64(base64, mimeType, apiKey) {
+  const text = await nvidiaChatRequest({
+    model: 'meta/llama-4-maverick-17b-128e-instruct',
+    messages: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: 'Extract ALL text from this recipe image. Return ONLY the raw text with ingredient lists, measurements, cooking steps, and any other recipe information. Do not add commentary. Maintain the original structure.'
+          },
+          {
+            type: 'image_url',
+            image_url: {
+              url: `data:${mimeType};base64,${base64}`
+            }
+          }
+        ]
+      }
+    ],
+    max_tokens: 4096,
+    temperature: 0.1
+  }, apiKey);
+
+  return text;
+}
+
 export async function extractTextFromTwoImages(imageUrl1, imageUrl2, apiKey) {
   const img1 = await downloadImageAsBase64(imageUrl1);
   const img2 = await downloadImageAsBase64(imageUrl2);
@@ -90,6 +117,39 @@ export async function extractTextFromTwoImages(imageUrl1, imageUrl2, apiKey) {
             type: 'image_url',
             image_url: {
               url: `data:${img2.mimeType};base64,${img2.base64}`
+            }
+          }
+        ]
+      }
+    ],
+    max_tokens: 4096,
+    temperature: 0.1
+  }, apiKey);
+
+  return text;
+}
+
+export async function extractTextFromTwoBase64(base64_1, mimeType1, base64_2, mimeType2, apiKey) {
+  const text = await nvidiaChatRequest({
+    model: 'meta/llama-4-maverick-17b-128e-instruct',
+    messages: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: 'These are two pages/parts of the same recipe. Each image contains a portion of the recipe — somewhere between the two images the text transitions from ingredients to preparation steps.\n\nExtract ALL text from BOTH images and combine them into a single continuous recipe text. Identify where the ingredients section ends and the preparation/cooking steps begin. Return ONLY the raw extracted text. Do not add commentary. Maintain the original structure.'
+          },
+          {
+            type: 'image_url',
+            image_url: {
+              url: `data:${mimeType1};base64,${base64_1}`
+            }
+          },
+          {
+            type: 'image_url',
+            image_url: {
+              url: `data:${mimeType2};base64,${base64_2}`
             }
           }
         ]
@@ -175,9 +235,9 @@ import { fileURLToPath } from 'url';
 const __filename_nim = fileURLToPath(import.meta.url);
 const __dirname_nim = path.dirname(__filename_nim);
 
-export async function generateRecipeImage(prompt, apiKey, feedback = '') {
+export async function generateRecipeImage(prompt, apiKey, feedback = '', details = {}) {
   try {
-    const imageBuffer = await geminiService.generateRecipeImage(prompt, feedback);
+    const imageBuffer = await geminiService.generateRecipeImage(prompt, feedback, details);
     
     if (imageBuffer) {
       const filename = `recipe-${Date.now()}.jpg`;
@@ -201,6 +261,31 @@ export async function generateRecipeImage(prompt, apiKey, feedback = '') {
   }
   
   return { url: null, filename: null };
+}
+
+/**
+ * Translates text between Spanish and English using NVIDIA NIM.
+ */
+export async function translateText(text, from, to, apiKey) {
+  const prompt = `Translate the following text from ${from === 'es' ? 'Spanish' : 'English'} to ${to === 'es' ? 'Spanish' : 'English'}.
+Maintain the same capitalization, style, formatting, line breaks, and punctuation.
+Do NOT explain the translation, do NOT add comments, do NOT wrap the output in markdown code blocks or quotes.
+Return ONLY the translation.
+
+Text to translate:
+${text}`;
+
+  const response = await nvidiaChatRequest({
+    model: 'meta/llama-4-maverick-17b-128e-instruct',
+    messages: [
+      { role: 'system', content: 'You are a professional translator. Return ONLY the translated text.' },
+      { role: 'user', content: prompt }
+    ],
+    temperature: 0.1,
+    max_tokens: 1024
+  }, apiKey);
+
+  return response.trim().replace(/^"|"$/g, '');
 }
 
 /**

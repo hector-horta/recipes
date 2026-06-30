@@ -1,6 +1,6 @@
 import { TagService } from './services/TagService.js';
 import { RecipeProvider } from './services/RecipeProvider.js';
-import { redisClient } from './services/redis.js';
+import { redisClient } from './config/redis.js';
 
 async function run() {
   await redisClient.connect();

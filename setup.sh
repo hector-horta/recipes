@@ -58,6 +58,7 @@ docker compose down
 echo ""
 echo "Step 4: Removing node_modules volumes..."
 docker volume rm recipes_frontend_node_modules 2>/dev/null || true
+docker volume rm recipes_more_admin_node_modules 2>/dev/null || true
 docker volume rm recipes_backend_node_modules 2>/dev/null || true
 echo "  NOTE: Data volumes are PRESERVED:"
 for vol in "${PROTECTED_VOLUMES[@]}"; do
@@ -110,9 +111,10 @@ echo " Setup complete!"
 echo "=========================================="
 echo ""
 echo "Common endpoints:"
-echo "  Frontend:  http://localhost:5173"
-echo "  Backend:   http://localhost:5001"
-echo "  Dozzle:    http://localhost:8080"
-echo "  Umami:     http://localhost:3000"
+echo "  Wati UI:    http://localhost:5173"
+echo "  More Admin:  http://localhost:5174"
+echo "  Backend:     http://localhost:5001"
+echo "  Dozzle:      http://localhost:8080"
+echo "  Umami:       http://localhost:3000"
 echo ""
 echo "Backups saved in backend/ingest_logs/"

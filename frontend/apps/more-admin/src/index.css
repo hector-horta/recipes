@@ -1,0 +1,98 @@
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Industrial Precision Palette - STITCH SYNC */
+    --brand-primary: #00FFC2;
+    --brand-secondary: #1C2024;
+    --brand-tertiary: #101417;
+    --brand-neutral: #83958C;
+    
+    /* Legacy Mapping for compatibility */
+    --brand-mint: var(--brand-primary);
+    --brand-sage: var(--brand-secondary);
+    --brand-forest: var(--brand-tertiary);
+    --brand-teal: #00D1A0;
+    --brand-cream: var(--brand-tertiary);
+    --brand-peach: #F87171;
+    --brand-celeste: var(--brand-neutral);
+    
+    --brand-text: #E0E2E8;
+    --brand-text-muted: #B9CBC1;
+
+    /* Functional Colors */
+    --surface-light: #272A2E;
+    --surface-organic: #1C2024;
+    --surface-dark: #101417;
+    --surface-lowest: #0B0F12;
+
+    --success: #00FFC2;
+    --warning: #FFB703;
+    --danger: #F87171;
+
+    --outline: #3A4A43;
+    --outline-strong: #83958C;
+
+    --glass-bg: rgba(16, 20, 23, 0.85);
+    --glass-border: rgba(255, 255, 255, 0.05);
+
+    /* @wati/ui-kit gradient tokens */
+    --ui-gradient-from: var(--brand-primary);
+    --ui-gradient-to: #00D1A0;
+    
+    /* Roundness */
+    --radius-sm: 2px;
+    --radius-md: 4px;
+    --radius-lg: 8px;
+  }
+
+  body {
+    font-family: 'Archivo Narrow', sans-serif;
+    background-color: var(--brand-tertiary);
+    color: var(--brand-text);
+  }
+}
+
+@layer utilities {
+  .glass-organic {
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+  }
+
+  .bg-organic-gradient {
+    background: linear-gradient(135deg, var(--brand-sage), var(--brand-teal));
+  }
+
+  .hover-lift {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.15);
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--outline);
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--outline-strong);
+  }
+}
+
+body {
+  @apply antialiased;
+}

@@ -78,7 +78,7 @@ const connectionString = getConnectionString();
 
 export const sequelize = new Sequelize(connectionString, {
   dialect: 'postgres',
-  logging: console.log,
+  logging: isProduction ? false : console.log,
   define: {
     timestamps: true,
     underscored: true

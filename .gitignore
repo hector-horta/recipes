@@ -1,5 +1,7 @@
 # dependencies
 node_modules/
+.pnpm-store/
+frontend/.pnpm-store/
 frontend/.vite
 backend/coverage
 frontend/coverage
@@ -38,3 +40,21 @@ backend/scratch/
 
 # Frontend build files
 frontend/dist/
+frontend/apps/*/dist/
+frontend/packages/*/dist/
+.eslintcache
+# Turborepo
+.turbo/
+
+# Code review ToDos:
+docs/todo/
+
+#scratch
+frontend/apps/more-admin/scratch/
+
+#other
+/.abacusai/config.json
+
+dump.sql
+nginx/certs_new/server.crt
+nginx/certs_new/server.key

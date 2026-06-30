@@ -30,6 +30,11 @@ export default defineConfig(({ mode }) => {
     },
     resolve: {
       dedupe: ['react', 'react-dom', '@tanstack/react-query', 'react-i18next', 'react-router-dom'],
+      alias: {
+        '@wati/types': path.resolve(__dirname, 'packages/types/src/index.ts'),
+        '@wati/api-client': path.resolve(__dirname, 'packages/api-client/src/index.ts'),
+        '@wati/ui-kit': path.resolve(__dirname, 'packages/ui-kit/src/index.ts'),
+      },
     },
     envDir: '../',
     test: {

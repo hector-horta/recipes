@@ -26,7 +26,13 @@ Antes de desplegar en un servidor real, completar cada ítem en orden.
 
 ## 3. Variables de Entorno
 
-- [ ] Rotar `JWT_SECRET` — generar con `openssl rand -base64 64`
+- [ ] Configurar tres secretos JWT distintos y robustos (no pueden ser iguales en producción) usando openssl:
+  ```bash
+  openssl rand -base64 64  # Para JWT_SECRET
+  openssl rand -base64 64  # Para JWT_VERIFY_SECRET
+  openssl rand -base64 64  # Para JWT_RESET_SECRET
+  ```
+- [ ] Configurar obligatoriamente las variables `JWT_VERIFY_SECRET` y `JWT_RESET_SECRET` en el entorno de producción (`NODE_ENV=production`), asegurándote de que difieran entre sí y de `JWT_SECRET` para evitar fallas en el inicio del backend.
 - [ ] Cambiar `POSTGRES_USER`, `POSTGRES_PASSWORD` y `POSTGRES_DB` a valores únicos (no usar defaults)
 - [ ] Establecer `NODE_ENV=production` en los servicios `frontend` y `backend` del `docker-compose.yml`
 - [ ] Establecer `VITE_API_MODE=LIVE`

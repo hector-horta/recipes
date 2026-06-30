@@ -9,7 +9,7 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '../../.env') });
 dotenv.config();
 
-const envSchema = z.object({
+export const envSchema = z.object({
   PORT: z.string().default('5001'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   FRONTEND_URL: z.string().default('http://localhost:5173'),
@@ -47,6 +47,44 @@ const envSchema = z.object({
   POSTGRES_USER: z.string().default('wati_user'),
   POSTGRES_HOST: z.string().optional(),
   POSTGRES_DB: z.string().default('wati_db')
+}).superRefine((data, ctx) => {
+  if (data.NODE_ENV === 'production') {
+    if (!data.JWT_VERIFY_SECRET) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'JWT_VERIFY_SECRET is required in production',
+        path: ['JWT_VERIFY_SECRET']
+      });
+    } else if (data.JWT_VERIFY_SECRET === data.JWT_SECRET) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'JWT_VERIFY_SECRET must differ from JWT_SECRET in production',
+        path: ['JWT_VERIFY_SECRET']
+      });
+    }
+
+    if (!data.JWT_RESET_SECRET) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'JWT_RESET_SECRET is required in production',
+        path: ['JWT_RESET_SECRET']
+      });
+    } else if (data.JWT_RESET_SECRET === data.JWT_SECRET) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'JWT_RESET_SECRET must differ from JWT_SECRET in production',
+        path: ['JWT_RESET_SECRET']
+      });
+    }
+
+    if (data.JWT_VERIFY_SECRET && data.JWT_RESET_SECRET && data.JWT_VERIFY_SECRET === data.JWT_RESET_SECRET) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'JWT_RESET_SECRET must differ from JWT_VERIFY_SECRET in production',
+        path: ['JWT_RESET_SECRET']
+      });
+    }
+  }
 });
 
 const _env = envSchema.safeParse(process.env);

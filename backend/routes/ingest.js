@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { Recipe } from '../models/Recipe.js';
-import { extractTextFromImage, extractTextFromTwoImages, analyzeAndStructureRecipe, generateRecipeImage } from '../services/NvidiaNIM.js';
+import { extractTextFromImage, extractTextFromBase64, extractTextFromTwoImages, extractTextFromTwoBase64, analyzeAndStructureRecipe, generateRecipeImage } from '../services/NvidiaNIM.js';
 import { transcribeAudio } from '../services/GroqWhisper.js';
 import { saveIngestLog } from '../middleware/recoveryLogger.js';
 import { RecipeProvider } from '../services/RecipeProvider.js';
@@ -20,21 +20,31 @@ const __dirname = path.dirname(__filename);
 const router = Router();
 
 import { z } from 'zod';
-import { requireAdminKey } from '../middleware/auth.js';
+import { requireAdminKey, checkRole, optionalAuthenticateToken } from '../middleware/auth.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
 const ingestImageSchema = z.object({
-  imageUrl: z.string().url('URL de imagen inválida'),
+  imageUrl: z.string().url('URL de imagen inválida').optional(),
+  imageBase64: z.string().optional(),
+  mimeType: z.string().optional(),
   generateImage: z.boolean().optional().default(true),
   saveToDb: z.boolean().optional().default(true)
 });
 
 const ingestImagesSchema = z.object({
-  imageUrl1: z.string().url('URL de imagen 1 inválida'),
-  imageUrl2: z.string().url('URL de imagen 2 inválida'),
+  imageUrl1: z.string().url('URL de imagen 1 inválida').optional(),
+  imageUrl2: z.string().url('URL de imagen 2 inválida').optional(),
+  imageBase64_1: z.string().optional(),
+  mimeType1: z.string().optional(),
+  imageBase64_2: z.string().optional(),
+  mimeType2: z.string().optional(),
   generateImage: z.boolean().optional().default(true),
   saveToDb: z.boolean().optional().default(true)
-});
+}).refine(data => {
+  const hasUrls = data.imageUrl1 && data.imageUrl2;
+  const hasBase64 = data.imageBase64_1 && data.imageBase64_2;
+  return hasUrls || hasBase64;
+}, { message: 'Debe proporcionar ambas URLs o ambos base64 de las imágenes.' });
 
 const ingestTextSchema = z.object({
   text: z.string().min(10, 'El texto debe ser más largo'),
@@ -44,7 +54,8 @@ const ingestTextSchema = z.object({
   sourceReference: z.string().optional()
 });
 
-router.use(requireAdminKey);
+router.use(optionalAuthenticateToken);
+router.use(checkRole(['admin', 'super_admin']));
 
 import { config } from '../config/env.js';
 
@@ -76,6 +87,24 @@ async function checkConflict(slug, recipeData, res) {
   return false;
 }
 
+// Helper to determine the authorized organization_id
+function getAuthorizedOrgId(req) {
+  // If no user (admin key bypass) or super_admin, respect the body if provided
+  if (!req.user || req.user.role === 'super_admin') {
+    return req.body.organization_id !== undefined ? req.body.organization_id : (req.user?.organization_id || null);
+  }
+  
+  // For regular admins, they can only ingest for their own organization or global (null)
+  const targetOrgId = req.body.organization_id !== undefined ? req.body.organization_id : req.user.organization_id;
+  
+  // If they try to set it to another organization's ID, fallback to their own
+  if (targetOrgId !== null && targetOrgId !== req.user.organization_id) {
+    return req.user.organization_id;
+  }
+  
+  return targetOrgId;
+}
+
 router.post('/image', asyncHandler(async (req, res) => {
   const parseResult = ingestImageSchema.safeParse(req.body);
   if (!parseResult.success) {
@@ -85,10 +114,17 @@ router.post('/image', asyncHandler(async (req, res) => {
     error.errors = parseResult.error.errors;
     throw error;
   }
-  const { imageUrl, generateImage, saveToDb } = parseResult.data;
+  const { imageUrl, imageBase64, mimeType, generateImage, saveToDb } = parseResult.data;
   const apiKey = getApiKey();
 
-  const rawText = await extractTextFromImage(imageUrl, apiKey);
+  let rawText = '';
+  if (imageBase64) {
+    rawText = await extractTextFromBase64(imageBase64, mimeType || 'image/png', apiKey);
+  } else if (imageUrl) {
+    rawText = await extractTextFromImage(imageUrl, apiKey);
+  } else {
+    return res.status(400).json({ error: 'Debe proporcionar imageUrl o imageBase64.' });
+  }
 
   if (!rawText.trim()) {
     return res.status(400).json({ error: 'No text could be extracted from the image.' });
@@ -108,7 +144,7 @@ router.post('/image', asyncHandler(async (req, res) => {
   let imageResult = null;
   if (generateImage) {
     try {
-      imageResult = await generateRecipeImage(structured.title?.en || titleEs, apiKey);
+      imageResult = await generateRecipeImage(structured.title?.en || titleEs, apiKey, '', structured);
     } catch (imgErr) {
       ActivityLogger.warn('[Ingest] Failed to generate image', { error: imgErr.message, title: titleEs });
     }
@@ -131,6 +167,7 @@ router.post('/image', asyncHandler(async (req, res) => {
     sibo_alerts: structured.siboAlerts,
     source_type: 'ocr_image',
     source_reference: imageUrl,
+    organization_id: getAuthorizedOrgId(req),
     status: saveToDb ? 'published' : 'draft'
   };
 
@@ -154,7 +191,11 @@ router.post('/image', asyncHandler(async (req, res) => {
   // ── Telemetría de ingesta ───────────────────────────────────────────
   ActivityLogger.log('INGEST_SUCCESS', {
     source_type: 'ocr_image',
-    title_es: recipeData.title_es
+    title_es: recipeData.title_es,
+    adminKeyFingerprint: req.adminKeyFingerprint
+  }, {
+    userId: req.user?.id || null,
+    ip: req.ip
   });
   // ───────────────────────────────────────────────────────────────────
 
@@ -175,11 +216,17 @@ router.post('/images', asyncHandler(async (req, res) => {
     error.errors = parseResult.error.errors;
     throw error;
   }
-  const { imageUrl1, imageUrl2, generateImage, saveToDb } = parseResult.data;
+  const { imageUrl1, imageUrl2, imageBase64_1, mimeType1, imageBase64_2, mimeType2, generateImage, saveToDb } = parseResult.data;
   const apiKey = getApiKey();
 
-  ActivityLogger.info('Processing dual images for dual ingest', { imageUrl1, imageUrl2 });
-  const rawText = await extractTextFromTwoImages(imageUrl1, imageUrl2, apiKey);
+  let rawText = '';
+  if (imageBase64_1 && imageBase64_2) {
+    ActivityLogger.info('Processing dual images from base64 for dual ingest');
+    rawText = await extractTextFromTwoBase64(imageBase64_1, mimeType1 || 'image/png', imageBase64_2, mimeType2 || 'image/png', apiKey);
+  } else if (imageUrl1 && imageUrl2) {
+    ActivityLogger.info('Processing dual images from URLs for dual ingest', { imageUrl1, imageUrl2 });
+    rawText = await extractTextFromTwoImages(imageUrl1, imageUrl2, apiKey);
+  }
 
   if (!rawText.trim()) {
     return res.status(400).json({ error: 'No text could be extracted from the images.' });
@@ -200,7 +247,7 @@ router.post('/images', asyncHandler(async (req, res) => {
   const titleEn = structured.title?.en || titleEs;
   if (generateImage) {
     try {
-      imageResult = await generateRecipeImage(titleEn, apiKey);
+      imageResult = await generateRecipeImage(titleEn, apiKey, '', structured);
     } catch (imgErr) {
       ActivityLogger.warn('Failed to generate image during dual ingest', { error: imgErr.message, title: titleEn });
     }
@@ -223,6 +270,7 @@ router.post('/images', asyncHandler(async (req, res) => {
     sibo_alerts: structured.siboAlerts,
     source_type: 'ocr_image',
     source_reference: `multi_image:${imageUrl1},${imageUrl2}`,
+    organization_id: getAuthorizedOrgId(req),
     status: saveToDb ? 'published' : 'draft'
   };
 
@@ -246,7 +294,11 @@ router.post('/images', asyncHandler(async (req, res) => {
   // ── Telemetría de ingesta ───────────────────────────────────────────
   ActivityLogger.log('INGEST_SUCCESS', {
     source_type: 'ocr_image_dual',
-    title_es: recipeData.title_es
+    title_es: recipeData.title_es,
+    adminKeyFingerprint: req.adminKeyFingerprint
+  }, {
+    userId: req.user?.id || null,
+    ip: req.ip
   });
   // ───────────────────────────────────────────────────────────────────
 
@@ -284,7 +336,7 @@ router.post('/text', asyncHandler(async (req, res) => {
   let imageResult = null;
   if (generateImage) {
     try {
-      imageResult = await generateRecipeImage(structured.title?.en || titleEs, apiKey);
+      imageResult = await generateRecipeImage(structured.title?.en || titleEs, apiKey, '', structured);
     } catch (imgErr) {
       ActivityLogger.warn('[Ingest] Failed to generate image', { error: imgErr.message, title: titleEs });
     }
@@ -307,6 +359,7 @@ router.post('/text', asyncHandler(async (req, res) => {
     sibo_alerts: structured.siboAlerts,
     source_type: sourceType || 'manual',
     source_reference: sourceReference || null,
+    organization_id: getAuthorizedOrgId(req),
     status: saveToDb ? 'published' : 'draft'
   };
 
@@ -329,7 +382,11 @@ router.post('/text', asyncHandler(async (req, res) => {
   // ── Telemetría de ingesta ───────────────────────────────────────────
   ActivityLogger.log('INGEST_SUCCESS', {
     source_type: sourceType || 'manual',
-    title_es: recipeData.title_es
+    title_es: recipeData.title_es,
+    adminKeyFingerprint: req.adminKeyFingerprint
+  }, {
+    userId: req.user?.id || null,
+    ip: req.ip
   });
   // ───────────────────────────────────────────────────────────────────
 
@@ -376,6 +433,16 @@ router.post('/transcribe', asyncHandler(async (req, res) => {
     return res.status(400).json({ error: 'No text could be transcribed from audio.' });
   }
 
+  ActivityLogger.log('ADMIN_ACTION', {
+    action: 'transcribe',
+    audioUrl,
+    language,
+    adminKeyFingerprint: req.adminKeyFingerprint
+  }, {
+    userId: req.user?.id || null,
+    ip: req.ip
+  });
+
   res.status(200).json({ transcribedText });
 }));
 
@@ -421,7 +488,7 @@ router.post('/voice', asyncHandler(async (req, res) => {
   // If we don't save to DB, we don't generate image yet (per new flow)
   if (saveToDb) {
     try {
-      imageResult = await generateRecipeImage(titleEn, nvidiaKey);
+      imageResult = await generateRecipeImage(titleEn, nvidiaKey, '', structured);
     } catch (imgErr) {
       ActivityLogger.warn('Image generation failed for voice ingest', { error: imgErr.message, title: titleEn });
     }
@@ -444,10 +511,20 @@ router.post('/voice', asyncHandler(async (req, res) => {
     sibo_alerts: structured.siboAlerts,
     source_type: 'audio',
     source_reference: audioUrl,
+    organization_id: getAuthorizedOrgId(req),
     status: saveToDb ? 'published' : 'draft'
   };
 
   if (!saveToDb) {
+    ActivityLogger.log('INGEST_SUCCESS', {
+      source_type: 'audio',
+      title_es: recipeData.title_es,
+      saveToDb: false,
+      adminKeyFingerprint: req.adminKeyFingerprint
+    }, {
+      userId: req.user?.id || null,
+      ip: req.ip
+    });
     return res.status(200).json({
       status: 'processed',
       recipe: recipeData,
@@ -464,6 +541,16 @@ router.post('/voice', asyncHandler(async (req, res) => {
 
   await RecipeProvider.clearCache();
 
+  ActivityLogger.log('INGEST_SUCCESS', {
+    source_type: 'audio',
+    title_es: recipeData.title_es,
+    saveToDb: true,
+    adminKeyFingerprint: req.adminKeyFingerprint
+  }, {
+    userId: req.user?.id || null,
+    ip: req.ip
+  });
+
   res.status(200).json({
     status: 'processed',
     recipe: recipe.toJSON(),
@@ -473,9 +560,13 @@ router.post('/voice', asyncHandler(async (req, res) => {
 }));
 
 router.post('/:slug/:action', asyncHandler(async (req, res) => {
-  const { slug, action } = req.params;
+  const { slug: slugOrId, action } = req.params;
 
-  const recipe = await Recipe.findOne({ where: { slug } });
+  // uuid regex to check if it's an id
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slugOrId);
+  const whereClause = isUuid ? { id: slugOrId } : { slug: slugOrId };
+
+  const recipe = await Recipe.findOne({ where: whereClause });
   if (!recipe) {
     return res.status(404).json({ error: 'Recipe not found.' });
   }
@@ -485,6 +576,7 @@ router.post('/:slug/:action', asyncHandler(async (req, res) => {
       recipe.status = 'published';
       await recipe.save();
       await RecipeProvider.clearCache();
+      ActivityLogger.log('ADMIN_ACTION', { action: 'publish', recipeId: recipe.id, slug: recipe.slug, adminKeyFingerprint: req.adminKeyFingerprint }, { userId: req.user?.id || null, ip: req.ip });
       return res.json({ status: 'published', recipe });
 
     case 'post':
@@ -493,14 +585,17 @@ router.post('/:slug/:action', asyncHandler(async (req, res) => {
       recipe.status = 'published';
       await recipe.save();
       await RecipeProvider.clearCache();
+      ActivityLogger.log('ADMIN_ACTION', { action: 'post', recipeId: recipe.id, slug: recipe.slug, adminKeyFingerprint: req.adminKeyFingerprint }, { userId: req.user?.id || null, ip: req.ip });
       return res.json({ status: 'posted', recipe });
 
     case 'csv':
+      ActivityLogger.log('ADMIN_ACTION', { action: 'csv', recipeId: recipe.id, slug: recipe.slug, adminKeyFingerprint: req.adminKeyFingerprint }, { userId: req.user?.id || null, ip: req.ip });
       res.setHeader('Content-Type', 'text/csv');
       res.attachment(`${slug}.csv`);
       return res.send(buildCSVRow(recipe.toJSON()));
 
     case 'curl':
+      ActivityLogger.log('ADMIN_ACTION', { action: 'curl', recipeId: recipe.id, slug: recipe.slug, adminKeyFingerprint: req.adminKeyFingerprint }, { userId: req.user?.id || null, ip: req.ip });
       return res.json({ 
         command: buildCurlCommand(recipe.toJSON()) 
       });
@@ -525,13 +620,14 @@ router.post('/:slug/:action', asyncHandler(async (req, res) => {
           }
         }
 
-        const imageResult = await generateRecipeImage(recipe.title_en, apiKey, issue);
+        const imageResult = await generateRecipeImage(recipe.title_en, apiKey, issue, recipe.toJSON());
         
         recipe.image_url = imageResult.url;
         recipe.image_filename = imageResult.filename;
         await recipe.save();
         
         await RecipeProvider.clearCache();
+        ActivityLogger.log('ADMIN_ACTION', { action: 'refresh-image', recipeId: recipe.id, slug: recipe.slug, adminKeyFingerprint: req.adminKeyFingerprint }, { userId: req.user?.id || null, ip: req.ip });
         
         return res.json({ 
           status: 'image_refreshed', 
@@ -584,6 +680,7 @@ router.post('/save', asyncHandler(async (req, res) => {
     sibo_alerts: sanitized.siboAlerts,
     source_type: recipeData.source_type || 'manual',
     source_reference: recipeData.source_reference,
+    organization_id: getAuthorizedOrgId(req),
     status: status
   };
 
@@ -592,7 +689,7 @@ router.post('/save', asyncHandler(async (req, res) => {
 
   if (generateImage && !finalData.image_url) {
     try {
-      imageResult = await generateRecipeImage(finalData.title_en, apiKey);
+      imageResult = await generateRecipeImage(finalData.title_en, apiKey, '', finalData);
       finalData.image_url = imageResult.url;
       finalData.image_filename = imageResult.filename;
     } catch (imgErr) {
@@ -605,11 +702,13 @@ router.post('/save', asyncHandler(async (req, res) => {
     Object.assign(existing, finalData);
     await existing.save();
     await RecipeProvider.clearCache();
+    ActivityLogger.log('ADMIN_ACTION', { action: 'save-update', recipeId: existing.id, slug: existing.slug, adminKeyFingerprint: req.adminKeyFingerprint }, { userId: req.user?.id || null, ip: req.ip });
     return res.json({ status: 'updated', recipe: existing });
   }
 
   const recipe = await Recipe.create(finalData);
   await RecipeProvider.clearCache();
+  ActivityLogger.log('ADMIN_ACTION', { action: 'save-create', recipeId: recipe.id, slug: recipe.slug, adminKeyFingerprint: req.adminKeyFingerprint }, { userId: req.user?.id || null, ip: req.ip });
   return res.status(201).json({ status: 'created', recipe });
 }));
 

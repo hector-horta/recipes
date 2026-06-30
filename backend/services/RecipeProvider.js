@@ -10,9 +10,43 @@ import crypto from 'crypto';
 
 const CACHE_TTL_SECONDS = 3600; // 1 hour
 
+// Helper to normalize text (remove accents and lowercase)
+const normalize = (text) => 
+  (text || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+// Global cache for compiled trigger regexes
+const triggerRegexCache = new Map();
+
+function getTriggerRegex(triggerText) {
+  if (!triggerRegexCache.has(triggerText)) {
+    const normalizedTrigger = normalize(triggerText);
+    const escapedTrigger = normalizedTrigger.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
+    const regex = new RegExp(`(?:^|\\s)${escapedTrigger}(?:s|es)?(?:\\s|$|[.,;])`, 'i');
+    triggerRegexCache.set(triggerText, regex);
+  }
+  return triggerRegexCache.get(triggerText);
+}
+
+// Global state for cache invalidation rate-limiting
+let lastCacheInvalidation = 0;
+const CACHE_INVALIDATION_COOLDOWN_MS = 2000; // 2 seconds
+
 export class RecipeProvider {
   static async getRecipes(params, userProfile) {
     let { query, number = 10, offset = 0 } = params;
+    let organizationId = params.organizationId || userProfile?.organization_id || null;
+
+    // Security: Only super_admin can query specifically for other organizations
+    if (userProfile && userProfile.role !== 'super_admin') {
+      if (organizationId !== null && organizationId !== userProfile.organization_id) {
+        organizationId = userProfile.organization_id;
+      }
+    } else if (!userProfile) {
+      // Anonymous users can only see global recipes unless an org is explicitly allowed (future)
+      // For now, if no user profile, we only allow global unless params says otherwise
+      // but we should probably force null if we want strict privacy.
+      // Keeping params.organizationId for now as it might be used by public org portals.
+    }
     
     // Fetch tags for translation
     const allTags = await TagService.getAllTags();
@@ -26,7 +60,13 @@ export class RecipeProvider {
     if (typeof query !== 'string') query = '';
     query = query.trim().slice(0, 200);
 
-    const whereClause = { status: 'published' };
+    const whereClause = { 
+      status: 'published',
+      [Op.or]: [
+        { organization_id: null }, // Global recipes
+        { organization_id: organizationId } // Organization-specific recipes
+      ]
+    };
 
     if (query) {
       const q = query;
@@ -64,7 +104,18 @@ export class RecipeProvider {
         orConditions.push(where(cast(col('ingredients'), 'text'), { [Op.iLike]: `%${term}%` }));
       });
 
-      whereClause[Op.or] = orConditions;
+      whereClause[Op.and] = [
+        { [Op.or]: [
+          { organization_id: null },
+          { organization_id: organizationId }
+        ]},
+        { [Op.or]: orConditions }
+      ];
+    } else {
+      whereClause[Op.or] = [
+        { organization_id: null },
+        { organization_id: organizationId }
+      ];
     }
 
     const userIntolerances = userProfile?.intolerances || [];
@@ -76,6 +127,7 @@ export class RecipeProvider {
       q: query || '',
       n: number,
       o: parsedOffset,
+      orgId: organizationId || 'global',
       intolerances: userIntolerances.sort(),
       severities: userProfile?.severities || {},
       uid: userProfile?.id || 'anonymous',
@@ -108,7 +160,11 @@ export class RecipeProvider {
     const order = query ? [['created_at', 'DESC']] : [['created_at', 'DESC']];
 
     // Get total count for pagination
-    const totalCount = await Recipe.count({ where: whereClause });
+    const totalCount = await Recipe.count({
+      where: whereClause,
+      distinct: true,
+      col: 'Recipe.id'
+    });
 
     // Buscamos candidatos con offset para paginación server-side
     const recipes = await Recipe.findAll({
@@ -153,8 +209,12 @@ export class RecipeProvider {
       }
     }
 
-    // Aplicar límite final después del filtrado
-    results = results.slice(0, requestedLimit);
+    // Aplicar offset y límite final después del filtrado
+    if (hasFilters) {
+      results = results.slice(parsedOffset, parsedOffset + requestedLimit);
+    } else {
+      results = results.slice(0, requestedLimit);
+    }
 
     // Strip internal metadata before sending to client
     results = results.map(({ _matchedAllergens, ...rest }) => rest);
@@ -184,9 +244,7 @@ export class RecipeProvider {
     const userSeverities = profile.severities || {};
     const hasSibo = userIntolerances.some(i => i.toLowerCase() === 'sibo');
     
-    // Función para normalizar texto (quitar acentos)
-    const normalize = (text) => 
-      (text || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
 
     // 2. Determinar safetyLevel dinámicamente
     let safetyLevel = 'safe';
@@ -224,12 +282,9 @@ export class RecipeProvider {
     let foundMaxSeverity = null; // 'low' or 'high'
     const matchedAllergenIds = new Set();
 
-    // Preparar regexps por adelantado
+    // Preparar regexps por adelantado usando cache compilado
     const triggerRegexes = activeTriggers.map(trigger => {
-      const normalizedTrigger = normalize(trigger.text);
-      const escapedTrigger = normalizedTrigger.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
-      const regex = new RegExp(`(?:^|\\s)${escapedTrigger}(?:s|es)?(?:\\s|$|[.,;])`, 'i');
-      return { trigger, regex };
+      return { trigger, regex: getTriggerRegex(trigger.text) };
     });
 
     const ingredients = (recipe.ingredients || []).map(i => {
@@ -368,14 +423,44 @@ export class RecipeProvider {
     };
   }
 
-  static async clearCache() {
+  static async clearCache(force = true) {
     try {
-      if (redisClient.isReady) {
-        const keys = await redisClient.keys('recipes:*');
-        if (keys.length > 0) {
-          await redisClient.del(keys);
-          ActivityLogger.info('Invalidated recipe cache', { keysCount: keys.length });
+      if (!redisClient.isReady) return;
+
+      const now = Date.now();
+      const timeSinceLast = now - lastCacheInvalidation;
+      if (!force && timeSinceLast < CACHE_INVALIDATION_COOLDOWN_MS) {
+        ActivityLogger.info('Cache invalidation skipped (cooldown)', { timeSinceLast });
+        return;
+      }
+
+      let batch = [];
+      let totalDeleted = 0;
+
+      for await (const result of redisClient.scanIterator({
+        MATCH: 'recipes:*',
+        COUNT: 100
+      })) {
+        const keys = Array.isArray(result) ? result : [result];
+        for (const key of keys) {
+          batch.push(key);
+          if (batch.length >= 100) {
+            await redisClient.del(batch);
+            totalDeleted += batch.length;
+            batch = [];
+          }
         }
+      }
+
+      if (batch.length > 0) {
+        await redisClient.del(batch);
+        totalDeleted += batch.length;
+      }
+
+      lastCacheInvalidation = Date.now();
+
+      if (totalDeleted > 0) {
+        ActivityLogger.info('Invalidated recipe cache', { keysCount: totalDeleted });
       }
     } catch (err) {
       ActivityLogger.warn('Error invalidating cache', { error: err.message });

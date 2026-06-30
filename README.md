@@ -1,6 +1,6 @@
 # Wati: Nutrición Consciente (Monorepo)
 
-Wati es una plataforma de recetas diseñada para usuarios con necesidades dietéticas específicas (FODMAPs, alergias, sensibilidades). Esta versión ha evolucionado a una **Arquitectura Multi-Usuario Cloud-Ready** gestionada en un **Monorepo**, con altos estándares de seguridad y cumplimiento **GDPR**.
+Wati es una plataforma de recetas diseñada para usuarios con necesidades dietéticas específicas (FODMAPs, alergias, sensibilidades). Esta versión ha evolucionado a una **Arquitectura Multi-Inquilino (Multi-tenant) Cloud-Ready** gestionada en un **Monorepo**, permitiendo que diferentes organizaciones gestionen sus propios usuarios y datos manteniendo activos globales como el catálogo de etiquetas.
 
 ## 🏗️ Estructura del Proyecto
 
@@ -16,6 +16,8 @@ El proyecto se divide en diferentes servicios orquestados por Docker Compose:
 
 ## 🌟 Características Principales
 
+- **Arquitectura Multi-Inquilino (Multi-tenancy)**: Soporte nativo para múltiples organizaciones con aislamiento de datos (usuarios, perfiles, recetas locales) y **activos globales compartidos** (catálogo de Tags). Las recetas del catálogo Wati (`organization_id = NULL`) están disponibles para todas las apps del ecosistema.
+- **Roles de Usuario Avanzados**: Soporte para `admin`, `user` y `super_admin`. El rol `super_admin` permite gestión cross-organización desde el panel de administración del ecosistema (sin restricción de `organization_id`).
 - **Privacidad y Cumplimiento GDPR**: Perfiles de salud encriptados. Flujo legal de aceptación de términos y borrado en cascada de datos (`DELETE /api/auth/me`).
 - **Gestión de Condiciones Médicas**: Soporte para diagnósticos complejos (como **SIBO**) mediante un motor de sincronización que vincula intolerancias alimentarias con estados clínicos, permitiendo alertas de seguridad personalizadas.
 - **Autenticación Segura (JWT & Bcrypt)**: Cuentas individuales identificadas por **UUID v4**.
@@ -47,6 +49,26 @@ El proyecto se divide en diferentes servicios orquestados por Docker Compose:
 ### IA y Servicios Externos
 - **NVIDIA NIM**: OCDRNet (OCR), Llama 4 Maverick (NLP), SDXL (Generación de Imágenes).
 - **Groq API**: Whisper (Transcripción de audio de alta velocidad).
+
+## 🏗️ Estructura del Proyecto (Monorepo)
+
+```text
+recipes/
+├── backend/                # API REST (Express + Sequelize)
+│   ├── config/             # Configuración (DB, Env, NVIDIA)
+│   ├── middleware/         # Auth, Role-check, Multi-tenant filter
+│   ├── models/             # User, Profile, Organization, Recipe, Tag
+│   ├── routes/             # auth, recipes, ingestion, admin
+│   └── services/           # NVIDIA AI, S3, ActivityLogger, EmailService
+├── frontend/               # Cliente React + TypeScript
+│   ├── src/
+│   │   ├── components/     # UI Atómica (Shadcn-inspired)
+│   │   ├── hooks/          # Hooks personalizados (useAuth, useRecipes)
+│   │   ├── services/       # Clientes de API
+│   │   └── utils/          # Analytics Facade, Sanitization
+├── docker/                 # Configuración de Docker (Nginx, Postgres, Redis)
+└── docs/                   # Documentación técnica detallada
+```
 
 ## 📊 Eventos de Analytics (Agnóstico)
 
@@ -114,4 +136,4 @@ cd backend && npm install && npm run coverage
 | `.cursorrules` / `.clauderules` | Directivas automáticas y reglas de contexto exclusivas para agentes de Inteligencia Artificial (Cursor, Windsurf, Claude, Antigravity). |
 
 ---
-**Wati** — *Seguridad alimentaria impulsada por IA, ahora multicapa.*
+**Wati** — *Ecosistema de salud alimentaria impulsado por IA, arquitectura multi-inquilino.*

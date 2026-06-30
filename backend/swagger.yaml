@@ -4,22 +4,12 @@ info:
   description: Wati Health Recipe and Medical AI Platform Backend API
   version: 1.0.0
 servers:
-  - url: http://localhost:5001
+  - url: http://localhost:5001/api
     description: Local server
-  - url: https://api.wati.health
+  - url: https://api.wati.health/api
     description: Production server
-components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-    adminApiKey:
-      type: apiKey
-      in: header
-      name: X-Admin-Key
 paths:
-  /api/status:
+  /status:
     get:
       tags:
         - Status
@@ -33,7 +23,7 @@ paths:
                 status: ok
                 message: Backend is running!
                 version: 1.0.0
-  /api/medical/catalog:
+  /medical/catalog:
     get:
       tags:
         - Medical
@@ -41,7 +31,7 @@ paths:
       responses:
         '200':
           description: Returns medical intolerances
-  /api/medical/triggers:
+  /medical/triggers:
     get:
       tags:
         - Medical
@@ -49,7 +39,7 @@ paths:
       responses:
         '200':
           description: Returns medical triggers
-  /api/auth/register:
+  /auth/register:
     post:
       tags:
         - Auth
@@ -83,7 +73,7 @@ paths:
           description: Validation error
         '409':
           description: Email already in use
-  /api/auth/login:
+  /auth/login:
     post:
       tags:
         - Auth
@@ -107,7 +97,7 @@ paths:
           description: Logged in successfully
         '401':
           description: Invalid credentials
-  /api/auth/resend-verification:
+  /auth/resend-verification:
     post:
       tags:
         - Auth
@@ -117,7 +107,7 @@ paths:
       responses:
         '200':
           description: Verification email sent
-  /api/auth/verify:
+  /auth/verify:
     post:
       tags:
         - Auth
@@ -138,7 +128,7 @@ paths:
           description: Account verified successfully
         '400':
           description: Invalid token
-  /api/auth/forgot-password:
+  /auth/forgot-password:
     post:
       tags:
         - Auth
@@ -157,7 +147,7 @@ paths:
       responses:
         '200':
           description: Reset email sent (if user exists)
-  /api/auth/reset-password:
+  /auth/reset-password:
     post:
       tags:
         - Auth
@@ -181,7 +171,7 @@ paths:
           description: Password updated
         '400':
           description: Invalid token or password
-  /api/auth/logout:
+  /auth/logout:
     post:
       tags:
         - Auth
@@ -189,7 +179,7 @@ paths:
       responses:
         '200':
           description: Logged out
-  /api/auth/me:
+  /auth/me:
     get:
       tags:
         - Auth
@@ -199,6 +189,10 @@ paths:
       responses:
         '200':
           description: Current user info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
     put:
       tags:
         - Auth
@@ -223,7 +217,7 @@ paths:
       responses:
         '200':
           description: Account deleted
-  /api/recipes:
+  /recipes:
     get:
       tags:
         - Recipes
@@ -235,18 +229,46 @@ paths:
           name: query
           schema:
             type: string
+          description: Search term for recipes
+        - in: query
+          name: organization_id
+          schema:
+            type: string
+          description: Filter by organization ID (optional)
         - in: query
           name: page
           schema:
             type: integer
+          description: Page number
         - in: query
           name: limit
           schema:
             type: integer
+          description: Items per page
       responses:
         '200':
           description: List of recipes
-  /api/recipes/tags:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recipes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Recipe'
+                  pagination:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      pages:
+                        type: integer
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+  /recipes/tags:
     get:
       tags:
         - Recipes
@@ -254,7 +276,7 @@ paths:
       responses:
         '200':
           description: List of tags
-  /api/recipes/tags/refresh:
+  /recipes/tags/refresh:
     post:
       tags:
         - Recipes
@@ -264,7 +286,7 @@ paths:
       responses:
         '200':
           description: Caches cleared
-  /api/favorites:
+  /favorites:
     get:
       tags:
         - Favorites
@@ -301,7 +323,7 @@ paths:
           description: Favorited
         '200':
           description: Unfavorited
-  /api/favorites/{recipeId}:
+  /favorites/{recipeId}:
     delete:
       tags:
         - Favorites
@@ -317,7 +339,7 @@ paths:
       responses:
         '200':
           description: Removed from favorites
-  /api/suggestions:
+  /suggestions:
     post:
       tags:
         - Suggestions
@@ -342,13 +364,952 @@ paths:
     get:
       tags:
         - Admin
-      summary: Get suggestion stats
+      summary: Get platform usage statistics
       security:
         - adminApiKey: []
+        - bearerAuth: []
       responses:
         '200':
-          description: Suggestion statistics
-  /api/ingest/image:
+          description: Usage statistics (top searches, conversion, uptime)
+  /admin/organizations:
+    get:
+      tags:
+        - Admin
+      summary: List all organizations
+      security:
+        - adminApiKey: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of organizations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Organization'
+    post:
+      tags:
+        - Admin
+      summary: Create a new organization
+      security:
+        - adminApiKey: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - slug
+              properties:
+                name:
+                  type: string
+                slug:
+                  type: string
+      responses:
+        '201':
+          description: Organization created
+        '409':
+          description: Organization already exists
+  /admin/organizations/{id}:
+    get:
+      tags:
+        - Admin
+      summary: Get organization details and collaborators list
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detailed organization data with associated users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  slug:
+                    type: string
+                  is_active:
+                    type: boolean
+                  settings:
+                    type: object
+                  status:
+                    type: string
+                    enum: [active, suspended]
+                  userCount:
+                    type: integer
+                  users:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        email:
+                          type: string
+                        displayName:
+                          type: string
+                        isActive:
+                          type: boolean
+                        role:
+                          type: string
+                          enum: [admin, user]
+                        joinedAt:
+                          type: string
+                          format: date-time
+        '404':
+          description: Organization not found
+    put:
+      tags:
+        - Admin
+      summary: Update organization
+      security:
+        - adminApiKey: []
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - slug
+              properties:
+                name:
+                  type: string
+                slug:
+                  type: string
+                is_active:
+                  type: boolean
+      responses:
+        '200':
+          description: Organization updated
+        '404':
+          description: Not found
+    delete:
+      tags:
+        - Admin
+      summary: Toggle organization status (active/suspended)
+      security:
+        - adminApiKey: []
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Status toggled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  organization:
+                    $ref: '#/components/schemas/Organization'
+  /admin/organizations/{id}/users:
+    post:
+      tags:
+        - Admin
+      summary: Add a single collaborator user to organization
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - displayName
+                - role
+              properties:
+                email:
+                  type: string
+                  format: email
+                displayName:
+                  type: string
+                role:
+                  type: string
+                  enum: [admin, user]
+      responses:
+        '201':
+          description: Collaborator user added/associated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  email:
+                    type: string
+                  displayName:
+                    type: string
+                  isActive:
+                    type: boolean
+                  role:
+                    type: string
+                    enum: [admin, user]
+                  joinedAt:
+                    type: string
+                    format: date-time
+                  createdNewUser:
+                    type: boolean
+        '400':
+          description: Validation error
+        '404':
+          description: Organization not found
+        '409':
+          description: User already belongs to organization
+  /admin/organizations/{id}/users/bulk:
+    post:
+      tags:
+        - Admin
+      summary: Bulk upload and associate collaborator users
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - users
+              properties:
+                users:
+                  type: array
+                  maxItems: 500
+                  items:
+                    type: object
+                    required:
+                      - email
+                      - displayName
+                      - role
+                    properties:
+                      email:
+                        type: string
+                        format: email
+                      displayName:
+                        type: string
+                      role:
+                        type: string
+                        enum: [admin, user]
+      responses:
+        '200':
+          description: Bulk import processed with detailed summary of succeeded and failed records
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  created:
+                    type: integer
+                  associated:
+                    type: integer
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        row:
+                          type: integer
+                        email:
+                          type: string
+                        reason:
+                          type: string
+        '400':
+          description: Validation error or limit exceeded
+        '404':
+          description: Organization not found
+  /admin/organizations/{id}/users/{userId}:
+    delete:
+      tags:
+        - Admin
+      summary: Disassociate a user from organization
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User disassociated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '404':
+          description: Organization or user relationship not found
+  /admin/recipes:
+    get:
+      tags:
+        - Admin
+      summary: List global recipes
+      security:
+        - adminApiKey: []
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: number
+          schema:
+            type: integer
+          description: Maximum number of recipes to return (for pagination)
+        - in: query
+          name: offset
+          schema:
+            type: integer
+          description: Number of recipes to skip (for pagination)
+      responses:
+        '200':
+          description: List of recipes (either array of Recipe, or paginated object containing recipes array and total count)
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/Recipe'
+                  - type: object
+                    properties:
+                      recipes:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Recipe'
+                      total:
+                        type: integer
+    post:
+      tags:
+        - Admin
+      summary: Create a new global recipe
+      security:
+        - adminApiKey: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecipeUpdate'
+      responses:
+        '201':
+          description: Recipe created
+  /admin/recipes/{id}:
+    put:
+      tags:
+        - Admin
+      summary: Update global recipe
+      security:
+        - adminApiKey: []
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecipeUpdate'
+      responses:
+        '200':
+          description: Recipe updated
+    delete:
+      tags:
+        - Admin
+      summary: Delete global recipe
+      security:
+        - adminApiKey: []
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Recipe deleted
+  /admin/tags:
+    get:
+      tags:
+        - Admin
+      summary: List global tags
+      security:
+        - adminApiKey: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of tags
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Tag'
+    post:
+      tags:
+        - Admin
+      summary: Create a new global tag
+      security:
+        - adminApiKey: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - key
+                - es
+                - en
+              properties:
+                key:
+                  type: string
+                es:
+                  type: string
+                en:
+                  type: string
+      responses:
+        '201':
+          description: Tag created
+  /admin/tags/{id}:
+    put:
+      tags:
+        - Admin
+      summary: Update global tag
+      security:
+        - adminApiKey: []
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - key
+                - es
+                - en
+              properties:
+                key:
+                  type: string
+                es:
+                  type: string
+                en:
+                  type: string
+      responses:
+        '200':
+          description: Tag updated
+    delete:
+      tags:
+        - Admin
+      summary: Delete global tag
+      security:
+        - adminApiKey: []
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Tag deleted
+  /admin/translate:
+    post:
+      tags:
+        - Admin
+      summary: Translate text between Spanish and English using NVIDIA NIM (Llama 4)
+      description: |
+        Synchronous translation endpoint. Used by the admin recipe editor for per-field
+        translation of titles, ingredients, and steps. Response is immediate (~1-2s).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+                - from
+                - to
+              properties:
+                text:
+                  type: string
+                  description: The text to translate
+                  example: "Picar el ajo finamente"
+                from:
+                  type: string
+                  enum: [es, en]
+                  description: Source language
+                  example: es
+                to:
+                  type: string
+                  enum: [es, en]
+                  description: Target language
+                  example: en
+      responses:
+        '200':
+          description: Translation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  translatedText:
+                    type: string
+                    example: "Finely chop the garlic"
+        '400':
+          description: Missing required fields (text, from, to)
+        '500':
+          description: Translation service error
+  /jobs:
+    get:
+      tags:
+        - Jobs
+      summary: List recent AI jobs (dashboard overview)
+      description: |
+        Returns counts and details of recent waiting, active, completed, and failed AI jobs.
+        Restricted to super_admin role.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Dashboard of recent AI jobs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  counts:
+                    type: object
+                    properties:
+                      waiting:
+                        type: integer
+                      active:
+                        type: integer
+                      completed:
+                        type: integer
+                      failed:
+                        type: integer
+                  jobs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Job'
+  /jobs/{id}:
+    get:
+      tags:
+        - Jobs
+      summary: Get status of a specific AI job
+      description: |
+        Poll this endpoint to check the progress and result of an enqueued AI job
+        (e.g., image generation). Status values: waiting, active, completed, failed, delayed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: The BullMQ job ID returned when the job was enqueued
+      responses:
+        '200':
+          description: Job status and result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        '404':
+          description: Job not found
+  /nutri/recipes:
+    get:
+      tags:
+        - Nutrition
+      summary: List recipes visible to the health professional
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: number
+          schema:
+            type: integer
+        - in: query
+          name: offset
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of recipes
+    post:
+      tags:
+        - Nutrition
+      summary: Create an organization-specific recipe
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecipeUpdate'
+      responses:
+        '201':
+          description: Recipe created
+  /nutri/recipes/{id}:
+    put:
+      tags:
+        - Nutrition
+      summary: Update organization-specific recipe
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecipeUpdate'
+      responses:
+        '200':
+          description: Recipe updated
+    delete:
+      tags:
+        - Nutrition
+      summary: Delete organization-specific recipe
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Recipe deleted
+  /nutri/patients/search:
+    get:
+      tags:
+        - Nutrition
+      summary: Search for a global user by email to assign a plan
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: email
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Patient user details
+        '404':
+          description: Patient not found
+  /nutri/patients:
+    get:
+      tags:
+        - Nutrition
+      summary: List unique patients with assigned plans
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of patients
+  /nutri/plans:
+    get:
+      tags:
+        - Nutrition
+      summary: List nutritional plans created by the professional or their organization
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of plans
+    post:
+      tags:
+        - Nutrition
+      summary: Create and assign a nutritional plan to a patient
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NutritionalPlanInput'
+      responses:
+        '201':
+          description: Plan created
+  /nutri/plans/{id}:
+    get:
+      tags:
+        - Nutrition
+      summary: Get details of a nutritional plan
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Plan details
+    put:
+      tags:
+        - Nutrition
+      summary: Update a nutritional plan
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NutritionalPlanInput'
+      responses:
+        '200':
+          description: Plan updated
+    delete:
+      tags:
+        - Nutrition
+      summary: Delete a nutritional plan
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Plan deleted
+  /nutri/plans/{id}/export-pdf:
+    get:
+      tags:
+        - Nutrition
+      summary: Export patient's diet plan / nutritional plan as a PDF document
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: PDF file containing the diet plan
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+  /plans/current:
+    get:
+      tags:
+        - Patients
+      summary: Get the current active nutritional plan for the logged-in patient
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Active plan details with populated recipes
+  /shop/orders/consolidate:
+    post:
+      tags:
+        - Shop
+      summary: Consolidate ingredients from active nutritional plans of one or more patients
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - patientIds
+              properties:
+                patientIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        '200':
+          description: Consolidated ingredients list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  patients:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        displayName:
+                          type: string
+                        email:
+                          type: string
+                        planTitle:
+                          type: string
+                  ingredients:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        ingredientId:
+                          type: string
+                          format: uuid
+                        nameEs:
+                          type: string
+                        nameEn:
+                          type: string
+                        quantity:
+                          type: string
+                        quantityNumeric:
+                          type: number
+                        unitEs:
+                          type: string
+                        unitEn:
+                          type: string
+                        siboAlert:
+                          type: boolean
+  /shop/orders/export-pdf:
+    post:
+      tags:
+        - Shop
+      summary: Export consolidated ingredients order as a PDF document
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - patientIds
+              properties:
+                patientIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        '200':
+          description: PDF file containing the purchase order
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+  /ingest/image:
     post:
       tags:
         - Ingest
@@ -373,7 +1334,7 @@ paths:
       responses:
         '200':
           description: Recipe processed
-  /api/ingest/images:
+  /ingest/images:
     post:
       tags:
         - Ingest
@@ -401,7 +1362,7 @@ paths:
       responses:
         '200':
           description: Recipe processed
-  /api/ingest/text:
+  /ingest/text:
     post:
       tags:
         - Ingest
@@ -430,7 +1391,7 @@ paths:
       responses:
         '200':
           description: Recipe processed
-  /api/ingest/transcribe:
+  /ingest/transcribe:
     post:
       tags:
         - Ingest
@@ -453,7 +1414,7 @@ paths:
       responses:
         '200':
           description: Transcription
-  /api/ingest/voice:
+  /ingest/voice:
     post:
       tags:
         - Ingest
@@ -478,7 +1439,7 @@ paths:
       responses:
         '200':
           description: Recipe processed
-  /api/ingest/{slug}/{action}:
+  /ingest/{slug}/{action}:
     post:
       tags:
         - Ingest
@@ -499,7 +1460,7 @@ paths:
       responses:
         '200':
           description: Action performed
-  /api/ingest/save:
+  /ingest/save:
     post:
       tags:
         - Ingest
@@ -525,7 +1486,7 @@ paths:
           description: Recipe updated
         '201':
           description: Recipe created
-  /api/ingest/logs:
+  /ingest/logs:
     get:
       tags:
         - Ingest
@@ -535,3 +1496,238 @@ paths:
       responses:
         '200':
           description: Ingestion logs
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    adminApiKey:
+      type: apiKey
+      in: header
+      name: X-Admin-Key
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        displayName:
+          type: string
+        role:
+          type: string
+          enum: [user, admin, super_admin, health_professional]
+        organizations:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/Organization'
+        isVerified:
+          type: boolean
+    Recipe:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title_es:
+          type: string
+        title_en:
+          type: string
+        slug:
+          type: string
+        organization_id:
+          type: string
+          format: uuid
+          nullable: true
+        image_url:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        nutrition:
+          type: object
+    RecipeUpdate:
+      type: object
+      properties:
+        title_es:
+          type: string
+        title_en:
+          type: string
+        slug:
+          type: string
+        prep_time_minutes:
+          type: integer
+        cook_time_minutes:
+          type: integer
+        servings:
+          type: integer
+        difficulty:
+          type: string
+          enum: [easy, medium, hard]
+        status:
+          type: string
+          enum: [draft, published, archived]
+        sibo_risk_level:
+          type: string
+          enum: [safe, caution, avoid]
+    Organization:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        is_active:
+          type: boolean
+        settings:
+          type: object
+        userCount:
+          type: integer
+        status:
+          type: string
+          enum: [active, suspended, pending]
+    Tag:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        key:
+          type: string
+        es:
+          type: string
+        en:
+          type: string
+        category:
+          type: string
+    NutritionalPlanInput:
+      type: object
+      required:
+        - patient_id
+        - title
+        - start_date
+        - end_date
+      properties:
+        patient_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        meals:
+          type: array
+          items:
+            type: object
+            properties:
+              day:
+                type: string
+              meals:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                    recipeId:
+                      type: string
+                      format: uuid
+                    notes:
+                      type: string
+        notes:
+          type: string
+    NutritionalPlan:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        patient_id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+          format: uuid
+          nullable: true
+        created_by:
+          type: string
+          format: uuid
+        title:
+          type: string
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        meals:
+          type: array
+          items:
+            type: object
+        notes:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    Job:
+      type: object
+      description: Represents an AI job processed by the BullMQ worker
+      properties:
+        id:
+          type: string
+          description: Unique BullMQ job identifier
+          example: "42"
+        name:
+          type: string
+          description: Job type name
+          enum: [generate-image, ingest-image, ingest-images, ingest-text, ingest-audio]
+          example: generate-image
+        status:
+          type: string
+          description: Current job state
+          enum: [waiting, active, completed, failed, delayed, unknown]
+          example: completed
+        progress:
+          type: integer
+          description: Job progress percentage (0-100)
+          example: 100
+        result:
+          type: object
+          nullable: true
+          description: Job result (only present when completed)
+          properties:
+            recipeId:
+              type: string
+              format: uuid
+            imageUrl:
+              type: string
+            filename:
+              type: string
+        failedReason:
+          type: string
+          nullable: true
+          description: Error message (only present when failed)
+        timestamp:
+          type: integer
+          description: Unix timestamp when the job was created
+        finishedOn:
+          type: integer
+          nullable: true
+          description: Unix timestamp when the job finished
+
