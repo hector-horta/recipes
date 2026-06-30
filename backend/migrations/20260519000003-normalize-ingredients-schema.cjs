@@ -186,9 +186,9 @@ module.exports = {
 
         // Find or create ingredient (case-insensitive for unique match, but we insert unique name)
         let ingredient = await queryInterface.sequelize.query(
-          'SELECT id FROM ingredients WHERE LOWER(name_es) = LOWER($1);',
+          'SELECT id FROM ingredients WHERE LOWER(name_es) = LOWER($1) OR LOWER(name_en) = LOWER($2);',
           {
-            bind: [nameEs],
+            bind: [nameEs, nameEn],
             type: queryInterface.sequelize.QueryTypes.SELECT
           }
         );
