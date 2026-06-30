@@ -24,7 +24,7 @@ export const envSchema = z.object({
   SPOONACULAR_API_KEY: z.string().optional(),
   NVIDIA_API_KEY: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
-  GEMINI_IMAGE_MODEL: z.string().default('imagen-4.0-generate-001'),
+  GEMINI_IMAGE_MODEL: z.string().default('gemini-3.1-flash-image'),
   GROQ_API_KEY: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().default('Wati <noreply@wati.com>'),
