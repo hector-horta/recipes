@@ -4,32 +4,6 @@
 
 ---
 
-## 🤖 Instrucciones para Agentes
-
-Al desarrollar en este repositorio:
-
-0. **🖥️ Detectar el sistema operativo ANTES de ejecutar cualquier comando de terminal.** Verifica si estás en Windows (PowerShell), macOS (zsh/bash) o Linux (bash) consultando los metadatos del usuario o ejecutando un comando de detección. Esto es **obligatorio** para evitar gastar tokens en comandos incompatibles. Referencia rápida:
-   | Acción | Bash / zsh (Linux/macOS) | PowerShell (Windows) |
-   |---|---|---|
-   | Filtrar texto en output | `comando \| grep "texto"` | `comando \| Select-String "texto"` |
-   | Encadenar comandos | `cmd1 && cmd2` | `cmd1; cmd2` |
-   | Redireccionar a nulo | `> /dev/null` | `> $null` |
-   | Variable de entorno inline | `VAR=value command` | `$env:VAR='value'; command` |
-   | Listar archivos recursivo | `find . -name "*.js"` | `Get-ChildItem -Recurse -Filter "*.js"` |
-   | Ver contenido de archivo | `cat archivo` | `Get-Content archivo` |
-   | Eliminar archivo | `rm archivo` | `Remove-Item archivo` |
-   | Consultar DB en Docker | `docker compose exec postgres psql -U user -d db -c "SQL"` | Igual (Docker CLI es cross-platform) |
-
-1. Aplica **Test Driven Development (TDD)** de forma estricta — escribe los tests primero.
-2. Sigue siempre este flujo: `Database → Backend (Model/Route) → Frontend (API/Hook/UI) → Analytics → Verification`.
-3. **No es necesario explorar la estructura de carpetas** — toda la información relevante ya está documentada aquí.
-4. Si un feature no requiere persistencia, saltar el paso de Database.
-5. Todo texto visible al usuario debe soportar **i18n** (español e inglés).
-6. **Mantener esta guía actualizada**: Al finalizar un feature nuevo o la corrección de un bug, **actualizar este archivo** si el cambio afectó la estructura de carpetas, esquemas de DB, endpoints, patrones, convenciones, componentes reutilizables, tipos TypeScript, eventos de analytics, o cualquier otra sección documentada aquí. Esta guía es la fuente de verdad — si no se actualiza, el próximo agente trabajará con información obsoleta.
-7. **Scratch scripts (OBLIGATORIO - MUST ABSOLUTO)**: Cualquier script desechable o archivo temporal creado para realizar pruebas manuales o de integración **DEBE** ubicarse exclusivamente dentro de la carpeta `backend/scratch/`. Este comportamiento es un **MUST** absoluto. Está estrictamente prohibido dejar estos archivos en la raíz del proyecto o en otras carpetas públicas/código fuente. Además, estos scripts son efímeros y **deben eliminarse obligatoriamente** antes de realizar commits. La carpeta `backend/scratch/` está configurada en `.gitignore` para evitar fugas al repositorio.
-
----
-
 ## 🚀 Inicio Rápido (Quick Start)
 
 Para levantar el entorno de desarrollo por primera vez:
