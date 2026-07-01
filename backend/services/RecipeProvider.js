@@ -1,34 +1,14 @@
-import { Op, where, cast, col } from 'sequelize';
-import { sequelize } from '../config/database.js';
+import { Op } from 'sequelize';
 import { Recipe } from '../models/Recipe.js';
 import { Ingredient } from '../models/Ingredient.js';
 import { redisClient } from '../config/redis.js';
-import { MEDICAL_TRIGGERS } from '../config/medical.js';
 import { ActivityLogger } from './ActivityLogger.js';
 import { TagService } from './TagService.js';
-import { CANONICAL_CATEGORIES, DIETARY_HIGHLIGHTS, ALL_CANONICAL_TAGS } from '../constants/tags.js';
 import crypto from 'crypto';
+import { evaluateSafety } from '../utils/SecurityScrubber.js';
+import { expandSearchTerms, processRecipeTags } from '../utils/recipeHelpers.js';
 
 const CACHE_TTL_SECONDS = 3600; // 1 hour
-
-// Helper to normalize text (remove accents and lowercase)
-const normalize = (text) => 
-  (text || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-
-// Global cache for compiled trigger regexes
-const triggerRegexCache = new Map();
-
-function getTriggerRegex(triggerText) {
-  if (!triggerRegexCache.has(triggerText)) {
-    const normalizedTrigger = normalize(triggerText);
-    const escapedTrigger = normalizedTrigger.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
-    const regex = new RegExp(`(?:^|\\s)${escapedTrigger}(?:s|es)?(?:\\s|$|[.,;])`, 'i');
-    triggerRegexCache.set(triggerText, regex);
-  }
-  return triggerRegexCache.get(triggerText);
-}
-
-// Global state for cache invalidation rate-limiting
 let lastCacheInvalidation = 0;
 const CACHE_INVALIDATION_COOLDOWN_MS = 2000; // 2 seconds
 
@@ -42,11 +22,6 @@ export class RecipeProvider {
       if (organizationId !== null && organizationId !== userProfile.organization_id) {
         organizationId = userProfile.organization_id;
       }
-    } else if (!userProfile) {
-      // Anonymous users can only see global recipes unless an org is explicitly allowed (future)
-      // For now, if no user profile, we only allow global unless params says otherwise
-      // but we should probably force null if we want strict privacy.
-      // Keeping params.organizationId for now as it might be used by public org portals.
     }
     
     // Fetch tags for translation
@@ -54,8 +29,6 @@ export class RecipeProvider {
     const tagMap = Object.fromEntries(
       allTags.map(t => [TagService.normalizeKey(t.key), t])
     );
-    // console.log('DEBUG tagMap keys:', Object.keys(tagMap));
-    // console.log('DEBUG postre entry:', tagMap['postre']);
 
     // Security: Ensure query is a string and reasonable length
     if (typeof query !== 'string') query = '';
@@ -70,42 +43,7 @@ export class RecipeProvider {
     };
 
     if (query) {
-      const q = query;
-      // Handle simple Spanish plurals for the search query (rough approximation)
-      const baseQ = q.toLowerCase().endsWith('es') ? q.slice(0, -2) : (q.toLowerCase().endsWith('s') ? q.slice(0, -1) : q);
-      
-      const searchTerms = [q];
-      if (baseQ !== q && baseQ.length > 2) searchTerms.push(baseQ);
-
-      // Search Expansion for Canonical Tags
-      // If the query matches a canonical tag name (e.g. "principal"), 
-      // we expand the search to include the tag key and its keywords.
-      const queryLower = q.toLowerCase();
-      const expandedTerms = new Set(searchTerms);
-
-      ALL_CANONICAL_TAGS.forEach(tag => {
-        const matchesEs = tag.es.toLowerCase().includes(queryLower);
-        const matchesEn = tag.en.toLowerCase().includes(queryLower);
-        const matchesKey = tag.key.toLowerCase().includes(queryLower);
-        const matchesKeyword = tag.keywords?.some(k => k.toLowerCase().includes(queryLower));
-        
-        if (matchesEs || matchesEn || matchesKey || matchesKeyword) {
-          expandedTerms.add(tag.key);
-          if (tag.keywords) {
-            tag.keywords.forEach(k => expandedTerms.add(k));
-          }
-        }
-      });
-
-      const orConditions = [];
-      Array.from(expandedTerms).forEach(term => {
-        orConditions.push({ title_es: { [Op.iLike]: `%${term}%` } });
-        orConditions.push({ title_en: { [Op.iLike]: `%${term}%` } });
-        orConditions.push(where(cast(col('tags'), 'text'), { [Op.iLike]: `%${term}%` }));
-        orConditions.push({ '$recipeIngredients.name_es$': { [Op.iLike]: `%${term}%` } });
-        orConditions.push({ '$recipeIngredients.name_en$': { [Op.iLike]: `%${term}%` } });
-      });
-
+      const orConditions = expandSearchTerms(query);
       whereClause[Op.and] = [
         { [Op.or]: [
           { organization_id: null },
@@ -121,8 +59,6 @@ export class RecipeProvider {
     }
 
     const userIntolerances = userProfile?.intolerances || [];
-    const hasSiboFilter = userIntolerances.some(i => i.toLowerCase() === 'sibo');
-
     const parsedOffset = Math.max(parseInt(offset, 10) || 0, 0);
 
     const cachePayload = {
@@ -152,20 +88,15 @@ export class RecipeProvider {
     }
 
     const requestedLimit = Math.min(Math.max(parseInt(number, 10) || 10, 1), 50);
-    
-    // Identificar si necesitamos un buffer para el filtrado post-DB
     const hasFilters = userIntolerances.length > 0;
 
     ActivityLogger.info('Recipe search initiated', { query, number: requestedLimit, offset: parsedOffset, hasFilters, refreshKey: params.refreshKey });
 
-    // ORDER: Randomize if no search query, otherwise latest first
-    const order = query ? [['created_at', 'DESC']] : [['created_at', 'DESC']];
-
+    const order = [['created_at', 'DESC']];
     let totalCount = 0;
     let recipes = [];
 
     if (query) {
-      // Find all matching recipe IDs
       const matchingRecipes = await Recipe.unscoped().findAll({
         attributes: ['id'],
         where: whereClause,
@@ -183,7 +114,6 @@ export class RecipeProvider {
       const allIds = Array.from(new Set(matchingRecipes.map(r => r.id)));
       totalCount = allIds.length;
 
-      // Slice candidate IDs based on whether post-DB filtering is needed
       const pageIds = hasFilters 
         ? allIds.slice(0, requestedLimit * 5) 
         : allIds.slice(parsedOffset, parsedOffset + requestedLimit);
@@ -195,7 +125,6 @@ export class RecipeProvider {
         });
       }
     } else {
-      // Standard path for listings without search query (no joins needed)
       totalCount = await Recipe.count({
         where: whereClause,
         distinct: true,
@@ -223,7 +152,6 @@ export class RecipeProvider {
 
     let results = recipes.map(r => this.normalizeRecipe(r.toJSON(), userProfile, tagMap, favoriteIds.has(r.id)));
 
-    // Collect unsafe metadata before filtering
     let filteredUnsafeCount = 0;
     const filteredAllergenSet = new Set();
 
@@ -231,28 +159,24 @@ export class RecipeProvider {
       const unsafeRecipes = results.filter(r => r.safetyLevel === 'unsafe');
       filteredUnsafeCount = unsafeRecipes.length;
 
-      // Collect which allergens triggered the filtering
       unsafeRecipes.forEach(r => {
         if (r._matchedAllergens) {
           r._matchedAllergens.forEach(a => filteredAllergenSet.add(a));
         }
       });
 
-      // Only filter if the user did NOT request to include unsafe recipes
       const includeUnsafe = params.includeUnsafe === 'true';
       if (!includeUnsafe) {
         results = results.filter(recipe => recipe.safetyLevel !== 'unsafe');
       }
     }
 
-    // Aplicar offset y límite final después del filtrado
     if (hasFilters) {
       results = results.slice(parsedOffset, parsedOffset + requestedLimit);
     } else {
       results = results.slice(0, requestedLimit);
     }
 
-    // Strip internal metadata before sending to client
     results = results.map(({ _matchedAllergens, ...rest }) => rest);
 
     const response = {
@@ -275,100 +199,7 @@ export class RecipeProvider {
   }
 
   static normalizeRecipe(recipe, userProfile, tagMap = {}, isFavorite = false) {
-    const profile = userProfile || {};
-    const userIntolerances = profile.intolerances || [];
-    const userSeverities = profile.severities || {};
-    const hasSibo = userIntolerances.some(i => i.toLowerCase() === 'sibo');
-    
-
-
-    // 2. Determinar safetyLevel dinámicamente
-    let safetyLevel = 'safe';
-
-    // A) Evaluación por campo SIBO (si el usuario tiene SIBO)
-    let siboCurated = false;
-    if (hasSibo) {
-      if (recipe.sibo_risk_level === 'avoid') {
-        safetyLevel = 'unsafe';
-        siboCurated = true;
-      } else if (recipe.sibo_risk_level === 'caution') {
-        safetyLevel = 'review';
-        siboCurated = true;
-      }
-    }
-
-    // B) Evaluación por ingredientes (Triggers)
-    // Identificar activadores médicos para las intolerancias del usuario
-    const activeTriggers = [];
-    userIntolerances.forEach(intolerance => {
-      const lowerIntolerance = (intolerance || '').toLowerCase();
-      // Extraer ID base (ej: 'egg_anafilaxis' -> 'egg')
-      const baseId = lowerIntolerance.split('_')[0].split('-')[0];
-      
-      // Si la receta ya tiene una curación SIBO (avoid/caution), no re-evaluamos triggers de SIBO 
-      if (baseId === 'sibo' && siboCurated) return;
-      
-      const triggers = MEDICAL_TRIGGERS[baseId];
-      if (triggers) {
-        // Almacenamos triggers mapeados a su baseId para evaluar severidad después
-        triggers.forEach(t => activeTriggers.push({ text: t, baseId }));
-      }
-    });
-
-    let foundMaxSeverity = null; // 'low' or 'high'
-    const matchedAllergenIds = new Set();
-
-    // Preparar regexps por adelantado usando cache compilado
-    const triggerRegexes = activeTriggers.map(trigger => {
-      return { trigger, regex: getTriggerRegex(trigger.text) };
-    });
-
-    const ingredients = (recipe.ingredients || []).map(i => {
-      let isBorderlineSafe = false;
-      const ingNameEs = i.name?.es || i.name || 'Desconocido';
-      const normalizedIngName = normalize(ingNameEs);
-      
-      // La advertencia de ingrediente limitado original SÓLO aplica si el usuario tiene SIBO
-      if (hasSibo && (i.siboAlert || i.isBorderlineSafe)) {
-        isBorderlineSafe = true;
-      }
-      
-      // Verificar si este ingrediente dispara alguna intolerancia
-      triggerRegexes.forEach(({ trigger, regex }) => {
-        if (regex.test(normalizedIngName)) {
-          const severity = (userSeverities[trigger.baseId] || 'severe').toLowerCase();
-          const isHighSeverity = severity === 'severe' || severity === 'anaphylactic';
-          
-          // Logic to handle matching ingredients for intolerances
-          matchedAllergenIds.add(trigger.baseId);
-          isBorderlineSafe = true;
-
-          if (isHighSeverity) {
-            foundMaxSeverity = 'high';
-          } else if (foundMaxSeverity !== 'high') {
-            foundMaxSeverity = 'low';
-          }
-        }
-      });
-      
-      return {
-        id: i.name?.es || i.name || 'unknown',
-        name: ingNameEs,
-        nameEn: i.name?.en || '',
-        quantity: i.quantity || '',
-        unit: typeof i.unit === 'object' ? (i.unit?.es || '') : (i.unit || ''),
-        unitEn: typeof i.unit === 'object' ? (i.unit?.en || '') : '',
-        isBorderlineSafe
-      };
-    });
-
-    // Trace completed normalization (removed debug logs)
-
-    if (foundMaxSeverity === 'high') {
-      safetyLevel = 'unsafe';
-    } else if (foundMaxSeverity === 'low') {
-      safetyLevel = 'review';
-    }
+    const { safetyLevel, ingredients, matchedAllergenIds } = evaluateSafety(recipe, userProfile);
 
     const instructions = (recipe.steps || [])
       .sort((a, b) => (a.order || 0) - (b.order || 0))
@@ -378,69 +209,13 @@ export class RecipeProvider {
       instructions.push('Sin instrucciones disponibles.');
     }
 
-    const imageUrl = recipe.image_url || '';
-
-    const rawTags = recipe.tags || [];
-    const processedTags = rawTags.map(t => {
-      const isString = typeof t === 'string';
-      const tagObj = isString ? { es: t, en: t } : t;
-      const key = TagService.normalizeKey(tagObj.key || tagObj.es || '');
-      
-      if (tagMap[key]) {
-        return { es: tagMap[key].es, en: tagMap[key].en, key };
-      }
-      
-      return { 
-        es: tagObj.es || '', 
-        en: tagObj.en || tagObj.es || '',
-        key
-      };
-    });
-
-    // 1. Filter allowed tags (Categories + Dietary)
-    const allowedKeys = [...CANONICAL_CATEGORIES, ...DIETARY_HIGHLIGHTS].map(c => c.key);
-    let finalTags = processedTags.filter(t => allowedKeys.includes(t.key));
-
-    // Special mapping: SIBO/Fodmap related tags -> Low FODMAP
-    const legacyFodmapKeys = ['sibo', 'fodmap', 'sibo_safe', 'bajo_en_fodmap'];
-    if (processedTags.some(t => legacyFodmapKeys.includes(t.key))) {
-      const lowFodmapTag = DIETARY_HIGHLIGHTS.find(d => d.key === 'low_fodmap');
-      if (!finalTags.some(t => t.key === 'low_fodmap')) {
-        finalTags.push({ es: lowFodmapTag.es, en: lowFodmapTag.en, key: lowFodmapTag.key });
-      }
-    }
-
-    // 2. Auto-Categorization (Heuristic)
-    if (!finalTags.some(t => CANONICAL_CATEGORIES.map(c => c.key).includes(t.key))) {
-      const searchText = ` ${recipe.title_es} ${recipe.title_en} ${ingredients.map(i => i.name).join(' ')} `.toLowerCase();
-      
-      const detectedCategories = CANONICAL_CATEGORIES.filter(cat => 
-        cat.keywords.some(k => {
-          // Use word-like matching to avoid "test" matching "te"
-          const regex = new RegExp(`\\b${k}\\b`, 'i');
-          return regex.test(searchText);
-        })
-      );
-
-      detectedCategories.forEach(cat => {
-        if (!finalTags.some(t => t.key === cat.key)) {
-          finalTags.push({ es: cat.es, en: cat.en, key: cat.key });
-        }
-      });
-    }
-
-    // Filter by SIBO context (only show Low FODMAP related if user has SIBO or if it's explicitly tagged)
-    // Actually, user wants to keep these 3 regardless or filtered?
-    // "Keep the 'vegan', 'gluten free' and 'SIBO-Safe' [Low FODMAP]"
-    // I will show all finalTags found.
-
-    const siboAllergiesTags = finalTags.map(({ key, ...rest }) => rest);
+    const siboAllergiesTags = processRecipeTags(recipe, ingredients, tagMap);
 
     return {
       id: recipe.id,
       title: recipe.title_es,
       titleEn: recipe.title_en,
-      imageUrl,
+      imageUrl: recipe.image_url || '',
       prepTimeMinutes: recipe.prep_time_minutes || 0,
       cookTimeMinutes: recipe.cook_time_minutes || 0,
       totalTimeMinutes: (recipe.prep_time_minutes || 0) + (recipe.cook_time_minutes || 0),
@@ -455,7 +230,7 @@ export class RecipeProvider {
       isFavorite,
       siboAllergiesTags,
       siboAlerts: recipe.sibo_alerts || [],
-      _matchedAllergens: [...matchedAllergenIds]
+      _matchedAllergens: matchedAllergenIds
     };
   }
 

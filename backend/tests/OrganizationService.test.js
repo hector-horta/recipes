@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { OrganizationService } from '../services/OrganizationService.js';
+import { UserOrganizationService } from '../services/UserOrganizationService.js';
 import { Organization } from '../models/Organization.js';
 import { User } from '../models/User.js';
 import { UserOrganization } from '../models/UserOrganization.js';
@@ -207,7 +208,7 @@ describe('OrganizationService', () => {
       UserOrganization.findOne.mockResolvedValue(null);
       UserOrganization.create.mockResolvedValue({ role: 'user', created_at: '2026-05-19' });
 
-      const result = await OrganizationService.addUserToOrganization('1', { displayName: 'User', email: 'user@test.com', role: 'user' });
+      const result = await UserOrganizationService.addUserToOrganization('1', { displayName: 'User', email: 'user@test.com', role: 'user' });
 
       expect(result.id).toBe('u1');
       expect(result.createdNewUser).toBe(false);
@@ -223,7 +224,7 @@ describe('OrganizationService', () => {
       User.create.mockResolvedValue(mockUser);
       UserOrganization.create.mockResolvedValue({ role: 'admin', created_at: '2026-05-19' });
 
-      const result = await OrganizationService.addUserToOrganization('1', { displayName: 'New User', email: 'new@test.com', role: 'admin' });
+      const result = await UserOrganizationService.addUserToOrganization('1', { displayName: 'New User', email: 'new@test.com', role: 'admin' });
 
       expect(result.id).toBe('u2');
       expect(result.createdNewUser).toBe(true);
@@ -244,7 +245,7 @@ describe('OrganizationService', () => {
         { displayName: 'Exist Bulk', email: 'existbulk@test.com', role: 'admin' }
       ];
 
-      const result = await OrganizationService.bulkAddUsersToOrganization('1', usersToLoad);
+      const result = await UserOrganizationService.bulkAddUsersToOrganization('1', usersToLoad);
 
       expect(result.total).toBe(2);
       expect(result.created).toBe(1);
@@ -261,7 +262,7 @@ describe('OrganizationService', () => {
       Organization.findByPk.mockResolvedValue(mockOrg);
       UserOrganization.findOne.mockResolvedValue(mockRelation);
 
-      const result = await OrganizationService.removeUserFromOrganization('1', 'u1');
+      const result = await UserOrganizationService.removeUserFromOrganization('1', 'u1');
 
       expect(result.message).toContain('Usuario removido');
       expect(mockRelation.destroy).toHaveBeenCalled();

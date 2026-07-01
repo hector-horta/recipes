@@ -1,5 +1,6 @@
 import { AdminStatsService } from '../services/AdminStatsService.js';
 import { OrganizationService } from '../services/OrganizationService.js';
+import { UserOrganizationService } from '../services/UserOrganizationService.js';
 import { AdminRecipeService } from '../services/AdminRecipeService.js';
 import { AdminTagService } from '../services/AdminTagService.js';
 import { translateText } from '../services/NvidiaNIM.js';
@@ -57,20 +58,20 @@ export const getOrganizationDetails = asyncHandler(async (req, res) => {
 export const addUserToOrganization = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { displayName, email, role } = req.body;
-  const result = await OrganizationService.addUserToOrganization(id, { displayName, email, role });
+  const result = await UserOrganizationService.addUserToOrganization(id, { displayName, email, role });
   res.status(201).json(result);
 });
 
 export const bulkAddUsersToOrganization = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { users } = req.body;
-  const result = await OrganizationService.bulkAddUsersToOrganization(id, users);
+  const result = await UserOrganizationService.bulkAddUsersToOrganization(id, users);
   res.json(result);
 });
 
 export const removeUserFromOrganization = asyncHandler(async (req, res) => {
   const { id, userId } = req.params;
-  const result = await OrganizationService.removeUserFromOrganization(id, userId);
+  const result = await UserOrganizationService.removeUserFromOrganization(id, userId);
   res.json(result);
 });
 
