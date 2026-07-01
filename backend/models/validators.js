@@ -135,5 +135,43 @@ export const nutritionalPlanSchema = z.object({
   path: ["end_date"]
 });
 
+export const ingestImageSchema = z.object({
+  imageUrl: z.string().url('URL de imagen inválida').optional(),
+  imageBase64: z.string().optional(),
+  mimeType: z.string().optional(),
+  generateImage: z.boolean().optional().default(true),
+  saveToDb: z.boolean().optional().default(true)
+});
+
+export const ingestImagesSchema = z.object({
+  imageUrl1: z.string().url('URL de imagen 1 inválida').optional(),
+  imageUrl2: z.string().url('URL de imagen 2 inválida').optional(),
+  imageBase64_1: z.string().optional(),
+  mimeType1: z.string().optional(),
+  imageBase64_2: z.string().optional(),
+  mimeType2: z.string().optional(),
+  generateImage: z.boolean().optional().default(true),
+  saveToDb: z.boolean().optional().default(true)
+}).refine(data => {
+  const hasUrls = data.imageUrl1 && data.imageUrl2;
+  const hasBase64 = data.imageBase64_1 && data.imageBase64_2;
+  return hasUrls || hasBase64;
+}, { message: 'Debe proporcionar ambas URLs o ambos base64 de las imágenes.' });
+
+export const ingestTextSchema = z.object({
+  text: z.string().min(10, 'El texto debe ser más largo'),
+  generateImage: z.boolean().optional().default(true),
+  saveToDb: z.boolean().optional().default(true),
+  sourceType: z.string().optional(),
+  sourceReference: z.string().optional()
+});
+
+export const transcribeSchema = z.object({
+  audioUrl: z.string().url('audioUrl must be a valid URL'),
+  language: z.string().optional().default('es'),
+  saveToDb: z.boolean().optional().default(true)
+});
+
+
 
 
