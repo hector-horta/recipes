@@ -15,12 +15,14 @@ vi.mock('../config/redis.js', () => ({
   }
 }));
 
-vi.mock('../models/Recipe.js', () => ({
-  Recipe: {
+vi.mock('../models/Recipe.js', () => {
+  const mockRecipe = {
     findAll: vi.fn(),
     count: vi.fn()
-  }
-}));
+  };
+  mockRecipe.unscoped = vi.fn(() => mockRecipe);
+  return { Recipe: mockRecipe };
+});
 
 describe('RecipeProvider', () => {
   beforeEach(() => {

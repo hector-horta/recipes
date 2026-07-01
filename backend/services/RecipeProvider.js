@@ -162,27 +162,37 @@ export class RecipeProvider {
     const order = query ? [['created_at', 'DESC']] : [['created_at', 'DESC']];
 
     // Get total count for pagination
-    const totalCount = await Recipe.count({
+    const countOptions = {
       where: whereClause,
       distinct: true,
-      col: 'Recipe.id',
-      include: [
+      col: 'Recipe.id'
+    };
+
+    if (query) {
+      countOptions.subQuery = false;
+      countOptions.include = [
         {
           model: Ingredient,
           as: 'recipeIngredients'
         }
-      ],
-      subQuery: false
-    });
+      ];
+    }
+
+    const totalCount = await Recipe.unscoped().count(countOptions);
 
     // Buscamos candidatos con offset para paginación server-side
-    const recipes = await Recipe.findAll({
+    const recipesOptions = {
       where: whereClause,
       order,
       offset: hasFilters ? 0 : parsedOffset,
-      limit: hasFilters ? requestedLimit * 5 : requestedLimit,
-      subQuery: false
-    });
+      limit: hasFilters ? requestedLimit * 5 : requestedLimit
+    };
+
+    if (query) {
+      recipesOptions.subQuery = false;
+    }
+
+    const recipes = await Recipe.findAll(recipesOptions);
 
     // Fetch user favorites if authenticated
     const favoriteIds = new Set();
