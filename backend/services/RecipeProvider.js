@@ -171,7 +171,8 @@ export class RecipeProvider {
           model: Ingredient,
           as: 'recipeIngredients'
         }
-      ]
+      ],
+      subQuery: false
     });
 
     // Buscamos candidatos con offset para paginación server-side
@@ -179,7 +180,8 @@ export class RecipeProvider {
       where: whereClause,
       order,
       offset: hasFilters ? 0 : parsedOffset,
-      limit: hasFilters ? requestedLimit * 5 : requestedLimit
+      limit: hasFilters ? requestedLimit * 5 : requestedLimit,
+      subQuery: false
     });
 
     // Fetch user favorites if authenticated
