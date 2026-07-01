@@ -7,7 +7,7 @@ import ActivityLogger from './ActivityLogger.js';
  */
 class GeminiService {
   constructor() {
-    this.modelId = config.GEMINI_IMAGE_MODEL || "imagen-3.0-generate-002";
+    this.modelId = config.GEMINI_IMAGE_MODEL || "gemini-3.1-flash-image";
     
     if (!config.GEMINI_API_KEY) {
       ActivityLogger.warn('⚠️ GEMINI_API_KEY is not configured. GeminiService will be disabled.');
@@ -68,18 +68,32 @@ class GeminiService {
         hasDetails: !!technicalContext
       });
       
-      const result = await this.client.models.generateImages({
-        model: this.modelId,
-        prompt: finalPrompt,
-        config: {
-          numberOfImages: 1,
-          aspectRatio: "1:1",
-          outputMimeType: "image/jpeg"
-        }
-      });
+      let imageData = null;
+      let result = null;
 
-      const generatedImage = result.generatedImages?.[0];
-      const imageData = generatedImage?.image?.imageBytes;
+      if (this.modelId.includes('gemini')) {
+        result = await this.client.models.generateContent({
+          model: this.modelId,
+          contents: finalPrompt,
+          config: {
+            responseModalities: ["IMAGE"]
+          }
+        });
+        const part = result.candidates?.[0]?.content?.parts?.[0];
+        imageData = part?.inlineData?.data;
+      } else {
+        result = await this.client.models.generateImages({
+          model: this.modelId,
+          prompt: finalPrompt,
+          config: {
+            numberOfImages: 1,
+            aspectRatio: "1:1",
+            outputMimeType: "image/jpeg"
+          }
+        });
+        const generatedImage = result.generatedImages?.[0];
+        imageData = generatedImage?.image?.imageBytes;
+      }
       
       if (imageData) {
         // If the SDK returns a base64 string, Buffer.from(..., 'base64') is correct.
