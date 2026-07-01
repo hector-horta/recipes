@@ -36,7 +36,7 @@ vi.mock('@wati/src/AuthContext', async () => {
         ...actual,
         useAuth: () => ({
             user: mockUser,
-            updateProfile: mockUpdateProfile,
+            updateUserProfile: mockUpdateProfile,
             isLoading: false
         })
     };

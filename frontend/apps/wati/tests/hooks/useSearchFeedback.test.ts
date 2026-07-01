@@ -33,7 +33,8 @@ describe('useSearchFeedback', () => {
         expect(mockFetch).toHaveBeenCalledWith('/api/suggestions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ term: 'pasta carbonara', userId: 'user-123' })
+            body: JSON.stringify({ term: 'pasta carbonara', userId: 'user-123' }),
+            credentials: 'include'
         });
         expect(result.current.submitted).toBe(true);
         expect(result.current.isSubmitting).toBe(false);

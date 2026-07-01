@@ -40,7 +40,7 @@ describe('ResetPasswordPage', () => {
   it('renders reset password form when token is present', () => {
     render(<ResetPasswordPage />);
     expect(screen.getByText('auth.reset.title')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('••••••••')).toBeInTheDocument();
+    expect(screen.getAllByPlaceholderText('••••••••')[0]).toBeInTheDocument();
   });
 
   it('shows error if passwords do not match', async () => {

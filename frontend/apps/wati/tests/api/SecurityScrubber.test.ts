@@ -8,7 +8,7 @@ describe('SecurityScrubber', () => {
         allergies: ['peanut'],
         intolerances: ['dairy'],
         conditions: ['SIBO'],
-        severities: { 'peanut': 'anaphylactic', 'dairy': 'moderate' }
+        severities: { 'peanut': 'anaphylactic', 'dairy': 'moderate', 'sibo': 'moderate' }
     };
 
     const safeRecipe = {

@@ -1,13 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, act } from '@testing-library/react';
 import { VerifyEmailPage } from '@wati/src/pages/VerifyEmailPage';
 import { useAuth } from '@wati/src/AuthContext';
 import { useToast } from '@wati/src/ToastContext';
 import { api } from '@wati/src/lib/api';
 
+const mockT = (key: string) => key;
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: mockT,
   }),
 }));
 
@@ -31,6 +32,7 @@ describe('VerifyEmailPage', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    (api.post as any).mockReset();
     (useAuth as any).mockReturnValue({ refreshUser: mockRefreshUser });
     (useToast as any).mockReturnValue({ showToast: mockShowToast });
     
@@ -46,6 +48,10 @@ describe('VerifyEmailPage', () => {
     vi.useFakeTimers();
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('shows loading state initially', async () => {
     (api.post as any).mockReturnValue(new Promise(() => {})); // Never resolves
     render(<VerifyEmailPage />);
@@ -57,17 +63,11 @@ describe('VerifyEmailPage', () => {
     
     render(<VerifyEmailPage />);
 
-    await waitFor(() => {
-      expect(screen.getByText('auth.verify.success_title')).toBeInTheDocument();
-    });
+    await vi.runAllTimersAsync();
 
+    expect(screen.getByText('auth.verify.success_title')).toBeInTheDocument();
     expect(mockShowToast).toHaveBeenCalledWith('auth.verify.success_toast', 'success');
     expect(mockRefreshUser).toHaveBeenCalled();
-
-    act(() => {
-      vi.advanceTimersByTime(3000);
-    });
-
     expect(window.location.href).toBe('/');
   });
 
@@ -78,9 +78,9 @@ describe('VerifyEmailPage', () => {
 
     render(<VerifyEmailPage />);
 
-    await waitFor(() => {
-      expect(screen.getByText('Invalid token')).toBeInTheDocument();
-    });
+    await vi.runAllTimersAsync();
+
+    expect(screen.getByText('Invalid token')).toBeInTheDocument();
   });
 
   it('shows error immediately if no token is provided', async () => {
@@ -97,17 +97,17 @@ describe('VerifyEmailPage', () => {
 
     render(<VerifyEmailPage />);
 
-    await waitFor(() => {
-      expect(screen.getByText('auth.verify.resend_button')).toBeInTheDocument();
-    });
+    await vi.runAllTimersAsync();
+
+    expect(screen.getByText('auth.verify.resend_button')).toBeInTheDocument();
 
     const resendBtn = screen.getByText('auth.verify.resend_button');
     act(() => {
       resendBtn.click();
     });
 
-    await waitFor(() => {
-      expect(mockShowToast).toHaveBeenCalledWith('auth.verify.resend_success', 'success');
-    });
+    await vi.runAllTimersAsync();
+
+    expect(mockShowToast).toHaveBeenCalledWith('auth.verify.resend_success', 'success');
   });
 });

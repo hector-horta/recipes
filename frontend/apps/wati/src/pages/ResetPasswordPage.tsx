@@ -32,17 +32,17 @@ export function ResetPasswordPage() {
     }
 
     if (password.length < 8) {
-      showToast('La contraseña debe tener al menos 8 caracteres', 'error');
+      showToast(t('auth.reset.too_short'), 'error');
       return;
     }
 
     if (!/[A-Z]/.test(password)) {
-      showToast('La contraseña debe tener al menos una mayúscula', 'error');
+      showToast(t('auth.reset.need_uppercase', { defaultValue: 'La contraseña debe tener al menos una mayúscula' }), 'error');
       return;
     }
 
     if (!/[0-9]/.test(password)) {
-      showToast('La contraseña debe tener al menos un número', 'error');
+      showToast(t('auth.reset.need_number', { defaultValue: 'La contraseña debe tener al menos un número' }), 'error');
       return;
     }
 

@@ -28,10 +28,10 @@ describe('imageCache', () => {
         it('should return cached image if exists', async () => {
             (db.cachedImages.get as any).mockResolvedValue({ base64: 'data:image/jpeg;base64,abc123' });
 
-            const result = await cacheImage('https://example.com/image.jpg');
+            const result = await cacheImage('https://wati.health/image.jpg');
 
             expect(result).toBe('data:image/jpeg;base64,abc123');
-            expect(db.cachedImages.get).toHaveBeenCalledWith('https://example.com/image.jpg');
+            expect(db.cachedImages.get).toHaveBeenCalledWith('https://wati.health/image.jpg');
         });
 
         it('should fetch and cache image if not in cache', async () => {
@@ -43,9 +43,9 @@ describe('imageCache', () => {
                 blob: async () => mockBlob
             });
 
-            const result = await cacheImage('https://example.com/image.jpg');
+            const result = await cacheImage('https://wati.health/image.jpg');
 
-            expect(mockFetch).toHaveBeenCalledWith('https://example.com/image.jpg');
+            expect(mockFetch).toHaveBeenCalledWith('https://wati.health/image.jpg', { mode: 'cors' });
             expect(db.cachedImages.put).toHaveBeenCalled();
             expect(result).toMatch(/^data:image\/jpeg;base64,/);
         });
@@ -54,7 +54,7 @@ describe('imageCache', () => {
             (db.cachedImages.get as any).mockResolvedValue(null);
             mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
-            const result = await cacheImage('https://example.com/image.jpg');
+            const result = await cacheImage('https://wati.health/image.jpg');
 
             expect(result).toBe(null);
         });
@@ -63,7 +63,7 @@ describe('imageCache', () => {
             (db.cachedImages.get as any).mockResolvedValue(null);
             mockFetch.mockResolvedValueOnce({ ok: false });
 
-            const result = await cacheImage('https://example.com/image.jpg');
+            const result = await cacheImage('https://wati.health/image.jpg');
 
             expect(result).toBe(null);
         });
@@ -78,7 +78,7 @@ describe('imageCache', () => {
         it('should return cached base64 if exists', async () => {
             (db.cachedImages.get as any).mockResolvedValue({ base64: 'data:image/png;base64,xyz789' });
 
-            const result = await getCachedImage('https://example.com/image.png');
+            const result = await getCachedImage('https://wati.health/image.png');
 
             expect(result).toBe('data:image/png;base64,xyz789');
         });
@@ -86,7 +86,7 @@ describe('imageCache', () => {
         it('should return null if not in cache', async () => {
             (db.cachedImages.get as any).mockResolvedValue(null);
 
-            const result = await getCachedImage('https://example.com/image.png');
+            const result = await getCachedImage('https://wati.health/image.png');
 
             expect(result).toBe(null);
         });
@@ -94,7 +94,7 @@ describe('imageCache', () => {
         it('should handle database errors gracefully', async () => {
             (db.cachedImages.get as any).mockRejectedValue(new Error('DB error'));
 
-            const result = await getCachedImage('https://example.com/image.png');
+            const result = await getCachedImage('https://wati.health/image.png');
 
             expect(result).toBe(null);
         });
@@ -109,7 +109,7 @@ describe('imageCache', () => {
         it('should return cached image if available', async () => {
             (db.cachedImages.get as any).mockResolvedValue({ base64: 'cached-data' });
 
-            const result = await getImageSource('https://example.com/img.jpg');
+            const result = await getImageSource('https://wati.health/img.jpg');
 
             expect(result).toBe('cached-data');
         });
@@ -123,13 +123,13 @@ describe('imageCache', () => {
                 blob: async () => mockBlob
             });
 
-            await getImageSource('https://example.com/img.jpg');
+            await getImageSource('https://wati.health/img.jpg');
 
             expect(db.cachedImages.put).toHaveBeenCalled();
         });
 
         it('should return original URL on cache failure', async () => {
-            const url = 'https://example.com/fallback.jpg';
+            const url = 'https://wati.health/fallback.jpg';
             (db.cachedImages.get as any).mockResolvedValue(null);
             mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
@@ -142,11 +142,11 @@ describe('imageCache', () => {
     describe('cacheRecipeImages', () => {
         it('should cache all unique image URLs from recipes', async () => {
             const recipes = [
-                { imageUrl: 'https://example.com/1.jpg' },
-                { imageUrl: 'https://example.com/2.jpg' },
-                { imageUrl: 'https://example.com/1.jpg' },
+                { imageUrl: 'https://wati.health/1.jpg' },
+                { imageUrl: 'https://wati.health/2.jpg' },
+                { imageUrl: 'https://wati.health/1.jpg' },
                 { imageUrl: null },
-                { imageUrl: 'https://example.com/3.jpg' }
+                { imageUrl: 'https://wati.health/3.jpg' }
             ];
 
             (db.cachedImages.get as any).mockResolvedValue(null);
@@ -155,9 +155,9 @@ describe('imageCache', () => {
             await cacheRecipeImages(recipes as any);
 
             expect(mockFetch).toHaveBeenCalledTimes(3);
-            expect(mockFetch).toHaveBeenCalledWith('https://example.com/1.jpg');
-            expect(mockFetch).toHaveBeenCalledWith('https://example.com/2.jpg');
-            expect(mockFetch).toHaveBeenCalledWith('https://example.com/3.jpg');
+            expect(mockFetch).toHaveBeenCalledWith('https://wati.health/1.jpg', { mode: 'cors' });
+            expect(mockFetch).toHaveBeenCalledWith('https://wati.health/2.jpg', { mode: 'cors' });
+            expect(mockFetch).toHaveBeenCalledWith('https://wati.health/3.jpg', { mode: 'cors' });
         });
 
         it('should handle empty recipe array', async () => {
@@ -167,8 +167,8 @@ describe('imageCache', () => {
 
         it('should use Promise.allSettled to handle individual failures', async () => {
             const recipes = [
-                { imageUrl: 'https://example.com/ok.jpg' },
-                { imageUrl: 'https://example.com/fail.jpg' }
+                { imageUrl: 'https://wati.health/ok.jpg' },
+                { imageUrl: 'https://wati.health/fail.jpg' }
             ];
 
             mockFetch

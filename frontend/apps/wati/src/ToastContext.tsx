@@ -75,6 +75,7 @@ const ToastItem = ({ toast, onClose }: { toast: Toast; onClose: () => void }) =>
       {toast.type !== 'loading' && (
         <button
           onClick={onClose}
+          aria-label="Close"
           className="absolute top-4 right-4 text-brand-forest/40 hover:text-brand-forest transition-colors"
         >
           <X className="w-4 h-4" />

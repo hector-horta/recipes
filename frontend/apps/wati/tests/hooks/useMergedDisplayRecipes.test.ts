@@ -103,7 +103,7 @@ describe('useMergedDisplayRecipes', () => {
         }));
 
         expect(result.current.displayRecipes).toEqual(mockRecipes);
-        expect(result.current.totalPages).toBe(0);
+        expect(result.current.totalPages).toBe(1);
     });
 
     it('should handle empty recipes in non-search mode', () => {

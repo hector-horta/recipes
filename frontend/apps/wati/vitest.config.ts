@@ -10,8 +10,8 @@ export default {
     preserveSymlinks: true,
     dedupe: ['react', 'react-dom', '@tanstack/react-query', 'react-i18next', 'react-router-dom'],
     alias: {
-      'react': path.resolve(__dirname, '../../../node_modules/react'),
-      'react-dom': path.resolve(__dirname, '../../../node_modules/react-dom'),
+      'react$': path.resolve(__dirname, '../../../node_modules/react'),
+      'react-dom$': path.resolve(__dirname, '../../../node_modules/react-dom'),
       '@': path.resolve(__dirname, './src'),
       '@wati/src': path.resolve(__dirname, './src'),
       '@wati/types': path.resolve(__dirname, '../../packages/types/src/index.ts'),
