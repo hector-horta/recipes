@@ -2,34 +2,34 @@ import { config } from './env.js';
 
 export const corsOptions = {
   origin: function (origin, callback) {
-    const allowedHosts = [
-      config.FRONTEND_URL,
-      'http://localhost',
-      'https://localhost',
-      'http://localhost:5173',
-      'http://127.0.0.1:5173',
-      'http://localhost:5174',
-      'http://127.0.0.1:5174',
-      'https://wati.health',
-      'https://www.wati.health',
-      'https://app.wati.health',
-      'https://more.wati.health',
-      'http://wati.health',
-      'http://www.wati.health',
-      'http://app.wati.health',
-      'http://more.wati.health'
-    ];
-    
-    // Allow localhost, local network IPs, and undefined (mobile apps, direct requests)
-    const isLocalhost = !origin || allowedHosts.includes(origin);
-    const isLocalNetwork = origin && (
+    // 1. Direct requests / Mobile apps (no origin header)
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    // 2. Allowed static hosts or custom env configuration
+    if (config.FRONTEND_URL && origin === config.FRONTEND_URL) {
+      return callback(null, true);
+    }
+
+    // 3. Localhost & 127.0.0.1 (any port)
+    const isLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+
+    // 4. mDNS / local network hosts (e.g., mx-mini.local:5173, wati.local:5174)
+    const isLocalMDNS = /^https?:\/\/[a-zA-Z0-9.-]+\.local(:\d+)?$/.test(origin);
+
+    // 5. Private IP subnets (192.168.x.x, 10.x.x.x, 172.16.x.x-172.31.x.x)
+    const isPrivateIP = (
       /^https?:\/\/192\.168\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(origin) ||
       /^https?:\/\/10\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(origin) ||
       /^https?:\/\/172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(origin)
     );
-    const isCloudflarePages = origin && /\.pages\.dev$/.test(origin);
-    
-    if (isLocalhost || isLocalNetwork || isCloudflarePages) {
+
+    // 6. Production & cloudflare subdomains
+    const isWatiDomain = /^https?:\/\/([a-zA-Z0-9-]+\.)*wati\.health(:\d+)?$/.test(origin);
+    const isCloudflarePages = /\.pages\.dev$/.test(origin);
+
+    if (isLocalhost || isLocalMDNS || isPrivateIP || isWatiDomain || isCloudflarePages) {
       callback(null, true);
     } else {
       const error = new Error('Not allowed by CORS');
