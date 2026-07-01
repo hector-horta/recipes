@@ -13,7 +13,11 @@ export const corsOptions = {
       'https://wati.health',
       'https://www.wati.health',
       'https://app.wati.health',
-      'https://more.wati.health'
+      'https://more.wati.health',
+      'http://wati.health',
+      'http://www.wati.health',
+      'http://app.wati.health',
+      'http://more.wati.health'
     ];
     
     // Allow localhost, local network IPs, and undefined (mobile apps, direct requests)
