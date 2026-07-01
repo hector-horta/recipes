@@ -125,7 +125,7 @@ export class RecipeProvider {
         });
       }
     } else {
-      totalCount = await Recipe.count({
+      totalCount = await Recipe.unscoped().count({
         where: whereClause,
         distinct: true,
         col: 'id'
