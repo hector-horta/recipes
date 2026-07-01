@@ -161,38 +161,54 @@ export class RecipeProvider {
     // ORDER: Randomize if no search query, otherwise latest first
     const order = query ? [['created_at', 'DESC']] : [['created_at', 'DESC']];
 
-    // Get total count for pagination
-    const countOptions = {
-      where: whereClause,
-      distinct: true,
-      col: 'Recipe.id'
-    };
+    let totalCount = 0;
+    let recipes = [];
 
     if (query) {
-      countOptions.subQuery = false;
-      countOptions.include = [
-        {
-          model: Ingredient,
-          as: 'recipeIngredients'
-        }
-      ];
+      // Find all matching recipe IDs
+      const matchingRecipes = await Recipe.unscoped().findAll({
+        attributes: ['id'],
+        where: whereClause,
+        include: [
+          {
+            model: Ingredient,
+            as: 'recipeIngredients',
+            attributes: []
+          }
+        ],
+        raw: true,
+        subQuery: false
+      });
+
+      const allIds = Array.from(new Set(matchingRecipes.map(r => r.id)));
+      totalCount = allIds.length;
+
+      // Slice candidate IDs based on whether post-DB filtering is needed
+      const pageIds = hasFilters 
+        ? allIds.slice(0, requestedLimit * 5) 
+        : allIds.slice(parsedOffset, parsedOffset + requestedLimit);
+
+      if (pageIds.length > 0) {
+        recipes = await Recipe.findAll({
+          where: { id: pageIds },
+          order
+        });
+      }
+    } else {
+      // Standard path for listings without search query (no joins needed)
+      totalCount = await Recipe.count({
+        where: whereClause,
+        distinct: true,
+        col: 'id'
+      });
+
+      recipes = await Recipe.findAll({
+        where: whereClause,
+        order,
+        offset: hasFilters ? 0 : parsedOffset,
+        limit: hasFilters ? requestedLimit * 5 : requestedLimit
+      });
     }
-
-    const totalCount = await Recipe.unscoped().count(countOptions);
-
-    // Buscamos candidatos con offset para paginación server-side
-    const recipesOptions = {
-      where: whereClause,
-      order,
-      offset: hasFilters ? 0 : parsedOffset,
-      limit: hasFilters ? requestedLimit * 5 : requestedLimit
-    };
-
-    if (query) {
-      recipesOptions.subQuery = false;
-    }
-
-    const recipes = await Recipe.findAll(recipesOptions);
 
     // Fetch user favorites if authenticated
     const favoriteIds = new Set();
