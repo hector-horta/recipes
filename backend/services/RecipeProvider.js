@@ -1,6 +1,7 @@
 import { Op, where, cast, col } from 'sequelize';
 import { sequelize } from '../config/database.js';
 import { Recipe } from '../models/Recipe.js';
+import { Ingredient } from '../models/Ingredient.js';
 import { redisClient } from '../config/redis.js';
 import { MEDICAL_TRIGGERS } from '../config/medical.js';
 import { ActivityLogger } from './ActivityLogger.js';
@@ -101,7 +102,8 @@ export class RecipeProvider {
         orConditions.push({ title_es: { [Op.iLike]: `%${term}%` } });
         orConditions.push({ title_en: { [Op.iLike]: `%${term}%` } });
         orConditions.push(where(cast(col('tags'), 'text'), { [Op.iLike]: `%${term}%` }));
-        orConditions.push(where(cast(col('ingredients'), 'text'), { [Op.iLike]: `%${term}%` }));
+        orConditions.push({ '$recipeIngredients.name_es$': { [Op.iLike]: `%${term}%` } });
+        orConditions.push({ '$recipeIngredients.name_en$': { [Op.iLike]: `%${term}%` } });
       });
 
       whereClause[Op.and] = [
@@ -163,7 +165,13 @@ export class RecipeProvider {
     const totalCount = await Recipe.count({
       where: whereClause,
       distinct: true,
-      col: 'Recipe.id'
+      col: 'Recipe.id',
+      include: [
+        {
+          model: Ingredient,
+          as: 'recipeIngredients'
+        }
+      ]
     });
 
     // Buscamos candidatos con offset para paginación server-side

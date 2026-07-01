@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { RecipeProvider } from '../services/RecipeProvider.js';
 import { Recipe } from '../models/Recipe.js';
 import { redisClient } from '../config/redis.js';
+import { Op } from 'sequelize';
 
 vi.mock('../config/redis.js', () => ({
   redisClient: {
@@ -76,6 +77,34 @@ describe('RecipeProvider', () => {
 
       const callArgs = Recipe.findAll.mock.calls[0][0];
       expect(callArgs.limit).toBe(5);
+    });
+
+    it('should include Ingredient association and format search conditions for ingredients', async () => {
+      Recipe.findAll.mockResolvedValue([]);
+      Recipe.count.mockResolvedValue(0);
+
+      await RecipeProvider.getRecipes({ query: 'pan' });
+
+      // Verify count options include Ingredient model
+      expect(Recipe.count).toHaveBeenCalledWith(expect.objectContaining({
+        include: expect.arrayContaining([
+          expect.objectContaining({
+            as: 'recipeIngredients'
+          })
+        ])
+      }));
+
+      // Verify search conditions search on recipeIngredients name fields
+      const countArgs = Recipe.count.mock.calls[0][0];
+      const andConditions = countArgs.where[Op.and];
+      expect(andConditions).toBeDefined();
+
+      const orConditions = andConditions[1][Op.or];
+      const hasIngredientNameSearchEs = orConditions.some(cond => cond['$recipeIngredients.name_es$'] !== undefined);
+      const hasIngredientNameSearchEn = orConditions.some(cond => cond['$recipeIngredients.name_en$'] !== undefined);
+      
+      expect(hasIngredientNameSearchEs).toBe(true);
+      expect(hasIngredientNameSearchEn).toBe(true);
     });
 
     it('should call count with distinct options for correct pagination count', async () => {
