@@ -100,6 +100,22 @@ Antes de dar por terminado tu trabajo en un feature, debes pasar esta checklist:
 
 ---
 
+## 🚀 Flujo de Git y Despliegue en Producción (Hetzner / Cloudflare)
+
+Para evitar incompatibilidades entre el frontend y el backend durante las actualizaciones, se debe seguir estrictamente este flujo de sincronización y despliegue:
+
+1. **Despliegue y Pruebas en Hetzner (Backend / Bot)**:
+   * El servidor de producción de Hetzner utiliza **exclusivamente** la rama `dev`.
+   * Después de realizar cambios en el backend o en el bot, se deben pushear a `dev` en GitHub y realizar un `git pull` en Hetzner.
+   * Reconstruye y levanta el contenedor backend en Hetzner (`docker compose build backend; docker compose up -d backend`) para verificar que los cambios funcionan correctamente en vivo.
+2. **Publicación del Frontend en Cloudflare (Sincronización a `main`)**:
+   * Cloudflare Pages/Workers compila y publica el frontend de producción escuchando **únicamente** la rama `main` en GitHub.
+   * **NUNCA** debes mezclar a `main` ni pushear cambios a `main` hasta que los cambios del backend ya estén desplegados y validados en Hetzner. Esto previene que el frontend intente conectarse a endpoints o APIs inexistentes en el backend.
+3. **Secuencia de Mezcla**:
+   * Desarrollo local (`dev`) ──► Despliegue/Validación en Hetzner (`dev`) ──► Merge a `main` en local ──► Push `main` a GitHub (Cloudflare publica el frontend).
+
+---
+
 ## 🔄 Mantener la documentación actualizada
 
 Al finalizar el desarrollo de un feature o corregir un bug:
