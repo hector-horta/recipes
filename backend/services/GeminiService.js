@@ -7,7 +7,7 @@ import ActivityLogger from './ActivityLogger.js';
  */
 class GeminiService {
   constructor() {
-    this.modelId = config.GEMINI_IMAGE_MODEL || "gemini-3.1-flash-image";
+    this.modelId = config.GEMINI_IMAGE_MODEL || "imagen-3.0-generate-002";
     
     if (!config.GEMINI_API_KEY) {
       ActivityLogger.warn('⚠️ GEMINI_API_KEY is not configured. GeminiService will be disabled.');
