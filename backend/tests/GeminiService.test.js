@@ -5,9 +5,11 @@ import ActivityLogger from '../services/ActivityLogger.js';
 
 vi.mock("@google/genai", () => {
   const generateImagesMock = vi.fn();
+  const generateContentMock = vi.fn();
   
   const models = {
-    generateImages: generateImagesMock
+    generateImages: generateImagesMock,
+    generateContent: generateContentMock
   };
   
   function GoogleGenAI() {
@@ -178,6 +180,39 @@ describe('GeminiService', () => {
       const result = await geminiService.generateRecipeImage('');
       expect(result).toBeNull();
       expect(ActivityLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Invalid recipeTitle'));
+    });
+
+    it('should use generateContent for gemini models', async () => {
+      const mockImageData = Buffer.from('fake-gemini-image').toString('base64');
+      const mockResponse = {
+        candidates: [{
+          content: {
+            parts: [{
+              inlineData: { data: mockImageData }
+            }]
+          }
+        }]
+      };
+
+      const originalModelId = geminiService.modelId;
+      geminiService.modelId = 'gemini-3.1-flash-image';
+
+      const genAIInstance = new GoogleGenAI();
+      genAIInstance.models.generateContent.mockResolvedValue(mockResponse);
+
+      const result = await geminiService.generateRecipeImage('Tasty Cake');
+
+      expect(result).toBeInstanceOf(Buffer);
+      expect(result.toString()).toBe('fake-gemini-image');
+      expect(genAIInstance.models.generateContent).toHaveBeenCalledWith(expect.objectContaining({
+        model: 'gemini-3.1-flash-image',
+        contents: expect.stringContaining('tasty cake'),
+        config: expect.objectContaining({
+          responseModalities: ['IMAGE']
+        })
+      }));
+
+      geminiService.modelId = originalModelId;
     });
   });
 });

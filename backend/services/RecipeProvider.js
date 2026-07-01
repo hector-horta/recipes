@@ -1,6 +1,7 @@
 import { Op, where, cast, col } from 'sequelize';
 import { sequelize } from '../config/database.js';
 import { Recipe } from '../models/Recipe.js';
+import { Ingredient } from '../models/Ingredient.js';
 import { redisClient } from '../config/redis.js';
 import { MEDICAL_TRIGGERS } from '../config/medical.js';
 import { ActivityLogger } from './ActivityLogger.js';
@@ -101,7 +102,8 @@ export class RecipeProvider {
         orConditions.push({ title_es: { [Op.iLike]: `%${term}%` } });
         orConditions.push({ title_en: { [Op.iLike]: `%${term}%` } });
         orConditions.push(where(cast(col('tags'), 'text'), { [Op.iLike]: `%${term}%` }));
-        orConditions.push(where(cast(col('ingredients'), 'text'), { [Op.iLike]: `%${term}%` }));
+        orConditions.push({ '$recipeIngredients.name_es$': { [Op.iLike]: `%${term}%` } });
+        orConditions.push({ '$recipeIngredients.name_en$': { [Op.iLike]: `%${term}%` } });
       });
 
       whereClause[Op.and] = [
@@ -159,20 +161,54 @@ export class RecipeProvider {
     // ORDER: Randomize if no search query, otherwise latest first
     const order = query ? [['created_at', 'DESC']] : [['created_at', 'DESC']];
 
-    // Get total count for pagination
-    const totalCount = await Recipe.count({
-      where: whereClause,
-      distinct: true,
-      col: 'Recipe.id'
-    });
+    let totalCount = 0;
+    let recipes = [];
 
-    // Buscamos candidatos con offset para paginación server-side
-    const recipes = await Recipe.findAll({
-      where: whereClause,
-      order,
-      offset: hasFilters ? 0 : parsedOffset,
-      limit: hasFilters ? requestedLimit * 5 : requestedLimit
-    });
+    if (query) {
+      // Find all matching recipe IDs
+      const matchingRecipes = await Recipe.unscoped().findAll({
+        attributes: ['id'],
+        where: whereClause,
+        include: [
+          {
+            model: Ingredient,
+            as: 'recipeIngredients',
+            attributes: []
+          }
+        ],
+        raw: true,
+        subQuery: false
+      });
+
+      const allIds = Array.from(new Set(matchingRecipes.map(r => r.id)));
+      totalCount = allIds.length;
+
+      // Slice candidate IDs based on whether post-DB filtering is needed
+      const pageIds = hasFilters 
+        ? allIds.slice(0, requestedLimit * 5) 
+        : allIds.slice(parsedOffset, parsedOffset + requestedLimit);
+
+      if (pageIds.length > 0) {
+        recipes = await Recipe.findAll({
+          where: { id: pageIds },
+          order
+        });
+      }
+    } else {
+      // Standard path for listings without search query (no joins needed)
+      totalCount = await Recipe.count({
+        where: whereClause,
+        distinct: true,
+        col: 'id'
+      });
+
+      recipes = await Recipe.findAll({
+        where: whereClause,
+        order,
+        offset: hasFilters ? 0 : parsedOffset,
+        limit: hasFilters ? requestedLimit * 5 : requestedLimit
+      });
+    }
 
     // Fetch user favorites if authenticated
     const favoriteIds = new Set();

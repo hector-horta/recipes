@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { RecipeProvider } from '../services/RecipeProvider.js';
 import { Recipe } from '../models/Recipe.js';
 import { redisClient } from '../config/redis.js';
+import { Op } from 'sequelize';
 
 vi.mock('../config/redis.js', () => ({
   redisClient: {
@@ -14,12 +15,14 @@ vi.mock('../config/redis.js', () => ({
   }
 }));
 
-vi.mock('../models/Recipe.js', () => ({
-  Recipe: {
+vi.mock('../models/Recipe.js', () => {
+  const mockRecipe = {
     findAll: vi.fn(),
     count: vi.fn()
-  }
-}));
+  };
+  mockRecipe.unscoped = vi.fn(() => mockRecipe);
+  return { Recipe: mockRecipe };
+});
 
 describe('RecipeProvider', () => {
   beforeEach(() => {
@@ -72,10 +75,59 @@ describe('RecipeProvider', () => {
       };
       Recipe.findAll.mockResolvedValue([mockRecipe]);
 
-      await RecipeProvider.getRecipes({ query: 'test', number: 5 });
+      await RecipeProvider.getRecipes({ query: '', number: 5 });
 
       const callArgs = Recipe.findAll.mock.calls[0][0];
       expect(callArgs.limit).toBe(5);
+    });
+
+    it('should include Ingredient association and format search conditions for ingredients', async () => {
+      Recipe.findAll
+        .mockResolvedValueOnce([{ id: '1' }]) // First call returns matching recipe IDs
+        .mockResolvedValueOnce([{
+          id: '1',
+          title_es: 'Pan',
+          title_en: 'Bread',
+          image_url: '',
+          prep_time_minutes: 30,
+          ingredients: [],
+          steps: [],
+          tags: [],
+          sibo_risk_level: 'safe',
+          toJSON() {
+            return {
+              id: '1',
+              title_es: 'Pan',
+              title_en: 'Bread',
+              image_url: '',
+              prep_time_minutes: 30,
+              ingredients: [],
+              steps: [],
+              tags: [],
+              sibo_risk_level: 'safe'
+            };
+          }
+        }]); // Second call returns full recipe records
+
+      const result = await RecipeProvider.getRecipes({ query: 'pan' });
+
+      // Verify the first findAll call fetched IDs and included recipeIngredients
+      const firstCallArgs = Recipe.findAll.mock.calls[0][0];
+      expect(firstCallArgs.attributes).toContain('id');
+      expect(firstCallArgs.include).toBeDefined();
+      expect(firstCallArgs.include[0].as).toBe('recipeIngredients');
+
+      // Verify search conditions search on recipeIngredients name fields
+      const andConditions = firstCallArgs.where[Op.and];
+      expect(andConditions).toBeDefined();
+
+      const orConditions = andConditions[1][Op.or];
+      const hasIngredientNameSearchEs = orConditions.some(cond => cond['$recipeIngredients.name_es$'] !== undefined);
+      const hasIngredientNameSearchEn = orConditions.some(cond => cond['$recipeIngredients.name_en$'] !== undefined);
+      
+      expect(hasIngredientNameSearchEs).toBe(true);
+      expect(hasIngredientNameSearchEn).toBe(true);
+      expect(result.total).toBe(1);
     });
 
     it('should call count with distinct options for correct pagination count', async () => {
@@ -86,7 +138,7 @@ describe('RecipeProvider', () => {
 
       expect(Recipe.count).toHaveBeenCalledWith(expect.objectContaining({
         distinct: true,
-        col: 'Recipe.id'
+        col: 'id'
       }));
       expect(result.total).toBe(12);
     });
